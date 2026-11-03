@@ -23,7 +23,7 @@ except ImportError:
 
 ZX0 = Path(os.environ["NXC_ZX0_DIR"]) / "zx0"
 GAME = next((p for p in (ROOT / "build/inputs/cobra.z80", EVIDENCE / "pilot/runs/cobra/cobra.z80") if p.exists()), None)
-PATCH = next((p for p in (ROOT / "build/inputs/Cobra.nxc", EVIDENCE / "format-study/cobra/Cobra.nexclash") if p.exists()), None)
+PATCH = next((p for p in (ROOT / "build/v1/Cobra_plain.nxc",) if p.exists()), None)
 
 
 @unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")
@@ -187,6 +187,34 @@ class CobraTool(unittest.TestCase):
                                 "--patch-by", "Ann"], capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(nxc.credit_line(out.read_bytes()), "Patch: Ann")
+
+    def test_language_keys(self) -> None:
+        got = nxc.language_info("en", ["Spanish=es"], "Ann", {"Spanish": "x"})
+        self.assertEqual(got, {"game_language": "en", "language_codes": "Spanish=es", "text_by": "Ann"})
+        self.assertEqual(nxc.language_info(), {})
+        for bad in (("english", [], None, ()), (None, ["Spanish=ES"], None, {"Spanish": "x"}),
+                    (None, ["Other=es"], None, {"Spanish": "x"}), (None, ["Spanish"], None, {"Spanish": "x"}),
+                    (None, [], "Ñ", ())):
+            with self.subTest(bad=bad), self.assertRaises(nxc.Wrong):
+                nxc.language_info(*bad)
+
+    def test_two_trainers_cannot_share_a_menu_name(self) -> None:
+        with self.assertRaisesRegex(nxc.Wrong, "one name"):
+            nxc.import_pok(self.patch, str(GAME), "NSame\nZ 8 40000 1 0\nNSame\nZ 8 40001 1 0\nY\n")
+
+    def test_add_dump_on_the_command_line(self) -> None:
+        banks = {b: bytes(d) for b, d in nxc.Z80Snapshot(str(GAME)).banks.items()}
+        with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
+            tmp = Path(d)
+            sna = tmp / "other.sna"
+            sna.write_bytes(bytes(27) + banks[5] + banks[2] + banks[0])
+            out = tmp / "o.nxc"
+            r = subprocess.run([sys.executable, "-W", "ignore", str(ROOT / "tools/nxc.py"), "add-dump", str(PATCH), str(GAME), str(sna), "-o", str(out)],
+                               capture_output=True, text=True)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            made = out.read_bytes()
+            self.assertEqual([t["file"] for t in nxc.targets(made)][1], "other.sna")
+            self.assertEqual(nxc.apply(made, game=sna.read_bytes()), nxc.apply(self.patch, game=self.game))
 
     def test_a_poke_outside_ram_is_refused(self) -> None:
         with self.assertRaises(nxc.Wrong):

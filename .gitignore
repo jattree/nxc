@@ -10,3 +10,7 @@ __pycache__/
 build/
 *.nxc
 *.img
+# Made from synthetic bytes only, to check an implementation: see tests/vectors/make_vectors.py.
+!tests/vectors/
+!tests/vectors/*
+tests/vectors/__pycache__/

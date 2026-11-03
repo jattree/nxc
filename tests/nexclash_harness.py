@@ -24,6 +24,34 @@ PAGE = 8192
 HOST_MMU = {2: 10, 3: 11, 4: 4, 5: 5, 6: 0, 7: 1}   # the 128K map: banks 5, 2, 0
 SPEED_MHZ = 28
 FLAGS = 0x5C3B
+FIRST_PART = 8192       # NextZXOS loads this much of a dot command; the rest stays in its open file
+OWN_HANDLE = 2
+
+
+def junk(address: int) -> int:
+    """What lies in the 8K past what the file holds: nothing may assume it is zero."""
+    return (address * 37 + 11) & 255
+
+
+def resolve_folder(spec: str, cwd: str) -> str | None:
+    """What F_GETCWD gives with A=$FF, as found by trying it on NextZXOS v2.09: the folder of a filespec, the name after
+    the last / \\ or : ignored, in capitals with its drive and a final /. None for a folder that is not there."""
+    spec = spec.replace("\\", "/")
+    drive = "C"
+    if len(spec) > 1 and spec[1] == ":":
+        drive, spec = spec[0].upper(), spec[2:]
+    folder = spec.rsplit("/", 1)[0] + "/" if "/" in spec else ""
+    parts = [] if folder.startswith("/") else [p for p in cwd.split("/") if p]
+    for part in folder.split("/"):
+        if part in ("", "."):
+            continue
+        if part == "..":
+            if not parts:
+                return None
+            parts.pop()
+        else:
+            parts.append(part.upper())
+    return drive + ":/" + "".join(p + "/" for p in parts)
 
 
 def assemble(replace: list[tuple[str, str]] | None = None) -> tuple[bytes, dict[str, int]]:
@@ -63,17 +91,24 @@ class Machine:
 
     def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("enter",),
                  free_pages: int = 90, fail_read: int | None = None, os_mode: int = 0,
-                 fail_write: int | None = None) -> None:
+                 fail_write: int | None = None, fail_create: bool = False, cwd: str = "/",
+                 total_pages: int | None = 224) -> None:
         self.symbols = symbols
         self.files = {name.lower(): bytes(data) for name, data in files.items()}
         self.keys = list(keys)
         self.free_pages = free_pages
         self.fail_read = fail_read
         self.fail_write = fail_write
+        self.fail_create = fail_create
+        self.total_pages = total_pages
+        self.cwd = cwd
+        self.opened: list[str] = []
+        self.absorbs = 0
+        self.overlay = bytes(binary[FIRST_PART:])
         self.os_mode = os_mode
         self.reads = 0
         self.writes = 0
-        self.handles: dict[int, list] = {}
+        self.handles: dict[int, list] = {OWN_HANDLE: [bytes(binary), FIRST_PART, "the command's own file"]}
         self.written: dict[str, bytearray] = {}
         self.deleted: list[str] = []
         self.next_handle = 3
@@ -108,10 +143,9 @@ class Machine:
             m.set_memory_block(slot * PAGE, bytes(self.pages[page]))
         self.host_hash = {page: bytes(data) for page, data in self.pages.items()}
         m.set_memory_block(0, bytes((0xC7,)) * 0x2000)      # the ROM: nothing runs here
-        m.set_memory_block(LOAD_AT, bytes(0x2000))
-        rest = bytes((i * 37 + 11) & 255 for i in range(0x2000 - len(binary)))
-        m.set_memory_block(LOAD_AT + len(binary), rest)     # junk: nothing may assume it is zero
-        m.set_memory_block(LOAD_AT, binary)
+        m.set_memory_block(LOAD_AT, bytes(binary[:FIRST_PART]))
+        first_end = symbols["first_end"]
+        m.set_memory_block(first_end, bytes(junk(a) for a in range(first_end, LOAD_AT + FIRST_PART)))
         m.set_memory_block(RETURN_AT, bytes((0x76,)))
         m.set_output_callback(self.output)
         m.set_input_callback(self.input)
@@ -129,6 +163,7 @@ class Machine:
         m.mark_addrs(ENTRY_SP + 2, 0x10000 - ENTRY_SP - 2, m.WRITE_MARK)
         self.phase_ticks: dict[str, int] = {}
         self.phases: list[str] = []
+        self.overlay_read = False
         self.callbacks: dict[str, object] = {}
 
     @staticmethod
@@ -145,8 +180,10 @@ class Machine:
 
     def set_phases(self, names: list[str]) -> None:
         self.phases = names
-        for name in names:
-            self.m.set_breakpoint(self.symbols[name])
+        # What is read in after the menu lies over what ran before it, so its marks wait until it is there.
+        if self.overlay_read:
+            for name in names:
+                self.m.set_breakpoint(self.symbols[name])
 
     def guard_iopage(self) -> None:
         """Once the .nex is being written, nothing writes to the I/O page but the file buffer: a stream or a site that
@@ -267,6 +304,12 @@ class Machine:
             reason = m.alt_l
             if m.alt_h != 0:
                 self.problems.append("IDE_BANK for other than ZX memory")
+            if reason == 0:
+                if self.total_pages is None:
+                    m.a = 7
+                    return False
+                m.e = self.total_pages
+                return True
             if reason == 1:
                 if self.free_pages <= 0:
                     m.a = 7
@@ -323,6 +366,15 @@ class Machine:
     def esxdos(self, function: int) -> bool:
         """Answer one call; True for carry."""
         m = self.m
+        if function == 0x8D:  # M_GETHANDLE
+            m.a = OWN_HANDLE
+            return False
+        if function == 0xA8:  # F_GETCWD; as tried: no carry either way, and a folder that is not there leaves rubbish
+            if m.a != 0xFF:
+                self.problems.append("F_GETCWD for other than a filespec")
+            folder = resolve_folder(self.string(m.de), self.cwd)
+            m.set_memory_block(m.hl, (folder.encode() + b"\0") if folder else b"z*\0")
+            return False
         if function == 0x88:  # M_DOSVERSION
             m.bc = ord("N") << 8 | ord("X")
             m.de = 0x0209
@@ -333,7 +385,11 @@ class Machine:
         if function == 0x9A:  # F_OPEN
             name = self.string(m.hl).lower()
             key = name if m.a != ord("$") else "$" + name
+            self.opened.append(key)
             if m.b & 0x02:
+                if self.fail_create:
+                    m.a = 5
+                    return True
                 self.written[key] = bytearray()
                 handle = self.next_handle
                 self.next_handle += 1
@@ -375,6 +431,10 @@ class Machine:
             m.set_memory_block(m.hl, data)
             entry[1] += len(data)
             m.bc = len(data)
+            if m.a == OWN_HANDLE and not self.overlay_read:
+                self.overlay_read = True
+                for name in self.phases:
+                    m.set_breakpoint(self.symbols[name])
         elif function == 0x9E:  # F_WRITE
             self.writes += 1
             if self.fail_write is not None and self.writes == self.fail_write:
@@ -384,6 +444,8 @@ class Machine:
             entry[0][entry[1]:entry[1] + len(data)] = data
             entry[1] += len(data)
         elif function == 0x9B:  # F_CLOSE
+            if m.a == OWN_HANDLE:
+                self.problems.append("the command's own file was closed: NextZXOS does that")
             del self.handles[m.a]
         else:
             raise AssertionError(f"esxDOS call {function:#x}")
@@ -430,7 +492,7 @@ class Machine:
                 m.f = (m.f | 1) if carry else (m.f & ~1)
                 m.pc = back + 1
                 continue
-            if m.pc in phase_marks:
+            if m.pc in phase_marks and self.overlay_read:
                 name = phase_marks[m.pc]
                 if last_phase is not None:
                     self.phase_ticks[last_phase] = self.phase_ticks.get(last_phase, 0) + self.ticks - mark_at
@@ -465,8 +527,9 @@ class Machine:
     def clean(self) -> list[str]:
         """What a finished run must leave as it found it."""
         out = list(self.problems)
-        if self.handles:
-            out.append(f"files left open: {self.handles}")
+        left_open = {h: e[2] for h, e in self.handles.items() if h != OWN_HANDLE}
+        if left_open:
+            out.append(f"files left open: {left_open}")
         if self.allocated:
             out.append(f"pages not freed: {self.allocated}")
         if self.mmu != HOST_MMU:

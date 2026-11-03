@@ -49,9 +49,10 @@ def first_existing(*paths) -> Path | None:
     return None
 
 
+V1 = ROOT / "build" / "v1"     # the patches as last rebuilt, by a script that is not in this repository
 COBRA_GAME = first_existing(INPUTS / "cobra.z80", EVIDENCE / "pilot/runs/cobra/cobra.z80")
 COBRA_NEX = first_existing(INPUTS / "source_sprites.nex", EVIDENCE / "format-study/cobra/source_sprites.nex")
-COBRA_PATCH = first_existing(INPUTS / "Cobra.nxc", EVIDENCE / "format-study/cobra/Cobra.nexclash")
+COBRA_PATCH = first_existing(V1 / "Cobra_plain.nxc")
 _poks = glob.glob(str(INPUTS / "Cobra*.pok")) + glob.glob(os.path.expanduser("~/Downloads/Cobra*.pok"))
 COBRA_POK = Path(_poks[0]) if _poks else None
 HAVE_COBRA = bool(COBRA_GAME and COBRA_NEX and COBRA_PATCH and COBRA_POK)
@@ -66,50 +67,39 @@ def needs_tools(cls):
 def text_of(patch: bytes, tag: bytes) -> dict[str, str]:
     for t, d in nxc.blocks(patch)[1]:
         if t == tag:
+            d = d[nxc.TARGET_FIXED:] if tag == b"TGT1" else d
             return dict(line.split("=", 1) for line in d.decode(errors="replace").splitlines() if "=" in line)
     return {}
 
 
-def rekey(patch: bytes, game: bytes, edit=None) -> bytes:
-    """The patch rebuilt with edit(list of [tag, data]) applied and KEY1 recomputed: what someone who owns the game can
-    do, and the file CRC cannot catch."""
+def unlocked(patch: bytes, game: bytes):
+    """(nonce, blocks, master stream) with no check of the file, as someone who owns the game can get them."""
     nonce, bl = nxc.blocks(patch)
+    base = nxc.dump_state(nonce, game)
+    for t, d in bl:
+        if t == b"TGT1" and len(d) >= nxc.TARGET_FIXED:
+            plain = base.block(b"TGT1", d[0])(d[6:nxc.TARGET_FIXED])
+            if plain[:8] == nxc.WRAP_CHECK:
+                return nonce, bl, nxc.key_state(nonce, plain[8:]), plain[8:]
+    raise AssertionError("that game does not unlock this patch")
+
+
+def rekey(patch: bytes, game: bytes, edit=None) -> bytes:
+    """The patch rebuilt with edit(list of [tag, data], stream) applied and the check value recomputed: what someone who owns
+    the game can do, and no one else."""
+    nonce, bl, st, _ = unlocked(patch, game)
     bl = [[t, d] for t, d in bl]
-    st = nxc.Stream(nonce, game)
-    key = st.block(b"KEY1")(dict((t, d) for t, d in bl)[b"KEY1"])
     if edit:
         edit(bl, st)
-    head = patch[:22]
-    before = b""
-    after = b""
-    seen = False
-    for t, d in bl:
-        if t == b"KEY1":
-            seen = True
-        elif seen:
-            after += nxc.block(t, d)
-        else:
-            before += nxc.block(t, d)
-    plain = key[:8] + struct.pack("<I", zlib.crc32(head + before + after)) + key[12:20]
-    return head + before + nxc.block(b"KEY1", st.block(b"KEY1")(plain)) + after
+    return nxc.seal(patch[:nxc.CHECK_AT], bl, st)
 
 
 def rekey_at(patch: bytes, game: bytes, position: int, mask: int) -> bytes:
-    """A byte flipped in the file, then KEY1's file CRC recomputed so the flip gets past it. Skips KEY1 itself."""
-    nonce, bl = nxc.blocks(patch)
-    st = nxc.Stream(nonce, game)
-    i = 22
-    for t, d in bl:
-        if t == b"KEY1":
-            start = i
-        i += 8 + len(d)
-    key = st.block(b"KEY1")(patch[start + 8:start + 28])
+    """A byte flipped in the file, then the check recomputed so the flip gets past it. Skips the check field itself."""
+    _, _, st, _ = unlocked(patch, game)
     out = bytearray(patch)
     out[position] ^= mask
-    rest = bytes(out[:start]) + bytes(out[start + 28:])
-    plain = key[:8] + struct.pack("<I", zlib.crc32(rest)) + key[12:20]
-    out[start + 8:start + 28] = st.block(b"KEY1")(plain)
-    return bytes(out)
+    return bytes(out[:nxc.CHECK_AT]) + nxc.check_value(bytes(out), st) + bytes(out[nxc.HEADER:])
 
 
 # ------------------------------------------------------------------ snapshots made here
@@ -179,8 +169,8 @@ def snapshot_paged(banks: dict[int, bytes], ext_len: int, hw: int, order=None, r
 
 def nex_from(banks: dict[int, bytes]) -> bytes:
     head = bytearray(512)
-    head[0:4] = b"Next"
-    head[8] = len(banks)
+    head[0:8] = b"NextV1.2"
+    head[9] = len(banks)
     for b in banks:
         head[18 + b] = 1
     return bytes(head) + b"".join(banks[b] for b in nxc.ORDER if b in banks)
@@ -388,20 +378,15 @@ class MadeUpGames(Base):
         good = snapshot_paged(b48, 23, 0)
         with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
             patch, _ = build_case(Path(d), rng, good, b48)
-            nonce, bl = nxc.blocks(patch)
-            k = dict(bl)[b"KEY1"]
-            plain = nxc.Stream(nonce, good).block(b"KEY1")(k)
+            nonce, bl, st, master = unlocked(patch, good)
             for name, game in (("a page too long", snapshot_paged({**b48, 5: b48[5]}, 23, 0)[:-5] + b"\xed\xed\xff\x00" + b"zzzzz"),
                                ("a page cut off", good[:-200]),
                                ("missing bank", good[:32 + 23]),
                                ("header only", good[:20])):
                 with self.subTest(name):
-                    nb = []
-                    for t, dd in bl:
-                        if t == b"KEY1":
-                            dd = nxc.Stream(nonce, game).block(b"KEY1")(plain)
-                        nb.append(nxc.block(t, dd))
-                    forged = patch[:22] + b"".join(nb)
+                    fixed = struct.pack("<BBI", 0, 1, len(game)) + nxc.dump_state(nonce, game).block(b"TGT1", 0)(nxc.WRAP_CHECK + master)
+                    nb = [[t, fixed + dd[nxc.TARGET_FIXED:] if t == b"TGT1" else dd] for t, dd in bl]
+                    forged = nxc.seal(patch[:nxc.CHECK_AT], nb, st)
                     m, failed, message = self.run_patch(forged, game)
                     self.assertTrue(failed, name)
                     self.assertIn(message, ("Game file is damaged", "Patch damaged: get it again"))
@@ -618,7 +603,7 @@ class Cobra(Base):
         self.assertEqual(m.screens[0], "\n".join(m.screen))    # no menu was shown
 
     def test_too_high_a_level(self) -> None:
-        for level in (2, 3, 255):
+        for level in (3, 4, 255):        # 2 is this loader's own level now
             patch = bytearray(self.patch)
             at = patch.index(b"OPT1") + 8
             patch[at] = level
@@ -639,16 +624,9 @@ class Cobra(Base):
             self.assertNotIn("zx0_decode", m.phase_ticks)
 
     def probe_flips(self, binary=None, symbols=None, sample: int = 500) -> list[str]:
-        """Flip bytes across the patch, leaving the file CRC to find them."""
+        """Flip bytes across the patch, leaving the keyed check to find them. Nothing is ever decompressed."""
         problems = []
         rng = random.Random(21)
-        nonce, bl = nxc.blocks(self.patch)
-        at = 22
-        key = 0
-        for t, d in bl:
-            if t == b"KEY1":
-                key = at
-            at += 8 + len(d)
         positions = list(range(0, 128)) + rng.sample(range(128, len(self.patch)), min(sample, len(self.patch) - 128))
         for position in positions:
             bad = bytearray(self.patch)
@@ -667,8 +645,7 @@ class Cobra(Base):
                 problems.append(f"{where}: an output was left")
             if m.clean():
                 problems.append(f"{where}: {m.clean()}")
-            # Only damage to the part of KEY1 that says what the .nex should be gets as far as decompressing.
-            if "zx0_decode" in m.phase_ticks and not key + 8 + 12 <= position < key + 28:
+            if "zx0_decode" in m.phase_ticks:
                 problems.append(f"{where}: decompressed something ({message})")
         return problems
 
@@ -676,18 +653,15 @@ class Cobra(Base):
         self.assertEqual(self.probe_flips(), [])
 
     def probe_tamper(self, binary=None, symbols=None, sample: int = 250) -> list[str]:
-        """Flip bytes and recompute the file CRC, as someone with the game can: every decoder faces garbage. A run may
+        """Flip bytes and recompute the check, as someone with the game can: every decoder faces garbage. A run may
         be refused, or end with exactly the right file; nothing else, and nothing outside its buffers."""
         problems = []
         rng = random.Random(22)
         nonce, bl = nxc.blocks(self.patch)
-        at = 22
+        at = nxc.HEADER
         ranges = []
-        key = None
         for t, d in bl:
-            if t == b"KEY1":
-                key = at
-            elif t in (b"NEX1", b"SIT1", b"BNK1"):
+            if t in (b"NEX1", b"SIT1", b"BNK1"):
                 ranges.append((at + 8, at + 8 + len(d)))
             at += 8 + len(d)
         positions = []
@@ -856,7 +830,7 @@ class Cobra(Base):
         m = self.machine({"patch.nxc": patch, self.game_name: self.game})
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed)
-        self.assertEqual(message, "Rebuild failed its check: damaged")
+        self.assertEqual(message, "Rebuild failed: patch damaged")
         self.assertIn(NEX, m.deleted)
         self.assertNotIn(NEX, m.written)
         self.assertEqual(m.clean(), [])
@@ -933,19 +907,17 @@ class Cobra(Base):
     # ---- negative controls: a broken loader must fail these same checks
 
     BROKEN = {
-        "no file CRC": [("""        cp      (hl)
+        "no keyed check": [("""        or      a
         jp      nz,bad_patch
         inc     hl
-        inc     de
-        djnz    .cmp""", """        cp      (hl)
+        djnz    .cmp""", """        or      a
         nop
         nop
         nop
         inc     hl
-        inc     de
         djnz    .cmp""")],
         "no key check": [("""        cp      (hl)
-        jr      nz,.wrong
+        jr      nz,.next
         inc     hl
         inc     de
         djnz    .chk""", """        cp      (hl)
@@ -1002,7 +974,7 @@ class Cobra(Base):
         """True when the broken loader is caught by the checks this class relies on."""
         binary, symbols = H.assemble(self.BROKEN[name])
         files = {"patch.nxc": self.patch, self.game_name: self.game}
-        if name == "no file CRC":
+        if name == "no keyed check":
             return bool(self.probe_flips(binary, symbols, sample=60))
         if name == "no key check":
             wrong = bytearray(self.game)
@@ -1068,13 +1040,13 @@ class Cobra(Base):
     def test_measure(self) -> None:
         import nexclash_harness
         m = H.Machine(self.binary, self.symbols, {"patch.nxc": self.patch, self.game_name: self.game})
-        m.set_phases(["work_begin", "absorb_game", "check_file_crc", "load_bank_index", "create_out", "done"])
+        m.set_phases(["work_begin", "absorb_game", "check_file", "load_bank_index", "create_out", "done"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         t = m.phase_ticks
         mhz = H.SPEED_MHZ * 1e6
         absorb = t["absorb_game"]
-        crc = t["check_file_crc"]
+        crc = t["check_file"]
         setup = t["load_bank_index"]
         write = t["create_out"]
         total = absorb + crc + setup + write
@@ -1082,7 +1054,7 @@ class Cobra(Base):
         # high-water marks, from what changed in the dot command's own 8K
         stack_low = self.symbols["stack_top"]
         for a in range(self.symbols["stack_floor"], 0x4000):
-            if m.m.memory[a] != ((a - 0x2000 - len(self.binary)) * 37 + 11) & 255:
+            if m.m.memory[a] != H.junk(a):
                 stack_low = a
                 break
         touched = 0
@@ -1093,16 +1065,16 @@ class Cobra(Base):
         print(f"\nMeasure, Cobra, {len(self.game)} byte game, {len(m.written[NEX])} byte .nex, T-states at 28 MHz, "
               f"no wait states, no file I/O:\n"
               f"  absorb and KEY1 {absorb:,} = {absorb / mhz:.3f} s\n"
-              f"  patch CRC {crc:,} = {crc / mhz:.3f} s\n"
+              f"  keyed check of the patch {crc:,} = {crc / mhz:.3f} s\n"
               f"  index, header, sites {setup:,} = {setup / mhz:.3f} s\n"
               f"  decompress, CRC and write {write:,} = {write / mhz:.3f} s\n"
               f"  total {total:,} = {total / mhz:.3f} s\n"
-              f"  binary {len(self.binary)} bytes of 8192; code and data end at {code_end:#06x}, variables to "
+              f"  file {len(self.binary)} bytes: 8192, then {self.symbols['ov_size']} read after the menu; code and data end at {code_end:#06x}, variables to "
               f"{self.symbols['vars_end']:#06x}\n"
               f"  stack in the 8K reached {stack_low:#06x}, {0x4000 - stack_low} bytes\n"
               f"  allocated {m.peak_pages} pages = {m.peak_pages * 8}K, of which {touched} bytes changed; "
               f"peak RAM 8K + {m.peak_pages * 8}K", flush=True)
-        self.assertLess(len(self.binary), 8192)
+        self.assertEqual(len(self.binary), H.FIRST_PART + self.symbols["ov_size"])
         self.assertGreater(stack_low, self.symbols["stack_floor"], "the stack reached the variables below it")
 
 
@@ -1110,7 +1082,7 @@ class Cobra(Base):
 
 
 def set_table(want: bytes, entries: list[tuple[int, int, bytes]]) -> bytes:
-    return struct.pack("<II", zlib.crc32(want), len(want)) + b"".join(
+    return struct.pack("<I", zlib.crc32(want)) + b"".join(
         struct.pack("<BHH", b, o, len(d)) + d for b, o, d in entries)
 
 
@@ -1213,20 +1185,23 @@ class Choices:
         m, failed, message = self.run_it([set_key, fix_key, fix_key, "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 1, False))
-        self.assertIn("Enhanced colours          [ON]", m.screens[-2])
+        shown = "[ON]" if len(self.sets) == 1 else f"[{self.sets[0]}]"
+        self.assertIn(f"Enhanced colours          {shown}", m.screens[-2])
         self.assertIn("Enhanced colours          [N/A]", m.screens[-3])
-        self.assertIn("Enhanced colours          [ON]", m.screens[-4])
+        self.assertIn(f"Enhanced colours          {shown}", m.screens[-4])
 
-    def test_the_key_is_on_and_off_and_on_is_the_first_set(self) -> None:
+    def test_the_key_steps_through_what_there_is(self) -> None:
         one, fix_key, set_key = self.lines()
-        m, failed, message = self.run_it([set_key] * 3 + ["enter"])
+        turn = len(self.sets) + 1
+        m, failed, message = self.run_it([set_key] * (turn + 1) + ["enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 1, False))
         shown = [next(line for line in screen.split("\n") if "Enhanced colours" in line).split("colours")[1].strip()
-                 for screen in m.screens[1:5]]
-        self.assertEqual(shown, ["[OFF]", "[ON]", "[OFF]", "[ON]"])
-        for name in self.sets:
-            self.assertNotIn(name, "\n".join(m.screens))
+                 for screen in m.screens[1:turn + 3]]
+        between = ["[ON]"] if len(self.sets) == 1 else ["[" + name[:17] + "]" for name in self.sets]
+        self.assertEqual(shown, ["[OFF]"] + between + ["[OFF]"] + between[:1])
+        if len(self.sets) == 1:
+            self.assertNotIn(self.sets[0], "\n".join(m.screens))
 
     def test_the_credit_is_not_on_the_menu(self) -> None:
         m, failed, message = self.run_it(["enter"])
@@ -1247,10 +1222,10 @@ class Choices:
 
     def test_flipped_bytes_in_a_set_are_refused_whatever_is_chosen(self) -> None:
         _, _, set_key = self.lines()
-        at = 22
+        at = nxc.HEADER
         ranges = []
         for t, d in nxc.blocks(self.patch)[1]:
-            if t == b"PAL1":
+            if t == b"SET1":
                 ranges.append((at + 8, at + 8 + len(d)))
             at += 8 + len(d)
         rng = random.Random(31)
@@ -1266,10 +1241,10 @@ class Choices:
         """The first set with another table, and a good file CRC: what someone with the game can do."""
         def edit(bl, st):
             for entry in bl:
-                if entry[0] == b"PAL1":
+                if entry[0] == b"SET1":
                     body = stream if stream is not None else nxc.zx0(table)
-                    name = entry[1][:2 + entry[1][1]]
-                    entry[1] = bytes((index,)) + name[1:] + st.block(b"PAL1", index)(body)
+                    fixed = entry[1][:nxc.SET_FIXED + entry[1][4]]
+                    entry[1] = bytes((index,)) + fixed[1:] + st.block(b"SET1", index)(body)
                     return
         return rekey(self.patch, self.game, edit)
 
@@ -1279,7 +1254,7 @@ class Choices:
             nxc.apply(patch, game=self.game, colours=self.sets[0])
         m, failed, message = self.run_it([set_key, "enter"], patch=patch)
         self.assert_refused(m, failed, message)
-        self.assertIn(message, ("Patch damaged: get it again", "Rebuild failed its check: damaged"))
+        self.assertIn(message, ("Patch damaged: get it again", "Rebuild failed: patch damaged"))
         self.assertEqual(m.bad_writes, [])
 
     def test_corrupted_set_tables(self) -> None:
@@ -1287,7 +1262,7 @@ class Choices:
         a_bank = next(b for b in nxc.ORDER if base[18 + b])
         no_bank = next(b for b in nxc.ORDER if not base[18 + b])
         ok = set_table(base, [])
-        head = ok[:8]
+        head = ok[:4]
         e = lambda b, o, d: struct.pack("<BHH", b, o, len(d)) + d  # noqa: E731
         noise = bytes(random.Random(1).randrange(256) for _ in range(30000))
         cases = {
@@ -1299,11 +1274,13 @@ class Choices:
             "a length that wraps around": head + struct.pack("<BHH", a_bank, 5, 0xFFFF) + b"xxxx",
             "runs past the table": head + struct.pack("<BHH", a_bank, 0, 100) + b"xx",
             "a part of an entry left over": head + e(a_bank, 0, b"x") + b"\x05",
-            "shorter than its CRC and length": head[:7],
+            "shorter than its CRC": head[:3],
             "only one byte": b"\x01",
             "bigger than the loader holds": head + e(a_bank, 0, noise[:16384]) + e(a_bank, 0, noise[:8300]),
-            "the wrong CRC": struct.pack("<II", zlib.crc32(base) ^ 1, len(base)),
-            "the wrong length": struct.pack("<II", zlib.crc32(base), len(base) + 16384),
+            "the wrong CRC": struct.pack("<I", zlib.crc32(base) ^ 1),
+            "out of order": head + e(a_bank, 100, b"x") + e(a_bank, 50, b"y"),
+            "overlapping itself": head + e(a_bank, 100, b"xx") + e(a_bank, 101, b"y"),
+            "an empty entry": head + e(a_bank, 100, b""),
             "changes the CRC does not know of": ok + e(a_bank, 3, bytes((base[512 + 3] ^ 1,))),
         }
         for name, table in cases.items():
@@ -1329,13 +1306,13 @@ class Choices:
         def with_data(data):
             def edit(bl, st):
                 for entry in bl:
-                    if entry[0] == b"PAL1":
+                    if entry[0] == b"SET1":
                         entry[1] = data
                         return
             return edit
-        for name, data in {"an empty block": b"", "one byte": b"\0", "no name": b"\0\0zzzz",
-                           "a name too long": b"\0\x1a" + b"n" * 26 + b"zzzz", "a name past the block": b"\0\x05ab",
-                           "a name of 25, past the block": b"\0\x19" + b"n" * 24}.items():
+        for name, data in {"an empty block": b"", "one byte": b"\0", "no name": b"\0\1\1\1\0zzzz",
+                           "a name too long": b"\0\1\1\1\x1a" + b"n" * 26 + b"zzzz", "a name past the block": b"\0\1\1\1\x05ab",
+                           "a name of 25, past the block": b"\0\1\1\1\x19" + b"n" * 24}.items():
             with self.subTest(name):
                 patch = rekey(self.patch, self.game, with_data(data))
                 with self.assertRaises(nxc.Wrong):
@@ -1352,11 +1329,11 @@ class Choices:
 
     def test_tampered_sets_with_a_good_crc(self) -> None:
         _, _, set_key = self.lines()
-        at = 22
+        at = nxc.HEADER
         start = end = None
         for t, d in nxc.blocks(self.patch)[1]:
-            if t == b"PAL1":
-                start, end = at + 10 + d[1], at + 8 + len(d)
+            if t == b"SET1":
+                start, end = at + 8 + nxc.SET_FIXED + d[4], at + 8 + len(d)
                 break
             at += 8 + len(d)
         rng = random.Random(23)
@@ -1377,7 +1354,7 @@ class Choices:
 
     def test_a_later_version_of_the_block_is_skipped(self) -> None:
         def add(bl, st):
-            bl.append([b"PAL2", b"\0\x03xyzjunk"])
+            bl.append([b"SET2", b"\0\1\1\1\x03xyzjunk"])
         patch = rekey(self.patch, self.game, add)
         one, fix_key, set_key = self.lines()
         m, failed, message = self.run_it([set_key, "enter"], patch=patch)
@@ -1399,70 +1376,72 @@ class Choices:
     ROOM = ('db "patch and your own copy.",13', 'db "p",13')     # the code nearly fills its room: a control may need more
 
     SET_BROKEN = {
-        "the set never applied": [("""apply_pokes:
-        call    apply_set
-""", """apply_pokes:
-        nop
+        "the set never applied": [(""".emit:  call    apply_sets
+""", """.emit:  nop
         nop
         nop
 """)],
-        "the set's CRC not checked": [("""        ld      hl,crc2
-        ld      de,$a000
+        "the output's CRC not checked": [("""        ld      hl,crc
+        ld      de,want
         call    check_result
-""", """        ld      hl,crc2
-        ld      de,$a000
+""", """        ld      hl,crc
+        ld      de,want
         nop
         nop
         nop
 """)],
-        "the base CRC run over the set": [("""        call    crc_update
-        call    apply_pokes""", """        call    apply_pokes
-        call    crc_update""")],
-        "the index taken as 0": [("""        ld      a,(smallbuf)                ; the block's own index picks the stream
+        "the CRC run before the set": [(""".emit:  call    apply_sets
+        ld      hl,WORK
+        ld      bc,BANK_SIZE
+        call    crc_update
+""", """.emit:  ld      hl,WORK
+        ld      bc,BANK_SIZE
+        call    crc_update
+        call    apply_sets
+""")],
+        "the index taken as 0": [("""        ld      a,(cur_stream)
+        ld      c,a
+        ld      hl,blk_pos
+        ld      de,magic_set1
 """, """        xor     a
         nop
         nop
+        ld      c,a
+        ld      hl,blk_pos
+        ld      de,magic_set1
 """)],
-        "the key taken with the fix off": [("""        ld      a,(ver_original)            ; unavailable: the choice stays as it is
+        "the key taken with the fix off": [(""".step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
         jr      nz,.wait
-""", """        ld      a,(ver_original)            ; unavailable: the choice stays as it is
+""", """.step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
         nop
         nop
 """)],
         "a set applied to the plain game": [("""        xor     a                           ; with the fix off, no set applies
-        ld      (set_choice),a
-""", """        nop
-        nop
-        nop
-        nop
-""")],
+        ld      (set_choices),a
+        ld      (set_choices+1),a
+""", "")],
         "a set's bank unchecked": [("""        call    header_has
         jp      z,bad_patch
-        jr      .remap
+        ld      a,(site_len)                ; no empty entry, and in rising order
 """, """        nop
         nop
         nop
         nop
         nop
         nop
-        jr      .remap
+        ld      a,(site_len)                ; no empty entry, and in rising order
 """)],
-        "a set not checked before the file is made": [("""        ld      de,8                        ; CRC and length, at least
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-        ld      a,$ff
-        call    set_walk
-""", """        ld      de,8                        ; CRC and length, at least
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-        ld      a,$ff
+        "a set not checked before the file is made": [("""        ld      a,$ff
+        call    table_walk_set
+        call    map_iopage
+""", """        nop
         nop
         nop
         nop
+        nop
+        call    map_iopage
 """)],
         "a set's entries unbounded": [("""        ld      bc,BANK_SIZE+1
         or      a
@@ -1478,21 +1457,21 @@ class Choices:
 """, """        cp      ' '                         ; as ENTER: with what the menu shows
         jr      nz,.not
         xor     a
-        ld      (set_choice),a
+        ld      (set_choices),a
         jr      .go
 .not:
-"""), ROOM],
+""")],
         "the choice lost with the fix": [(""".version:
         ld      a,(ver_original)
         xor     1
         ld      (ver_original),a
 """, """.version:
         xor     a
-        ld      (set_choice),a
+        ld      (set_choices),a
         ld      a,(ver_original)
         xor     1
         ld      (ver_original),a
-"""), ROOM],
+""")],
     }
 
     def set_control_caught(self, name: str) -> bool:
@@ -1506,11 +1485,11 @@ class Choices:
             failed, message = m.run('"patch.nxc"')
             return m, failed, message
 
-        if name in ("the set never applied", "the base CRC run over the set", "the index taken as 0"):
+        if name in ("the set never applied", "the CRC run before the set", "the index taken as 0"):
             m, failed, message = go([set_key, "enter"], self.reindexed())
             return failed or bytes(m.written.get(NEX, b"")) != nxc.apply(self.reindexed(), game=self.game, colours=self.sets[0])
-        if name == "the set's CRC not checked":
-            m, failed, message = go([set_key, "enter"], self.forge_set(struct.pack("<II", zlib.crc32(base) ^ 1, len(base))))
+        if name == "the output's CRC not checked":
+            m, failed, message = go([set_key, "enter"], self.forge_set(struct.pack("<I", zlib.crc32(base) ^ 1)))
             return not failed
         if name == "the key taken with the fix off":
             m, failed, message = go([fix_key, set_key, fix_key, "enter"])
@@ -1540,14 +1519,12 @@ class Choices:
     def reindexed(self) -> bytes:
         """The patch with each set's index and stream moved, so that an index is not its place in the file."""
         def edit(bl, st):
-            nonce, _ = nxc.blocks(self.patch)
-            old = nxc.Stream(nonce, self.game)
             for entry in bl:
-                if entry[0] == b"PAL1":
+                if entry[0] == b"SET1":
                     index = entry[1][0]
-                    name = entry[1][1:2 + entry[1][1]]
-                    plain = old.block(b"PAL1", index)(entry[1][2 + entry[1][1]:])
-                    entry[1] = bytes((index + 40,)) + name + st.block(b"PAL1", index + 40)(plain)
+                    fixed = entry[1][1:nxc.SET_FIXED + entry[1][4]]
+                    plain = st.block(b"SET1", index)(entry[1][nxc.SET_FIXED + entry[1][4]:])
+                    entry[1] = bytes((index + 40,)) + fixed + st.block(b"SET1", index + 40)(plain)
         return rekey(self.patch, self.game, edit)
 
     def test_the_block_says_its_stream(self) -> None:
@@ -1700,7 +1677,7 @@ class MadeUpChoices(Choices, Base):
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, colours=self.sets[0]))
         screen = m.screens[-2].split("\n")
         self.assertEqual(screen[3 + 8 + 2], "  9  Colour clash fix          [ON]")
-        self.assertEqual(screen[3 + 8 + 3], "  0  Enhanced colours          [ON]")
+        self.assertEqual(screen[3 + 8 + 3], "  0  Enhanced colours          [First]")
         self.assertNotIn(":", m.screens[-2].replace("Colour", ""))
         m, failed, message = self.run_it(["9", "enter"], patch=patch)
         self.assertFalse(failed, message)
@@ -1719,7 +1696,7 @@ class MadeUpChoices(Choices, Base):
                 if entry[0] == b"INF1":
                     entry[1] = lines + entry[1]
             if not sets:
-                bl[:] = [e for e in bl if e[0] != b"PAL1"]
+                bl[:] = [e for e in bl if e[0] != b"SET1"]
         return rekey(self.patch, self.game, edit)
 
     def tail(self, patch: bytes) -> list[str]:
@@ -1834,7 +1811,7 @@ class MadeUpChoices(Choices, Base):
             "",
             " ENTER to play",
             "")))
-        without = rekey(self.patch, self.game, lambda bl, st: bl.__setitem__(slice(None), [e for e in bl if e[0] != b"PAL1"]))
+        without = rekey(self.patch, self.game, lambda bl, st: bl.__setitem__(slice(None), [e for e in bl if e[0] != b"SET1"]))
         m, failed, message = self.run_it(["3", "enter"], patch=without)    # no such line
         self.assertFalse(failed, message)
         self.assertEqual(m.screens[-2], "\n".join((
@@ -1854,12 +1831,12 @@ class MadeUpChoices(Choices, Base):
 JETPAC_DIR = EVIDENCE / "format-study" / "jetpac" / "work" / "p2"
 _jetpac_games = glob.glob(str(REFERENCE / "jetpac" / "*.z80"))
 JETPAC_GAME = Path(_jetpac_games[0]) if _jetpac_games else None
-JETPAC_PATCH = ROOT / "build" / "Jetpac.nxc"
+JETPAC_PATCH = V1 / "Jetpac.nxc"
 
 
 @needs_tools
 @unittest.skipUnless(JETPAC_PATCH.exists() and JETPAC_GAME and JETPAC_DIR.is_dir(),
-                     "Jetpac's game, builds or patch are missing (build/Jetpac.nxc, NXC_EVIDENCE); they are private")
+                     "Jetpac's game, builds or patch are missing (build/v1, NXC_EVIDENCE); they are private")
 class Jetpac(Choices, Base):
     @classmethod
     def setUpClass(cls) -> None:
@@ -1912,28 +1889,40 @@ class Jetpac(Choices, Base):
         self.assertEqual(nxc.inf1_value(self.patch, "patch_by"), b"Jon Attree")
         self.assertEqual([t[1] for t in nxc.trainers(self.patch)], ["Infinite lives"])
 
+    def test_its_blanks_are_filled_as_the_records_say(self) -> None:
+        self.assertEqual(text_of(self.patch, b"TGT1")["zxdb_entry"], "0009362")
+        self.assertEqual(dict(nxc.blocks(self.patch)[1])[b"ROM1"], b"\x01")
+        proof = text_of(self.patch, b"PRF1")
+        self.assertIn("IDENTICAL", proof["replay"])
+        self.assertIn("40/40", proof["replay"])
+        self.assertIn("JNext 1.1.104", proof["emulator"])
+        self.assertIn("two players not exercised", proof["coverage"])
+        self.assertEqual(proof["hardware"], "none")
+        for key in ("replay_when", "emulator_when", "coverage_when", "hardware_when"):
+            self.assertTrue(proof[key])
+
     def test_measure_with_a_set(self) -> None:
         m = H.Machine(self.binary, self.symbols, {"patch.nxc": self.patch, self.game_name: self.game}, keys=["3", "enter"])
         m.set_phases(["work_begin", "done"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         low = next(a for a in range(self.symbols["stack_floor"], 0x4001)
-                   if a == 0x4000 or m.m.memory[a] != ((a - 0x2000 - len(self.binary)) * 37 + 11) & 255)
+                   if a == 0x4000 or m.m.memory[a] != H.junk(a))
         print(f"\nMeasure, Jetpac with a set: {m.phase_ticks['work_begin'] / (H.SPEED_MHZ * 1e6):.3f} s at 28 MHz, no file I/O; "
               f"{m.peak_pages} pages; stack in the 8K reached {0x4000 - low} bytes of "
-              f"{0x4000 - self.symbols['stack_floor']}; binary {len(self.binary)} of 8192; code ends {self.symbols['code_end']:#06x}, "
+              f"{0x4000 - self.symbols['stack_floor']}; file {len(self.binary)}; code ends {self.symbols['code_end']:#06x}, "
               f"variables start {self.symbols['vars']:#06x}", flush=True)
         self.assertGreater(low, self.symbols["stack_floor"])
 
 
 BOMB_GAME = next((p for p in (INPUTS / "bomb_jack.z80", ) if p.exists()), None)
-BOMB_PATCH = first_existing(ROOT / "build" / "BombJack.nxc")
+BOMB_PATCH = first_existing(V1 / "BombJack.nxc")
 
 
 @needs_tools
-@unittest.skipUnless(BOMB_GAME and BOMB_PATCH, "Bomb Jack's game or patch is missing (build/inputs, build/BombJack.nxc)")
+@unittest.skipUnless(BOMB_GAME and BOMB_PATCH, "Bomb Jack's game or patch is missing (build/inputs, build/v1)")
 class BombJack(Choices, Base):
-    """A patch made before this menu, with two sets; build/make_jetpac.py adds one trainer from the archive's .pok."""
+    """A patch made before this menu, with two sets and one trainer from the archive's .pok."""
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -1957,8 +1946,7 @@ class BombJack(Choices, Base):
 
 
 @needs_tools
-@unittest.skipUnless((EVIDENCE / "format-study" / "out").is_dir() and
-                     REFERENCE.is_dir(),
+@unittest.skipUnless((V1 / "study").is_dir() and REFERENCE.is_dir(),
                      "the study's patches and games are not here (NXC_EVIDENCE); they are private")
 class OtherBuilds(Base):
     """Every build of the format study: games found at run time by TGT1's MD5, nothing kept here. Results are printed
@@ -1971,7 +1959,7 @@ class OtherBuilds(Base):
             games.setdefault(hashlib.md5(Path(path).read_bytes()).hexdigest(), Path(path))
         for path in sorted(glob.glob(str(EVIDENCE / "format-study" / "*.z80"))):
             games.setdefault(hashlib.md5(Path(path).read_bytes()).hexdigest(), Path(path))
-        patches = sorted(glob.glob(str(EVIDENCE / "format-study" / "out" / "*.nexclash")))
+        patches = sorted(glob.glob(str(V1 / "study" / "*.nxc")))
         limit = os.environ.get("NXC_BUILDS")
         done = no_game = k128 = k48 = 0
         slowest = (0, 0, 0)
@@ -1987,7 +1975,7 @@ class OtherBuilds(Base):
             with self.subTest(index=done):
                 want = nxc.apply(patch, game=game)
                 self.assertEqual(hashlib.md5(want).hexdigest(), text_of(patch, b"INF1").get("nex_md5"))
-                name = text_of(patch, b"TGT1").get("file", "game.z80").lower()
+                name = text_of(patch, b"TGT1")["file"].lower()
                 m = H.Machine(self.binary, self.symbols, {"patch.nxc": patch, name: game})
                 m.set_phases(["absorb_game", "done"])
                 failed, message = m.run('"patch.nxc"', limit_seconds=60)
@@ -2006,6 +1994,64 @@ class OtherBuilds(Base):
               f"{slowest[2]} byte game and {slowest[1]} byte .nex", flush=True)
         self.assertGreaterEqual(done, 3)
         self.assertGreaterEqual(k128, 1)
+
+    def test_the_make_command_on_real_builds(self) -> None:
+        """The command line on three builds of the study. Counts only."""
+        import subprocess
+        import tempfile
+        builds = sorted(glob.glob(str(REFERENCE / "**" / "*_sprites.nex"), recursive=True))[:3]
+        games: dict[str, Path] = {}
+        for path in glob.glob(str(V1 / "study" / "*.nxc")):
+            patch = Path(path).read_bytes()
+            games[text_of(patch, b"INF1")["nex_md5"]] = text_of(patch, b"TGT1")["md5"]
+        known = {hashlib.md5(Path(p).read_bytes()).hexdigest(): p for p in glob.glob(str(REFERENCE / "**" / "*.z80"), recursive=True)}
+        done = 0
+        with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
+            for index, build in enumerate(builds):
+                data = Path(build).read_bytes()
+                game = known.get(games.get(hashlib.md5(data).hexdigest(), ""))
+                if not game:
+                    continue
+                out = Path(d) / f"{index}.nxc"
+                r = subprocess.run([sys.executable, "-W", "ignore", str(ROOT / "tools/nxc.py"), "make", build, game, "-o", str(out), "--file", "game.z80"], capture_output=True, text=True)
+                with self.subTest(index=index):
+                    self.assertEqual(r.returncode, 0, "refused")
+                    self.assertEqual(nxc.apply(out.read_bytes(), game=Path(game).read_bytes()), data)
+                    done += 1
+        print(f"\nMake command: {done} of {len(builds)} real builds rebuilt exactly", flush=True)
+
+    def test_finished_patches(self) -> None:
+        """The finished patches under build/dean, which are private: each byte-exact, and each trainer changing only its POKEs.
+        Counts only."""
+        paths = sorted(glob.glob(str(ROOT / "build" / "dean" / "*.nxc")))
+        if not paths:
+            self.skipTest("the finished patches are not here; they are private")
+        games: dict[str, Path] = {}
+        for path in sorted(glob.glob(str(REFERENCE / "**" / "*.z80"), recursive=True)) + sorted(glob.glob(str(INPUTS / "*.z80"))):
+            games.setdefault(hashlib.md5(Path(path).read_bytes()).hexdigest(), Path(path))
+        done = with_trainers = trainers = 0
+        for index, path in enumerate(paths):
+            patch = Path(path).read_bytes()
+            game = games[text_of(patch, b"TGT1")["md5"]].read_bytes()
+            with self.subTest(index=index):
+                want = nxc.apply(patch, game=game)
+                self.assertEqual(hashlib.md5(want).hexdigest(), text_of(patch, b"INF1")["nex_md5"])
+                offsets = {}
+                at = 512
+                for b in nxc.ORDER:
+                    if want[18 + b]:
+                        offsets[b] = at
+                        at += 16384
+                every = nxc.trainers(patch)
+                self.assertLessEqual(len(every), nxc.TRAINERS_SHOWN)
+                for k, t in enumerate(every):
+                    got = nxc.apply(patch, game=game, chosen=[k + 1])
+                    allowed = {offsets[b] + o for b, o, _ in t[2]}
+                    self.assertTrue({i for i in range(len(got)) if got[i] != want[i]} <= allowed)
+                done += 1
+                with_trainers += bool(every)
+                trainers += len(every)
+        print(f"\nFinished patches: {done} of {len(paths)} byte-exact, {with_trainers} with trainers, {trainers} trainers, none played", flush=True)
 
 
 if __name__ == "__main__":
