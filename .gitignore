@@ -1,0 +1,12 @@
+# Game data never goes in this repo.
+*.z80
+*.sna
+*.tap
+*.tzx
+*.nex
+*.nexclash
+*.rzx
+__pycache__/
+build/
+*.nxc
+*.img
