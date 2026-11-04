@@ -4,7 +4,7 @@ byte for byte. See spec/NXC-FORMAT.md.
 
     nxc.py PATCH [GAME] [-o OUT] [--trainer NAME_OR_NUMBER ...] [--original] [--colours NAME]
     nxc.py make NEX GAME -o OUT [--zxdb ENTRY] [--title T] [--publisher "Ocean, 1986"] [--patch-by N] [--colours-by N]
-                 [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
+                 [--fix-label TEXT] [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
     nxc.py make NEX TAPE --start START.z80 -o OUT [--tape-bank N ...] [--residual-max N] [as above]
     nxc.py add-dump PATCH KNOWN_GAME NEW_DUMP -o OUT [--file NAME] [--zxdb ENTRY] [--title TITLE]   (also add-target)
     nxc.py import-pok PATCH POK GAME -o OUT [--publisher "Ocean, 1986"] [--only "Name,Name"]
@@ -43,6 +43,7 @@ TOGGLE_KINDS = (KIND_TOGGLE, KIND_TOGGLE_LOGIC)
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
 TEXT_READ = 252; MENU_COLUMNS = 41; CREDIT_NAME = 32  # what a loader reads of INF1, shows, and keeps of a name
+FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label')   # the main line's name without INF1's fix_label
 CREDIT = "Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
@@ -567,6 +568,8 @@ def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None):
         if t == b'INF1' and publisher:
             text_ = b''.join(l + b'\n' for l in body.split(b'\n') if l and not l.startswith(b'publisher='))
             body = b'publisher=%s\n' % publisher.encode() + text_
+            label = next((l[10:] for l in body.split(b'\n') if l.startswith(b'fix_label=')), b'')
+            if not fix_label_seen(body, label.decode()): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
@@ -800,6 +803,9 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     head = st.block(b'NEX1')(zx0(out[:512]))
     table = st.block(b'SIT1')(zx0(struct.pack('<H', count) + bytes(sites))) if count else b''
     info = dict(info); info.setdefault('credit', CREDIT)
+    info = {**{k: info[k] for k in MENU_KEYS if k in info}, **{k: v for k, v in info.items() if k not in MENU_KEYS}}   # what the menu shows, first
+    if info.get('fix_label') not in (None, ''): check_fix_label(info['fix_label'])
+    if not fix_label_seen(text(info), info.get('fix_label')): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
     bl = [[b'TGT1', target_block(0, game_kind, game, nonce, master, target)], [b'INF1', text(info)], [b'PRF1', proof_text(proof)], [b'ROM1', bytes((rom,))]]
     names = [parse_trn1(t)[1] for t in trainer_blocks]
     if len(set(names)) != len(names): raise ValueError('two trainers have one name')
@@ -1258,6 +1264,24 @@ def inf1_value(f, key):
         if text[start:end].startswith(key.encode() + b'='): return text[start + len(key) + 1:end]
         start = end + 1
 
+def check_fix_label(v):
+    if not isinstance(v, str) or not 1 <= len(v) <= FIX_LABEL_MAX or not v.isascii() or not v.isprintable():
+        raise Wrong('a fix label is 1 to %d printable ASCII characters: %r' % (FIX_LABEL_MAX, v))
+
+def fix_label_seen(body, label):
+    """Whether a loader reading the first TEXT_READ bytes of INF1 text body finds its fix_label line whole, if it has one."""
+    if not label: return True
+    line = b'fix_label=%s\n' % label.encode()
+    at = (b'\n' + body).find(b'\n' + line)
+    return at >= 0 and at + len(line) <= TEXT_READ
+
+def fix_label(f):
+    """The menu's main line as a loader names it: INF1's fix_label, its first FIX_LABEL_MAX characters with anything
+    unprintable as ?, or FIX_LABEL if the key is absent, empty or cut off."""
+    v = inf1_value(f, 'fix_label')
+    if not v: return FIX_LABEL
+    return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:FIX_LABEL_MAX])
+
 def credit_line(f):
     """The menu's credit line, or None: "Patch: a     Colours: b" in MENU_COLUMNS columns, the colours only if the patch has
     a colour set. With both, the gap closes from 5 to 2 before a name is cut, then a keeps at least 11, b what is left."""
@@ -1288,8 +1312,9 @@ def set_credits(f, game, patch_by=None, colours_by=None):
                    line(b'colours_by', colours_by) if colours_by is not None else old[b'colours_by']]
             rest = [l for l in lines if not l.startswith((b'patch_by=', b'colours_by='))]
             first = [l for l in rest if l.startswith(b'publisher=')]
-            body = b''.join(first + new + [l for l in rest if l not in first])
-            if len(b''.join(first + new)) > TEXT_READ: raise Wrong('the credit lines must end within the first %d bytes of INF1' % TEXT_READ)
+            label = [l for l in rest if l.startswith(b'fix_label=')]   # the menu's lines first, the fix label after the names
+            body = b''.join(first + new + label + [l for l in rest if l not in first and l not in label])
+            if len(b''.join(first + new + label)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
@@ -1378,6 +1403,7 @@ def run(argv):
         ap.add_argument('--file', help='the name a player has the game under; its own name by default')
         ap.add_argument('--zxdb', help='its ZXDB entry'); ap.add_argument('--title'); ap.add_argument('--publisher', help='for the menu, such as "Ocean, 1986"')
         ap.add_argument('--patch-by'); ap.add_argument('--colours-by'); ap.add_argument('--credit', help="INF1's credit; a patch from NexClash keeps the default")
+        ap.add_argument('--fix-label', metavar='TEXT', help='the menu\'s name for the NexClash build\'s line, 1 to %d characters, for a game "%s" does not fit, such as Colour' % (FIX_LABEL_MAX, FIX_LABEL))
         ap.add_argument('--build', help="what INF1 calls the build; the .nex's own name by default")
         ap.add_argument('--rom', type=int, choices=(0, 1, 2), default=0, help='0 not stated; 1 runs on the Next\'s own ROM; 2 needs the Sinclair 48K ROM, carried in the alt ROM')
         ap.add_argument('--highest-bank', type=int, help='the highest 16K bank the build uses at run time, if above the highest it lists')
@@ -1411,7 +1437,7 @@ def run(argv):
         target = dict(file=a.file or os.path.basename(a.game), title=a.title, zxdb_entry=a.zxdb)
         if a.also: target['file'] = [target['file']] + [os.path.basename(x) for x in a.also]
         with open(a.nex, 'rb') as g: built = g.read()
-        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by,
+        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by, fix_label=a.fix_label,
                     build=a.build or os.path.splitext(os.path.basename(a.nex))[0], nex_md5=hashlib.md5(built).hexdigest())
         if a.credit: info['credit'] = a.credit
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))

@@ -90,6 +90,7 @@ def main() -> None:
     print("patch", len(patch), "bytes; vectors", (HERE / "vectors_tape.json").stat().st_size, "bytes")
     tape_set(blocks, banks, nex, extra, z80)
     toggle(blocks, nex, extra, z80, tap)
+    label(nex, extra, z80, tap)
 
 
 def tzx10(blocks) -> bytes:
@@ -153,6 +154,23 @@ def toggle(blocks, nex, extra, z80, tap) -> None:
     (HERE / "vectors_toggle.json").write_text(json.dumps(vectors, indent=1) + "\n")
     print("toggle patch", len(patch), "bytes")
 
+
+
+def label(nex, extra, z80, tap) -> None:
+    """The tape patch with INF1's fix_label: the menu names its main line Colour. Nothing else differs."""
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        for n, data in (("tape.tap", tap), ("tape_start.z80", z80), ("o.nex", nex)): (tmp / n).write_bytes(data)
+        patch, _ = nxc.make(str(tmp / "tape.tap"), str(tmp / "o.nex"), dict(title="Label Vector", file="tape.tap"),
+                            dict(publisher="Nobody, 2026", fix_label="Colour", build="synthetic"), nonce=NONCE, master=MASTER, rom=1,
+                            proof=dict(replay="none: synthetic", hardware="none"), start=str(tmp / "tape_start.z80"), tape_banks=extra)
+    (HERE / "vector_label.nxc").write_bytes(patch)
+    text = dict(nxc.blocks(patch)[1])[b"INF1"]
+    vectors = dict(comment="Made by make_tape_vectors.py from synthetic bytes: a fix_label. Nothing here comes from any game.",
+                   patch_md5=hashlib.md5(patch).hexdigest(), inf1=text.decode(), menu_line="  1  " + nxc.fix_label(patch).ljust(26) + "[ON]",
+                   default_line="  1  " + nxc.FIX_LABEL.ljust(26) + "[ON]", expected={"base": digest(nxc.apply(patch, game=tap))})
+    (HERE / "vectors_label.json").write_text(json.dumps(vectors, indent=1) + "\n")
+    print("label patch", len(patch), "bytes")
 
 if __name__ == "__main__":
     main()

@@ -27,7 +27,7 @@ def variant(nex: bytes, changes) -> bytes:
     return bytes(out)
 
 
-def build(toggles, colours=None, trainers=(), proof=None):
+def build(toggles, colours=None, trainers=(), proof=None, info=None):
     """(patch, base .nex, tap): toggles {name: (changes, logic)}, colours {name: changes}, changes [(bank 2 offset, value)]."""
     blocks = G.data_blocks()
     start = G.start_banks(blocks)
@@ -42,7 +42,7 @@ def build(toggles, colours=None, trainers=(), proof=None):
         col = {}
         for i, (n, ch) in enumerate((colours or {}).items()):
             (tmp / f"c{i}.nex").write_bytes(variant(nex, ch)); col[n] = str(tmp / f"c{i}.nex")
-        patch, _ = nxc.make(str(tmp / "game.tap"), str(tmp / "o.nex"), dict(title="Tape Game", file="game.tap"), dict(build="t"),
+        patch, _ = nxc.make(str(tmp / "game.tap"), str(tmp / "o.nex"), dict(title="Tape Game", file="game.tap"), dict(build="t", **(info or {})),
                             start=str(tmp / "start.z80"), tape_banks=extra, toggles=tog, colours=col,
                             trainer_blocks=[nxc.trn1(n, p) for n, p in trainers], proof=proof)
     return patch, nex, G.tap(blocks)

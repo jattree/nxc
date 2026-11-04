@@ -1,0 +1,14 @@
+{
+ "comment": "Made by make_tape_vectors.py from synthetic bytes: a fix_label. Nothing here comes from any game.",
+ "patch_md5": "99a21c8c17e199553fa9dcd9d988f39e",
+ "inf1": "publisher=Nobody, 2026\nfix_label=Colour\nbuild=synthetic\ncredit=Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-later)\n",
+ "menu_line": "  1  Colour                    [ON]",
+ "default_line": "  1  Colour clash fix          [ON]",
+ "expected": {
+  "base": {
+   "length": 164352,
+   "crc32": "041f1f32",
+   "md5": "bcd07d778c1bf662a685a082343e8a62"
+  }
+ }
+}

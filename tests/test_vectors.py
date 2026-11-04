@@ -130,8 +130,8 @@ class SpecAgainstVectors(unittest.TestCase):
                 self.assertLess(path.stat().st_size, 200_000, path.name)
         self.assertEqual(sorted(p.name for p in VECTORS.iterdir() if p.is_file()),
                          ["game_v1.z80", "game_v3.z80", "make_tape_vectors.py", "make_vectors.py", "tape.tap", "tape.tzx", "tape_start.z80",
-                          "tapeset_a.tap", "tapeset_b.tzx", "vector.nxc", "vector_tape.nxc", "vector_tapeset.nxc", "vector_toggle.nxc", "vectors.json",
-                          "vectors_tape.json", "vectors_tapeset.json", "vectors_toggle.json"])
+                          "tapeset_a.tap", "tapeset_b.tzx", "vector.nxc", "vector_label.nxc", "vector_tape.nxc", "vector_tapeset.nxc", "vector_toggle.nxc",
+                          "vectors.json", "vectors_label.json", "vectors_tape.json", "vectors_tapeset.json", "vectors_toggle.json"])
 
 
 # A tape walker and bank builder written from the spec's words and tables alone, with nothing from the tool.
@@ -298,6 +298,28 @@ class ToggleSpecAgainstVectors(unittest.TestCase):
         offsets = [o for o in range(16384) if chunk[o >> 3] & (0x80 >> (o & 7))]
         self.assertEqual((bank, offsets, chunk[2048:]), (2, [0x2100, 0x2101, 0x2180], bytes((0x11, 0x22, 0x33))))
         self.assertNotEqual(v["expected"]["off"], v["expected"]["on"])
+
+
+class LabelSpecAgainstVectors(unittest.TestCase):
+    """The fix_label vector, read from the spec: INF1 is in the clear, a block of tag, length and text; the menu's main line
+    is the label padded so [ON] starts in column 31, or "Colour clash fix" without one."""
+
+    def test_the_label(self) -> None:
+        v = json.loads((VECTORS / "vectors_label.json").read_text())
+        patch = (VECTORS / "vector_label.nxc").read_bytes()
+        self.assertEqual(hashlib.md5(patch).hexdigest(), v["patch_md5"])
+        at = 38
+        while patch[at:at + 4] != b"INF1":
+            at += 8 + struct.unpack_from("<I", patch, at + 4)[0]
+        text = patch[at + 8:at + 8 + struct.unpack_from("<I", patch, at + 4)[0]]
+        self.assertEqual(text.decode(), v["inf1"])
+        lines = dict(l.split("=", 1) for l in text[:252].decode().split("\n")[:-1])
+        self.assertEqual(lines["fix_label"], "Colour")
+        self.assertEqual(v["menu_line"], "  1  " + lines["fix_label"].ljust(26) + "[ON]")
+        self.assertEqual(v["menu_line"].index("[ON]"), 31)
+        self.assertEqual(v["default_line"], "  1  Colour clash fix          [ON]")
+        tape = json.loads((VECTORS / "vectors_tape.json").read_text())
+        self.assertEqual(v["expected"]["base"], tape["expected"]["base from the tap"])     # the same build: a name changes nothing else
 
 
 class TapeSetSpecAgainstVectors(unittest.TestCase):
