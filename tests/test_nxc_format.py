@@ -817,9 +817,15 @@ class SeveralDumps(Case):
 class Split(Case):
     def test_the_first_part_is_exactly_what_nextzxos_loads(self) -> None:
         self.assertGreater(len(self.binary), H.FIRST_PART)
-        self.assertEqual(len(self.binary), H.FIRST_PART + self.symbols["ov_size"])
-        self.assertEqual(self.binary[-4:], b"NXQ1")
+        sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size")]
+        self.assertEqual(len(self.binary), H.FIRST_PART + sum(sizes))
+        at = H.FIRST_PART
+        for size in sizes:                                  # the overlay, then a tape's two parts, each ending in the tag
+            at += size
+            self.assertEqual(self.binary[at - 4:at], b"NXQ1")
         self.assertLessEqual(self.symbols["code_end"], self.symbols["patch_path"])
+        for n in ("tape1_size", "tape2_size"):
+            self.assertLessEqual(self.symbols["z80_part_at"] + self.symbols[n], self.symbols["code_end"])
 
     def test_every_message_fits_what_nextzxos_shows(self) -> None:
         # In JNext, NextZXOS cut an error message of 40 characters at 32.
@@ -830,8 +836,9 @@ class Split(Case):
 
     def test_a_cut_or_mixed_file_gives_a_clear_message(self) -> None:
         said = "NEXCLASH cut or mixed: recopy it"
-        for name, binary in (("first part only", self.binary[:H.FIRST_PART]), ("cut short", self.binary[:-1]), ("cut more", self.binary[:H.FIRST_PART + 100]),
-                             ("another's tail", self.binary[:-4] + b"XXXX")):
+        end = H.FIRST_PART + self.symbols["ov_size"]              # a snapshot reads no further than the overlay
+        for name, binary in (("first part only", self.binary[:H.FIRST_PART]), ("cut short", self.binary[:end - 1]), ("cut more", self.binary[:H.FIRST_PART + 100]),
+                             ("another's tail", self.binary[:end - 4] + b"XXXX" + self.binary[end:])):
             with self.subTest(name):
                 m = self.machine({"patch.nxc": self.patch, "game.z80": self.game}, binary=binary)
                 failed, message = m.run('"patch.nxc"')
