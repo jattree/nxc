@@ -32,6 +32,8 @@ MV_REC          equ MENU_RAM + 10       ; 2: the record being drawn
 MV_VTYPE        equ MENU_RAM + 12
 
 MENU_LINES_MAX  equ 10
+MENU_TITLE_ROW  equ 27                  ; a title's characters in a bar row, before the stripes
+MENU_HELP_ROW   equ 18                  ; the help's first row, at the latest
 A_TEXT          equ $47                 ; BRIGHT, paper black, ink white
 A_BAR           equ $4e                 ; paper blue, ink yellow
 A_HEAD          equ $46
@@ -41,8 +43,8 @@ A_HELP          equ $45
 A_SEL           equ $69                 ; paper cyan, ink blue
 M_DEBOUNCE      equ 3000
 
-; HL: the description, DE: the font. Carry on return: BREAK; otherwise ENTER or
-; SPACE, with the states in the description as chosen.
+; HL: the description, DE: the font. Carry on return: BREAK; otherwise A is 0
+; for ENTER and not 0 for SPACE, with the states in the description as chosen.
 menu_run:
         ld      (MV_DESC),hl
         ld      (MV_FONT),de
@@ -90,8 +92,11 @@ menu_run:
         ld      a,c
         ld      (MV_SEL),a
         jr      .draw
-.go:    call    menu_release
-        or      a
+.go:    sub     13                      ; A: 0 ENTER, not 0 SPACE
+        push    af
+        call    menu_release
+        pop     af
+        or      a                       ; carry clear
         ret
 .brk:   call    menu_release
         scf
@@ -255,44 +260,88 @@ md_skip:
 
 menu_draw:
         call    scr_clear
-        xor     a
-        call    bar
-        call    md_strings              ; the title from column 1, cut to 20
+        call    md_strings              ; the title, never cut: one bar row, or two
+        ld      b,MENU_TITLE_ROW + 1
         push    hl
-        ld      b,20
         call    len_max
         pop     hl
-        push    af
-        ld      b,a
+        ld      e,a                     ; E: the first row's characters
+        cp      MENU_TITLE_ROW + 1
+        jr      c,.one_row
+        ld      e,MENU_TITLE_ROW        ; longer: up to the last space that fits
+        ld      d,e
+        push    hl
+.sp:    ld      a,e
+        or      a
+        jr      z,.hard
+        push    hl
+        ld      c,e
+        ld      b,0
+        add     hl,bc
+        ld      a,(hl)
+        pop     hl
+        cp      ' '
+        jr      z,.split
+        dec     e
+        jr      .sp
+.hard:  ld      e,d                     ; no space: 27 then the rest
+.split: pop     hl
+.one_row:
+        push    hl
+        push    de
+        xor     a
+        call    bar
+        pop     de
+        pop     hl
         xor     a
         ld      c,1
         call    at
+        ld      b,e
+        call    puts_max                ; HL: the rest, at a space or the end
+        ld      a,(hl)
+        cp      ' '
+        jr      nz,.no_sp
+        inc     hl
+.no_sp: ld      a,(hl)
+        ld      b,1                     ; the publisher's row
+        or      a
+        jr      z,.pub
+        push    hl
+        ld      a,1
+        call    bar
+        pop     hl
+        ld      a,1
+        ld      c,1
+        call    at
+        ld      b,MENU_TITLE_ROW
         call    puts_max
-        pop     af
-        neg                             ; the publisher's room: to column 26, a blank after the title
-        add     a,25
-        cp      17
-        jr      c,.room
-        ld      a,16
-.room:  ld      b,a
+        ld      b,2
+.pub:   ld      a,b                     ; the publisher, in white, below the bar
+        push    af
         call    md_strings
         call    md_skipz
         push    hl
+        ld      b,32
         call    len_max
         pop     hl
-        or      a
-        jr      z,.no_pub
         ld      b,a
-        neg
-        add     a,27
-        ld      c,a
-        xor     a
+        ld      c,1                     ; from column 1, or 0 if it needs all 32
+        cp      32
+        jr      c,.pc
+        dec     c
+.pc:    pop     af
+        push    af
         call    at
+        ld      a,A_TEXT
+        ld      (MV_ATTR),a
         call    puts_max
-.no_pub:
-        ld      a,2                     ; the lines, in their sections
-        ld      (MV_ROW),a
-        ld      a,$ff
+        pop     af
+        inc     a                       ; then a blank row, but for a title of two rows
+        cp      3
+        jr      z,.lines
+        inc     a
+.lines: ld      (MV_ROW),a
+        ld      a,$ff                   ; the lines, in their sections
         ld      (MV_SECT),a
         xor     a
         ld      (MV_LINE),a
@@ -358,9 +407,12 @@ menu_draw:
         pop     hl
         or      a
         jr      z,.credits
-        ld      a,(MV_ROW)                  ; still the keys' row: a blank after it
-        add     a,2
-        ld      (MV_ROW),a
+        ld      a,(MV_ROW)                  ; still the keys' row: a blank after it,
+        add     a,2                         ; unless the help would then pass row 20
+        cp      MENU_HELP_ROW + 1
+        jr      c,.hr
+        ld      a,MENU_HELP_ROW
+.hr:    ld      (MV_ROW),a
         ld      c,0
         call    at
         ld      a,A_HELP

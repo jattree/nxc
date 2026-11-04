@@ -99,39 +99,41 @@ class TheMenu(unittest.TestCase):
         m.keyboard = spy
         m.run_to(0xC000)
         text = m.screens[0].splitlines()
-        self.assertEqual(text[0], " VECTOR        Nobody, 2026 ////")
-        self.assertEqual(text[2], "TRAINER")
-        self.assertEqual(text[3], "1 Lives                    [OFF]")
-        self.assertEqual(text[5], "OPTIONS")
-        self.assertEqual(text[6], "2 Colour clash fix         [ ON]")
-        self.assertEqual(text[7], "3 Enhanced colours         [OFF]")
-        self.assertEqual(text[8], "4 Language                 [OFF]")
-        self.assertEqual(text[10], "ENTER play   BREAK exit")
+        self.assertEqual(text[0], " VECTOR                     ////")
+        self.assertEqual(text[1], " Nobody, 2026")
+        self.assertEqual(text[3], "TRAINER")
+        self.assertEqual(text[4], "1 Lives                    [OFF]")
+        self.assertEqual(text[6], "OPTIONS")
+        self.assertEqual(text[7], "2 Colour clash fix         [ ON]")
+        self.assertEqual(text[8], "3 Enhanced colours         [OFF]")
+        self.assertEqual(text[9], "4 Language                 [OFF]")
+        self.assertEqual(text[11], "ENTER play   BREAK exit")
         self.assertEqual(text[22], "Patch: Vector")
         self.assertEqual(text[23], " Engine: Dean Woodyatt      ////")
         self.assertNotIn("nexclash", m.screens[0].lower())
         a = attrs[0]
         self.assertEqual(set(a[0][:28]) | set(a[23][:28]), {0x4E})
         self.assertEqual(bytes(a[0][28:]), bytes((0x4A, 0x56, 0x74, 0x65)))
-        self.assertEqual(set(a[3]), {0x69})                 # line 1, selected
-        self.assertEqual(a[2][0], 0x46)
-        self.assertEqual(a[7][28:31], bytes((0x42,) * 3))   # OFF in red
-        self.assertEqual(a[6][29:31], bytes((0x44,) * 2))   # ON in green
-        self.assertEqual(a[10][:10], bytes((0x44,) * 10))
-        self.assertEqual(a[10][13:23], bytes((0x42,) * 10))
-        self.assertEqual(a[1], bytes((0x47,) * 32))
+        self.assertEqual(set(a[4]), {0x69})                 # line 1, selected
+        self.assertEqual(a[3][0], 0x46)
+        self.assertEqual(a[8][28:31], bytes((0x42,) * 3))   # OFF in red
+        self.assertEqual(a[7][29:31], bytes((0x44,) * 2))   # ON in green
+        self.assertEqual(a[11][:10], bytes((0x44,) * 10))
+        self.assertEqual(a[11][13:23], bytes((0x42,) * 10))
+        self.assertEqual(a[1], bytes((0x47,) * 32))         # the publisher, in white
+        self.assertEqual(a[2], bytes((0x47,) * 32))
 
     def test_keys_and_rules(self):
         m = self.screens(PATCH, GAME, ("caps+6", "caps+6", "caps+7", "3", "3", "2", "4", "1"))
         s = [x.splitlines() for x in m.screens]
         # m.screens[k]: the screen as key k is pressed, so after the keys before it
-        self.assertTrue(s[1][3].endswith("[OFF]"))
-        self.assertEqual(s[4][7], "3 Enhanced colours         [ ON]")     # one set: ON
-        self.assertEqual(s[5][7], "3 Enhanced colours         [OFF]")     # and back
-        self.assertEqual(s[6][6], "2 Colour clash fix         [ ON]")     # fixed on in a .nex
-        self.assertEqual(s[7][8], "4 Language                 [ ON]")
-        self.assertEqual(s[8][3], "1 Lives                    [ ON]")
-        self.assertEqual(m.screens[-1].splitlines()[3], "1 Lives                    [ ON]")
+        self.assertTrue(s[1][4].endswith("[OFF]"))
+        self.assertEqual(s[4][8], "3 Enhanced colours         [ ON]")     # one set: ON
+        self.assertEqual(s[5][8], "3 Enhanced colours         [OFF]")     # and back
+        self.assertEqual(s[6][7], "2 Colour clash fix         [ ON]")     # fixed on in a .nex
+        self.assertEqual(s[7][9], "4 Language                 [ ON]")
+        self.assertEqual(s[8][4], "1 Lives                    [ ON]")
+        self.assertEqual(m.screens[-1].splitlines()[4], "1 Lives                    [ ON]")
 
     def test_the_limit(self):
         menu = bytearray(nxc.apply_menu(PATCH, GAME))
@@ -140,20 +142,60 @@ class TheMenu(unittest.TestCase):
         m = N.NexMachine(bytes(menu), REGS, keys=("3", "4", "enter"))
         m.final_entry = 0
         m.run_to(0xC000)
-        self.assertEqual(m.screens[-1].splitlines()[8], "4 Language                 [OFF]")
+        self.assertEqual(m.screens[-1].splitlines()[9], "4 Language                 [OFF]")
 
     def test_help(self):
         f = nxc.set_help(PATCH, GAME, {"trainer_1": "Lives stay at three, whatever happens to you.", "fix": "The sprite build."})
         self.assertEqual(nxc.help_texts(f)["trainer_1"], "Lives stay at three, whatever   happens to you.")
         m = self.screens(f, GAME, ("caps+6",))
         s0, s1 = m.screens[0].splitlines(), m.screens[1].splitlines()
-        self.assertEqual(s0[12:15], ["Lives:", "Lives stay at three, whatever", "happens to you."])
-        self.assertEqual(s1[12:14], ["Colour clash fix:", "The sprite build."])
+        self.assertEqual(s0[13:16], ["Lives:", "Lives stay at three, whatever", "happens to you."])
+        self.assertEqual(s1[13:15], ["Colour clash fix:", "The sprite build."])
         same_start(self, f, GAME, ("1",), chosen=["1"])
         for bad in ({"trainer_2": "x"}, {"toggle_1": "x"}, {"fix": "x" * 65}, {"fix": "two\nlines"}):
             with self.assertRaises(nxc.Wrong):
                 nxc.set_help(PATCH, GAME, bad)
         self.assertEqual(nxc.help_texts(nxc.set_help(f, GAME, {"fix": ""})), {"trainer_1": "Lives stay at three, whatever   happens to you."})
+
+
+@unittest.skipUnless(N.z80 is not None, "the z80 package is not installed (pip install z80)")
+class Presets(unittest.TestCase):
+    def test_choices_are_where_the_menu_starts(self):
+        menu = nxc.apply_menu(PATCH, GAME, chosen=["1"], language="Vector")
+        bare = nxc.apply(PATCH, game=GAME, chosen=["1"], language="Vector")
+        a, _ = N.start_state(bare, REGS)
+        b, m = N.start_state(menu, REGS, keys=("enter",), bare_header=bare[:512])
+        self.assertEqual(a, b)
+        text = m.screens[0].splitlines()
+        self.assertEqual((text[4], text[9]), ("1 Lives                    [ ON]", "4 Language                 [ ON]"))
+        b, _ = N.start_state(menu, REGS, keys=("1", "4", "enter"), bare_header=nxc.apply(PATCH, game=GAME)[:512])
+        self.assertEqual(N.start_state(nxc.apply(PATCH, game=GAME), REGS)[0], b)
+        for bad in (dict(chosen=["9"]), dict(colours="Blue"), dict(toggles=["x"])):
+            with self.assertRaises(nxc.Wrong):
+                nxc.apply_menu(PATCH, GAME, **bad)
+
+    def test_a_long_title(self):
+        for title, rows in (("A TITLE OF TWENTY-SEVEN CHS", 1), ("THE TITLE THAT GOES ON AND ON PAST ONE ROW", 2)):
+            rows = [None] * rows
+            m = N.NexMachine(nxc.apply_menu(retitle(PATCH, title), GAME), REGS, keys=("enter",))
+            m.run_to(0xC000)
+            text = m.screens[0].splitlines()
+            self.assertTrue(all(t.endswith("////") for t in text[:len(rows)]))
+            joined = " ".join(t[1:28].strip() for t in text[:len(rows)])
+            self.assertEqual(joined, title)
+            self.assertEqual(text[len(rows)], " Nobody, 2026")
+            self.assertEqual(text[len(rows) + (1 if len(rows) == 2 else 2)], "TRAINER")
+
+
+def retitle(f, title):
+    """The vector patch with its target's title changed, resealed."""
+    st, bl = nxc.check_key(f, GAME)[:2]
+    out = []
+    for t, d in bl:
+        if t == b"TGT1":
+            d = d.replace(b"title=Vector", b"title=" + title.encode())
+        out.append([t, d])
+    return nxc.seal(f[:nxc.CHECK_AT], out, st)
 
 
 class Writer(unittest.TestCase):
@@ -197,9 +239,8 @@ class Writer(unittest.TestCase):
             self.assertEqual((Path(d) / "m.nex").read_bytes(), nxc.apply_menu(PATCH, GAME))
             r = tool(str(VECTORS / "vector.nxc"), str(g), "-o", str(Path(d) / "b.nex"), "--bare", "--trainer", "1")
             self.assertEqual((Path(d) / "b.nex").read_bytes(), nxc.apply(PATCH, game=GAME, chosen=["1"]))
-            r = tool(str(VECTORS / "vector.nxc"), str(g), "-o", str(Path(d) / "x.nex"), "--trainer", "1")
-            self.assertNotEqual(r.returncode, 0)
-            self.assertIn("--bare", r.stderr)
+            r = tool(str(VECTORS / "vector.nxc"), str(g), "-o", str(Path(d) / "x.nex"), "--trainer", "1", "--colours", "Painted")
+            self.assertEqual((Path(d) / "x.nex").read_bytes(), nxc.apply_menu(PATCH, GAME, chosen=["1"], colours="Painted"))
             r = tool("help", str(VECTORS / "vector.nxc"), str(g), "-o", str(Path(d) / "h.nxc"), "--line", "fix=The sprite build.")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(nxc.help_texts((Path(d) / "h.nxc").read_bytes()), {"fix": "The sprite build."})

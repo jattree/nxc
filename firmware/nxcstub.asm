@@ -39,6 +39,8 @@ LINE_I          equ VARS + 8
 PASS            equ VARS + 9            ; what a pass applies: 0 trainers, 2 sets and toggles
 RUN_LEFT        equ VARS + 10           ; 2
 RUN_DST         equ VARS + 12           ; 2
+BITBUF          equ SCRSAVE             ; a chunk's bitmap, once the screen is back
+BITMAP_SIZE     equ 2048
 MENU_RAM        equ VARS + 16
 BLOCK_LEN       equ 57
 C               equ $c000               ; where M0 is at entry
@@ -290,62 +292,44 @@ pokes:  call    rd
         djnz    .p
         ret
 
-; A set's runs: bank, offset, length, bytes, until bank 0xFF. Copied as much
-; as the data's page holds at a time.
+; A set's chunks, as SET2 holds them decoded: a bank, a length, then the chunk,
+; a bitmap of 2,048 bytes and a byte for each bit set; until a bank of 0xFF.
 runs:   call    rd
         cp      $ff
         ret     z
         call    map_bank
+        call    rd                      ; the length: 2,048 and the bytes, which follow
         call    rd
-        ld      (RUN_DST),a
-        call    rd
-        or      $c0
-        ld      (RUN_DST + 1),a
-        call    rd
-        ld      (RUN_LEFT),a
-        call    rd
-        ld      (RUN_LEFT + 1),a
-.c:     ld      bc,(RUN_LEFT)
+        ld      hl,BITBUF               ; the bitmap, where bank 5's screen was kept
+        ld      bc,BITMAP_SIZE
+.b:     call    rd
+        ld      (hl),a
+        inc     hl
+        dec     bc
         ld      a,b
         or      c
-        jr      z,runs
-        ld      de,(DP_ADDR)
-        ld      hl,$a000
-        or      a
-        sbc     hl,de                   ; the room left in the page
-        or      a
-        sbc     hl,bc
-        jr      nc,.all
-        add     hl,bc
-        ld      b,h
-        ld      c,l
-.all:   ld      hl,(RUN_LEFT)
-        or      a
-        sbc     hl,bc
-        ld      (RUN_LEFT),hl
-        ld      hl,(DP_ADDR)
-        ld      de,(RUN_DST)
-        ldir
-        ld      (RUN_DST),de
-        ld      (DP_ADDR),hl
+        jr      nz,.b
+        ld      hl,BITBUF
+        ld      de,$c000
+.byte:  ld      c,(hl)
+        ld      b,8
+.bit:   sla     c
+        jr      nc,.keep
+        call    rd
+        ld      (de),a
+.keep:  inc     de
+        djnz    .bit
+        inc     hl
         ld      a,h
-        cp      $a0
-        jr      nz,.c
-        ld      a,(DP_PAGE)             ; the page is used up
-        inc     a
-        ld      (DP_PAGE),a
-        call    map4
-        ld      hl,$8000
-        ld      (DP_ADDR),hl
-        jr      .c
+        cp      high (BITBUF + BITMAP_SIZE)
+        jr      nz,.byte
+        jr      runs
 
-; Past one set's runs.
+; Past one set's chunks.
 skip_runs:
         call    rd
         cp      $ff
         ret     z
-        call    rd
-        call    rd
         call    rd
         ld      c,a
         call    rd

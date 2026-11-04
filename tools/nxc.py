@@ -12,8 +12,8 @@ byte for byte. See spec/NXC-FORMAT.md.
     nxc.py help PATCH GAME -o OUT --line KEY=TEXT ...   (the menu's help: fix, colours, language, trainer_N, toggle_N)
     nxc.py handoff-bas -o NXCHAND.BAS
 
-Applying writes a .nex that carries its menu: it shows the menu when it starts and applies the choices then. --bare writes
-one without it, with the choices given on the command line fixed in it.
+Applying writes a .nex that carries its menu: it shows the menu when it starts, with any choices given here already on,
+and applies what is chosen then. --bare writes one without it, with the choices given here fixed in it.
 
 Applying, listing, adding a target, importing cheats and crediting need only Python 3's standard library. Making a
 patch, or anything else that compresses, needs the zx0 compressor: set NXC_ZX0_DIR to its folder.
@@ -1317,6 +1317,7 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
 
 # ---------------------------------------------------------------- the menu, and a .nex that carries it
 
+MENU_TITLE = 54   # two bar rows of 27
 HELP_TAG = b'HLP1'; HELP_MAX = 64; HELP_READ = 1024; MENU_ROW = 32; MENU_LINES = 10; MENU_HOLD = 2   # help: two rows of 32
 STUB = os.path.join(HERE, '..', 'firmware', 'nxcstub.bin')   # assembled from firmware/nxcstub.asm, with firmware/menu.asm
 STUB_PARAMS = 8; STUB_DESC_END = 0x1D00; STUB_BLOCK = 57; MENU_ENTRY = 0xC000; NO_DATA = 0xFFFFFF
@@ -1381,27 +1382,43 @@ def menu_text(v, n):
     return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:n]).encode()
 
 def set_runs(chunks):
-    """A set's chunks as the runs a menu .nex carries: bank, offset, length, bytes, then a bank of 0xFF."""
-    out = bytearray()
-    for b, chunk in chunks:
-        offsets = chunk_offsets(chunk); place = BITMAP
-        for start, end in spans(offsets):
-            out += struct.pack('<BHH', b, start, end - start) + chunk[place:place + end - start]; place += end - start
-    return bytes(out + b'\xff')
+    """A set as a menu .nex carries it: each chunk decoded, as a bank, its length and the chunk (its bitmap, then a byte
+    for each bit set), then a bank of 0xFF."""
+    return b''.join(struct.pack('<BH', b, len(chunk)) + chunk for b, chunk in chunks) + b'\xff'
 
-def menu_description(f, st=None):
-    """(the description firmware/menu.asm draws, the data its lines point at) for a menu .nex. Without st (the patch's
-    key), sets and toggles get no data, as for the dot command's own menu."""
+def menu_presets(f, chosen=None, colours=None, language=None, toggles=()):
+    """The states a menu .nex's lines start with, from choices as apply takes them: {line index: state}."""
+    lines = menu_lines(f); out = {}
+    numbers = [k for k, t in enumerate(trainers(f)) for c in chosen or () if t[1] == c or str(k + 1) == str(c)]
+    for c in chosen or ():
+        if not any(t[1] == c or str(k + 1) == str(c) for k, t in enumerate(trainers(f))): raise Wrong('this patch has no trainer %s' % c)
+    for i, (kind, name, key, payload) in enumerate(lines):
+        if kind == 0 and int(key.split('_')[1]) - 1 in numbers: out[i] = 1
+        if kind == 2:
+            want = colours if key == 'colours' else language
+            if want is not None:
+                names = [e['name'].decode('ascii', 'replace') for e in payload]
+                if want not in names: raise Wrong('this patch has no %s set called %s' % (key, want))
+                out[i] = names.index(want) + 1
+        if kind == 3 and name in (toggles or ()): out[i] = 1
+    for t in toggles or ():
+        if not any(l[0] == 3 and l[1] == t for l in lines): raise Wrong('this patch has no toggle called %s' % t)
+    if sum(1 for i, v in out.items() if lines[i][0] >= 2 and v) > MENU_HOLD: raise Wrong('at most %d sets and toggles can be on at once' % MENU_HOLD)
+    return out
+
+def menu_description(f, st=None, presets=None):
+    """(the description firmware/menu.asm draws, the data its lines point at) for a menu .nex, its lines starting in the
+    states presets gives ({line: state}, off without). Without st (the patch's key), sets and toggles get no data."""
     lines = menu_lines(f); helps = help_texts(f)
     title = next((t['title'] for t in targets(f) if t.get('title')), b'') or b''
     pub = inf1_value(f, 'publisher') or b''
     colours = (inf1_value(f, 'colours_by') or b'') if colour_sets(f) else b''
     d = bytearray((1, MENU_HOLD, len(lines)))
-    for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), 26), (pub, 16), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
+    for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), MENU_TITLE), (pub, MENU_ROW), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
         d += menu_text(v, n) + b'\0'
     data = bytearray(); where = []
-    for kind, name, key, payload in lines:
-        d += bytes((kind, 1 if kind == 1 else 0, len(payload) if kind == 2 else 0))
+    for i, (kind, name, key, payload) in enumerate(lines):
+        d += bytes((kind, 1 if kind == 1 else (presets or {}).get(i, 0), len(payload) if kind == 2 else 0))
         d += menu_text(name.encode(), 25) + b'\0' + menu_text(helps.get(key, '').encode(), HELP_MAX) + b'\0'
         if kind == 2:
             for e in payload: d += menu_text(e['name'], 25) + b'\0'
@@ -1435,14 +1452,16 @@ def set_or_poke_touches(f, st, bank, lo, hi):
                 if b == bank and any(lo <= o < hi for o in chunk_offsets(chunk)): return True
     return False
 
-def apply_menu(f, game):
+def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=()):
     """The .nex that carries its menu (spec, "A .nex that carries its menu"): the bare .nex with nothing chosen, its header
-    changed to start the stub, then the menu banks: the stub, its parameters and the description, then the data."""
+    changed to start the stub, then the menu banks: the stub, its parameters and the description, then the data. The
+    choices, as apply takes them, are where its menu starts."""
+    presets = menu_presets(f, chosen, colours, language, toggles)
     bare = apply(f, game=game)
     opened = check_key(f, game); st, bl = opened[:2]
     header = bytearray(bare[:512])
     m0 = dict(bl)[b'OPT1'][2] + 1
-    desc, data = menu_description(f, st)
+    desc, data = menu_description(f, st, presets)
     stub = bytearray(stub_binary())
     if len(stub) + len(desc) > STUB_DESC_END: raise Wrong('the menu is too big for its bank')
     count = 1 + -(-len(data) // BANK); top = m0 + count - 1
@@ -1717,7 +1736,7 @@ def run(argv):
     ap.add_argument('--trainer', action='append', help='a trainer by number from 1 or by name; repeatable')
     ap.add_argument('--original', action='store_true', help='no patch: write the game itself, or with trainers a snapshot of it with them in; for a tape, the start state as a .z80')
     ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a patch that wants a set of tapes; repeatable, in order')
-    ap.add_argument('--bare', action='store_true', help='a .nex without the menu, with the choices given here fixed in it; by default the .nex carries the menu, and the choices are made when it starts')
+    ap.add_argument('--bare', action='store_true', help='a .nex without the menu, with the choices given here fixed in it; by default the .nex carries the menu, which starts with the choices given here')
     a = ap.parse_args(argv); f = read_file(a.patch)
     print('colour sets:', ', '.join(['(default)'] + colour_sets(f)))
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
@@ -1734,9 +1753,7 @@ def run(argv):
         game = game_arg(a.game, a.also)
         if a.original: d = original_with_pokes(f, game, a.trainer)
         elif a.bare: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
-        elif a.trainer or a.colours or a.language or a.toggle:
-            raise Wrong('a .nex with its menu has every choice on its menu, made when it starts: give --bare to fix them now')
-        else: d = apply_menu(f, game)
+        else: d = apply_menu(f, game, chosen=a.trainer, colours=a.colours, language=a.language, toggles=a.toggle)
         with open(output, 'wb') as g: g.write(d)
         print('wrote', output, hashlib.md5(d).hexdigest())
 
