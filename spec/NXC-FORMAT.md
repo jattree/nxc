@@ -155,7 +155,7 @@ A reader skips an entry of a kind it does not know, or cannot read, for finding 
 
 **`file` is a bare name, never a path.** 1 to 127 bytes of printable ASCII, with none of `/ \ : * ? " < > |`, no `..` anywhere, no space first, no space or dot last. Anything else makes the whole patch damage, whichever kind the entry is, so that a wrong name can never open another path. A loader puts it after the patch's own folder: if that does not fit, it refuses, and never cuts a name short. `firmware/nexclash.asm` holds 223 bytes of path.
 
-A writer refuses two entries with the same MD5, or the same `file` whatever the case, so that a loader does not open one file twice for two entries. A reader need not check this.
+A writer refuses two entries with the same MD5, or the same `file` whatever the case, so that a loader does not open one file twice for two entries; and two entries of different kinds with the same length, so that a loader can tell from the length alone which kind a file is. A reader need not check this.
 
 Every entry in a patch must rebuild the same banks. A writer checks that, by rebuilding, before it writes anything: only the banks matter, since the `.nex` carries its own start-up state, so dumps with different registers but the same memory are the same to it. With the clash fix off each player gets their own file, so its registers are theirs. A tape's banks are those its `TAP1` makes, which include any extra banks, so a tape that places a multiload's blocks and a snapshot cannot be entries of one patch.
 
@@ -394,7 +394,7 @@ and nothing after them. The header holds the start's registers, IFF1 and IFF2, i
 
 A reader refuses as damage: a table that is not exactly those fields; a header breaking its rules; a copy naming a data block past the tape's, or past the first 1,024, or whose offset plus length passes that block's end; a copy or site whose bank is 112 or above, whose length is out of range, or whose offset plus length passes 16,384; and copies, or sites, out of order. Each of the two lists goes through banks in `.nex` order, and within a bank by rising offset, with no two of one list overlapping. A copy and a site may overlap, and then the site wins.
 
-**The banks.** The machine's banks (0 to 7 for 128K; 5, 2 and 0 for 48K), and any other bank a copy or site names, start as 16,384 zeros. The copies are made, in order, then the sites. The machine's banks are then the game's memory at the start; another bank is an **extra bank**. An extra bank the `.nex` header does not list is damage, since it would never be used and readers could differ over whether it matters. A reader works out the CRC below before it uses a bank, and refuses a mismatch as damage.
+**The banks.** The machine's banks (0 to 7 for 128K; 5, 2 and 0 for 48K), and any other bank a copy or site names, start as 16,384 zeros. The copies are made, in order, then the sites. The machine's banks are then the game's memory at the start; another bank is an **extra bank**. Building the `.nex`, an extra bank its header does not list is damage, since it would never be used and readers could differ over whether it matters; the clash fix off uses only the machine's banks, and does not read the header. A reader works out the CRC below before it uses a bank, and refuses a mismatch as damage.
 
 **What it holds of the game.** The copies say where things go, and the bytes come from the player's tape. The sites hold what is not on the tape: the screen as drawn, variables, the stack, and tables the game's code made when it ran, which are derived from the game. **A writer takes from the tape every run of 16 bytes or more of the start that the tape holds, wherever it holds it, and carries only the rest.** So a table holds none of the tape's code or data as it is, and no more than the 24,576 bytes a snapshot patch's `SIT1` may. `tools/nxc.py` also refuses more than 8,192 bytes of sites unless told otherwise: a start state the tape does not hold is a sign of a packed or encrypted tape, whose unpacked form is the game, and a plain copy recipe is not for those.
 
@@ -534,7 +534,7 @@ These are skipped, and get no number. Each is sized as TZX 1.20 sizes it, as a h
 
 Any other ID, the deprecated 0x16, 0x17, 0x34 and 0x40 among them, and a block that runs past the end, make a file that cannot be a tape target: a writer refuses it, and a reader treats it as damage. Jumps, loops and calls change nothing here, since the numbering is the file's order, not the order a deck plays it. Direct recordings, CSW and generalised data hold a signal, not bytes, so nothing can be copied from them in this version, and a game held only in them cannot be a tape target.
 
-A reader need only walk a tape as far as the highest data block its table names; a writer has checked the whole file, and the key proves it is that file.
+A reader walks a tape from its start until it has found the highest data block its table names, refusing on the way what this section refuses, and reads nothing after that block. A writer checks the whole file.
 
 ## Applying a patch, in this order
 

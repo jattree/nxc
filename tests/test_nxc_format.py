@@ -1294,7 +1294,9 @@ class MakeCommand(Case):
         r = self.run_tool("make", str(self.tmp / "o.nex"), str(self.tmp / "game.z80"), "-o", str(self.tmp / "o.nex"))
         self.assertIn("one of the inputs", r.stderr)
         (self.tmp / "game.tap").write_bytes(self.game)
-        self.assertIn("is .z80 or .sna", self.make(game="game.tap").stderr)
+        self.assertIn("needs --start", self.make(game="game.tap").stderr)
+        (self.tmp / "game.szx").write_bytes(self.game)
+        self.assertIn("is .z80, .sna, .tap or .tzx", self.make(game="game.szx").stderr)
         self.assertIn("No such file", self.make(game="nothing.z80").stderr)
         r = subprocess.run([sys.executable, "-W", "ignore", str(ROOT / "tools/nxc.py"), "make", str(self.tmp / "o.nex"), str(self.tmp / "game.z80"), "-o", str(self.tmp / "out.nxc")],
                            capture_output=True, text=True, env=dict(os.environ, NXC_ZX0_DIR=str(self.tmp)))
