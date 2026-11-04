@@ -30,7 +30,7 @@ This repository holds no game data, and no patches from any game.
 
 ## Using a patch
 
-**On a PC,** which writes the finished `.nex`:
+**On a PC,** which writes the finished `.nex` (step by step, with what you need: [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md)):
 
 ```sh
 python tools/nxc.py Game.nxc Game.z80 -o Game.nex
@@ -162,6 +162,7 @@ checking another implementation.
 
 ## Documents
 
+- [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md): building a .nex from a patch on a PC, step by step
 - [spec/NXC-FORMAT.md](spec/NXC-FORMAT.md): the format
 - [firmware/README.md](firmware/README.md): the loader and its setup
 - [backgrounds/README.md](backgrounds/README.md): a picture behind any game, an experiment that has only run in JNext
