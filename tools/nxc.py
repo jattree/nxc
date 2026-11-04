@@ -1428,6 +1428,9 @@ def run(argv):
             if value and inf1_value(f, key) is None: raise Wrong('the menu names must end within the first %d bytes of INF1' % TEXT_READ)
         with open(a.output, 'wb') as g: g.write(f)
         print('rebuilds it exactly, MD5', info['nex_md5']); print(memory_text(dict(blocks(f)[1])[b'OPT1'][2]))
+        together = bool(colour_sets(f)) + bool(languages(f)) + len(toggles_of(f))
+        if together > 2:
+            print('note: %d choices can be on together; firmware/nexclash.asm holds 2 at once, so its menu lets no third be turned on' % together)
         for one in made["sets"]:
             print('set %s: %d bytes decoded in %d banks, %d at most at once, %d stored' % (one['name'], one['decoded'], one['banks'], one['largest'], one['stored']))
         print('wrote', a.output, len(f), 'bytes')

@@ -1472,9 +1472,10 @@ class Choices:
 """)],
         "the key taken with the fix off": [(""".step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
-        jr      nz,.wait
+        jp      nz,.wait
 """, """.step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
+        nop
         nop
         nop
 """)],

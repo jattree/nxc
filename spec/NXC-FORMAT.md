@@ -337,7 +337,7 @@ A **toggle** is a set of its own kind, on its own menu line, for a bug fix or an
 
 **Compatibility.** A reader that does not know kinds 3 and 4 checks the block's shape and index as for any `SET2`, offers no line, and the game plays without it. So toggles raise no level and set no flag in `OPT1`. Patches and vectors made before toggles are unchanged byte for byte.
 
-**Memory.** A chosen toggle is held as a chosen set is: one chunk at a time. `firmware/nexclash.asm` keeps three 8K pages for each chosen set or toggle, and can hold two at once: with more on it refuses, before reading anything but the menu, with `Too many options: turn one off`.
+**Memory, and a reader's limit.** A chosen toggle is held as a chosen set is: one chunk at a time, in the same pages. **A reader may hold fewer chosen sets and toggles at once than a patch offers.** It states its limit N, and its menu then lets no more than N be on: a key that would turn on one more does nothing, and the line stays `[OFF]`, so a choice it cannot make is never offered and then refused. `firmware/nexclash.asm` holds 2, in three 8K pages each. A writer warns when a patch offers more sets and toggles that can be on together than 2: a colour line, a language line and each toggle count one each.
 
 ### Reserved: snapshot output
 

@@ -91,7 +91,8 @@ folder in one form on NextZXOS, tried in JNext for `/tmp/x`, `c:/tmp/x`, `C:\TMP
 Patch: Jon Attree  Colours: Alberto Conde
 ```
 
-The number keys work a line. Trainers start off, the clash fix on, the sets off, and trainers combine with any of it. Each kind of
+Toggles (`SET2` kinds 3 and 4) get a line each after the sets', with their own names, `[OFF]` to begin with. At most two sets
+and toggles can be on at once: with two on, a key that would turn on another does nothing. The number keys work a line. Trainers start off, the clash fix on, the sets off, and trainers combine with any of it. Each kind of
 set a patch has gets a line, "Enhanced colours" then "Language", whose key steps from `[OFF]` through its sets and back. One colour
 set is `[ON]` or `[OFF]`; otherwise the line names it, in up to 17 characters. With the fix off these read `[N/A]`, ignore their
 keys and are not applied; turning the fix on again brings the choices back. Only ten lines have keys, the tenth being key 0, so with

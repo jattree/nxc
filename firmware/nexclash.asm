@@ -109,7 +109,9 @@ TARGET_FIXED    equ 30
 BANK_SIZE       equ 16384
 PAGES           equ 6
 SET_PAGES       equ 3                       ; more, for each set chosen
-KINDS           equ 2                       ; colours, language
+KINDS           equ 2                       ; colours, language: also the sets or toggles chosen at once
+KIND_TOGGLE     equ 3                       ; a toggle: 3 display only, 4 changes the logic
+TOGGLES_MAX     equ 4
 SET_FIXED       equ 5                       ; stream index, kind, choice, base, name's length
 SET_CRC_INDEX   equ 255                     ; the stream of a set's CRC; a chunk's is its bank
 BITMAP          equ 2048                    ; a chunk's first part: one bit for each byte of a bank
@@ -159,7 +161,7 @@ SMALLBUF_END_HI equ $3F
 SMALLBUF_SIZE   equ $0100
 TEXT_MAX        equ 252
 stack_top       equ $4000
-stack_floor     equ $3F40                   ; 192 of stack
+stack_floor     equ $3F4C                   ; 180 of stack (64 the most measured)
 rc4_s           equ $3D00                   ; aligned
 statbuf         equ smallbuf                ; read at once, and nothing else is there
 rc4_base        equ $AA00                   ; in the I/O page
@@ -326,10 +328,13 @@ game_kind       equ target_kinds
         VAR     set_seen, 1                 ; a target that is a set of tapes
         VAR     set_key, 8                  ; "file_K=", for a set's Kth file
         VAR     set_tab, 1 + 5 * (SET_FILES_MAX - 1) ; a set's n, then each further file's kind and length
-        VAR     set_len1, 4                 ; its first file's length
         VAR     set_kind1, 1                ; and kind, with KIND_SET
-        VAR     text_at, 4                  ; where its text starts in the patch
         VAR     set_cmp, 4                  ; a name being compared: where, how long
+        VAR     tg_count, 1                 ; toggles offered, at most TOGGLES_MAX
+        VAR     tg_on, 1                    ; a bit for each, on
+        VAR     tg_kind, TOGGLES_MAX        ; each one's kind, 3 or 4
+        VAR     tg_rank, TOGGLES_MAX        ; and its place among the toggles of that kind, from 1
+        VAR     tg_seen, 2                  ; how many of kind 3, and of 4, so far
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -351,6 +356,9 @@ var_at          =   $3F00
         VAR     set_kinds, 1                ; a bit for each file of the set that is a .tzx
         VAR     cur_fi, 1                   ; which of them gh has open
         VAR     readable_kind, 1            ; KIND_Z80; the set's kind once a set is the game
+        VAR     slot_kinds, 3               ; the SET2 kind each set slot holds: 1, 2 or a toggle's; [2] for the menu
+        VAR     set_len1, 4                 ; before the menu: a set's first file's length
+        VAR     text_at, 4                  ; and where its text starts in the patch
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -611,8 +619,11 @@ find_set:
         ld      a,(tagbuf+3)
         cp      BASE_SPRITE
         jr      nz,.next
-        ld      a,(cur_kind)
-        inc     a
+        ld      a,(cur_kind)            ; the kind that slot holds
+        ld      hl,slot_kinds
+        add     a,l
+        ld      l,a
+        ld      a,(hl)
         ld      hl,tagbuf+1
         cp      (hl)
         jr      nz,.next
@@ -1197,6 +1208,10 @@ start_menu:
         ld      (set_n),a
         ld      a,KIND_Z80
         ld      (readable_kind),a
+        ld      a,1                         ; slot 0 colours, slot 1 language, until the menu says
+        ld      (slot_kinds),a              ; (HL is the argument line: kept)
+        inc     a
+        ld      (slot_kinds+1),a
         ld      a,h
         or      l
         jp      z,usage
@@ -1364,16 +1379,23 @@ walk_first:
         cp      2
         jp      c,bad_patch
 .level_ok:
-        ld      a,(set_counts)              ; ten lines have keys: two kinds leave room for 7
+        ld      b,9                         ; ten lines have keys: the fix, each kind, each toggle,
+        ld      a,(set_counts)              ; and trainers in what is left
         or      a
-        jr      z,.lines
-        ld      a,(set_counts+1)
+        jr      z,.k1
+        dec     b
+.k1:    ld      a,(set_counts+1)
         or      a
-        jr      z,.lines
+        jr      z,.k2
+        dec     b
+.k2:    ld      a,(tg_count)
+        neg
+        add     a,b
+        ld      b,a
         ld      a,(trainer_count)
-        cp      TRAINERS_SHOWN
+        cp      b
         jr      c,.lines
-        dec     a
+        ld      a,b
         ld      (trainer_count),a
 .lines: ld      hl,tapes_listed             ; every tape target in exactly one TAP1
         ld      de,tapes_served
@@ -2283,7 +2305,39 @@ note_set:
         cp      BASE_SPRITE
         ret     nz
         ld      a,(smallbuf+1)
-        dec     a
+        cp      KIND_TOGGLE
+        jr      c,.set
+        cp      KIND_TOGGLE + 2
+        ret     nc
+        ld      c,a                         ; a toggle: its rank among its kind, and a line if room
+        ld      hl,tg_seen - KIND_TOGGLE
+        ld      b,0
+        add     hl,bc
+        inc     (hl)
+        ld      e,(hl)
+        ld      a,(tg_count)
+        cp      TOGGLES_MAX
+        ret     nc
+        ld      hl,tg_kind
+        ld      d,b
+        push    af
+        ld      a,l
+        pop     af
+        push    af
+        ld      l,a
+        ld      h,0
+        ld      bc,tg_kind
+        add     hl,bc
+        ld      a,(smallbuf+1)
+        ld      (hl),a
+        ld      bc,TOGGLES_MAX
+        add     hl,bc
+        ld      (hl),e
+        pop     af
+        inc     a
+        ld      (tg_count),a
+        ret
+.set:   dec     a
         cp      KINDS
         ret     nc
         ld      c,a
@@ -2341,21 +2395,28 @@ menu:   call    mode_on
 .not_this:
         inc     hl
         djnz    .kind
-        jr      .wait                       ; no such line
+        jp      menu_toggle_key             ; a toggle's line, or none
 .step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
-        jr      nz,.wait
+        jp      nz,.wait
         ld      a,e                         ; off, then each in turn, then off
         ld      de,KINDS
         add     hl,de
         cp      (hl)
         jr      nz,.more
         ld      (hl),0
-        jr      .again
-.more:  inc     (hl)
-        jr      .again
+        jp      .again
+.more:  ld      a,(hl)                      ; from off, only if there is room for one more
+        or      a
+        jr      nz,.inc
+        call    chosen_count
+        cp      KINDS
+        jp      nc,.wait
+.inc:   inc     (hl)
+        jp      .again
 .go:    call    wait_release
         call    check_ram
+        call    toggles_to_slots
         jp      mode_off
 .cancel:
         ld      hl,msg_cancelled
@@ -2529,6 +2590,7 @@ menu_draw:
         call    kind_line
         ld      a,1
         call    kind_line
+        call    toggle_lines
         call    newline
         ld      hl,str_keys
         call    put_line
@@ -2586,6 +2648,176 @@ menu_draw:
         call    put_z
         ld      hl,colours_by
         jp      put_line
+
+; ------------------------------------------------------------ toggles on the menu
+
+; Each toggle's line, after the sets': its name, then [ON], [OFF], or [N/A] with the fix off.
+toggle_lines:
+        ld      a,(tg_count)
+        or      a
+        ret     z
+        ld      b,a
+        ld      c,0
+.t:     push    bc
+        ld      hl,cur_line
+        inc     (hl)
+        ld      a,(hl)
+        call    digit_row
+        pop     bc
+        push    bc
+        ld      a,c
+        call    toggle_find
+        ld      a,(tagbuf+4)
+        ld      (cur_name),a
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        ld      a,(cur_name)
+        ld      b,a
+        ld      hl,smallbuf
+        call    put_name
+        ld      a,(ver_original)
+        or      a
+        jr      nz,.na
+        pop     bc
+        push    bc
+        ld      a,c
+        call    toggle_bit
+        and     (hl)
+        call    put_on_off
+        jr      .n
+.na:    ld      a,31
+        call    pad_to
+        ld      hl,str_unavailable
+        call    put_line
+.n:     pop     bc
+        inc     c
+        djnz    .t
+        ret
+
+; Toggle A (from 0)'s SET2 block found, its fixed part in tagbuf, the file at its name.
+toggle_find:
+        ld      e,a
+        ld      d,0
+        ld      hl,tg_kind
+        add     hl,de
+        ld      a,(hl)
+        ld      (slot_kinds+2),a
+        ld      hl,tg_rank
+        add     hl,de
+        ld      a,(hl)
+        ld      (cur_n),a
+        ld      a,2
+        ld      (cur_kind),a
+        jp      find_set
+
+; HL at tg_on, A the bit of toggle A.
+toggle_bit:
+        ld      b,a
+        inc     b
+        ld      a,$80
+.r:     rlca
+        djnz    .r
+        ld      hl,tg_on
+        ret
+
+; A: how many sets and toggles are chosen.
+chosen_count:
+        push    hl
+        ld      c,0
+        ld      hl,set_choices
+        ld      b,KINDS
+.s:     ld      a,(hl)
+        or      a
+        jr      z,.s0
+        inc     c
+.s0:    inc     hl
+        djnz    .s
+        ld      a,(tg_on)
+        ld      b,8
+.t:     rrca
+        jr      nc,.t0
+        inc     c
+.t0:    djnz    .t
+        ld      a,c
+        pop     hl
+        ret
+
+; A is the line's number past the sets' lines (C the key's line): a toggle's line turns it on or
+; off; on only while fewer than KINDS are chosen, so a third choice cannot be made at all.
+menu_toggle_key:
+        ld      b,a                         ; the last line with a key so far
+        ld      a,c
+        sub     b
+        jp      c,menu.wait
+        jp      z,menu.wait
+        dec     a                           ; toggle number
+        ld      hl,tg_count
+        cp      (hl)
+        jp      nc,menu.wait
+        ld      e,a
+        ld      a,(ver_original)
+        or      a
+        jp      nz,menu.wait
+        ld      a,e
+        call    toggle_bit
+        ld      d,a
+        and     (hl)
+        jr      nz,.off
+        call    chosen_count
+        cp      KINDS
+        jp      nc,menu.wait
+        ld      a,(tg_on)
+        or      d
+        ld      (tg_on),a
+        jp      menu.again
+.off:   ld      a,d
+        cpl
+        and     (hl)
+        ld      (hl),a
+        jp      menu.again
+
+; ENTER: each toggle on takes a slot no set uses, its kind and rank there. The menu let no more
+; be chosen than there are slots.
+toggles_to_slots:
+        ld      a,(tg_count)
+        or      a
+        ret     z
+        ld      b,a
+        ld      c,0
+.t:     push    bc
+        ld      a,c
+        call    toggle_bit
+        and     (hl)
+        jr      z,.n
+        ld      hl,set_choices
+        ld      de,slot_kinds
+        ld      a,(hl)
+        or      a
+        jr      z,.free
+        inc     hl
+        inc     de
+        ld      a,(hl)
+        or      a
+        jp      nz,bad_patch                ; cannot be: the menu counted
+.free:  pop     bc
+        push    bc
+        push    hl
+        ld      hl,tg_kind
+        ld      b,0
+        add     hl,bc
+        ld      a,(hl)
+        ld      (de),a
+        ld      de,TOGGLES_MAX
+        add     hl,de
+        ld      a,(hl)
+        pop     hl
+        ld      (hl),a
+.n:     pop     bc
+        inc     c
+        djnz    .t
+        ret
 
 ; The line of kind A, if it offers any. Colours with one set is [ON] or [OFF]; otherwise it
 ; says [OFF] or the name, from the patch, at most 17 characters, ending in the last column.
@@ -3412,18 +3644,23 @@ work_begin:
         ld      (hl),0
         ldir
         jp      crc_make
-.none:  ld      a,(page_goal)
-        ld      hl,msg_ram
-        cp      PAGES
-        jp      z,fail_hl
-        ld      hl,msg_ram_set
-        cp      PAGES + SET_PAGES
-        jp      z,fail_hl
-        ld      hl,msg_ram_two
-        cp      PAGES + 2 * SET_PAGES
-        jp      z,fail_hl
-        ld      hl,msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
+.none:  ld      a,(page_goal)               ; 6, 9, 12 or 15 pages: the message for that many
+        add     a,low (ram_msgs - PAGES)
+        ld      l,a
+        ld      h,high ram_msgs
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        ex      de,hl
         jp      fail_hl
+ram_msgs:       dw msg_ram                  ; 3 bytes apart, as the pages go up in threes
+                db 0
+                dw msg_ram_set
+                db 0
+                dw msg_ram_two
+                db 0
+                dw msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
+        assert  high ram_msgs == high (ram_msgs + 10), "the RAM messages' table crosses a page"
 
 ; ---- page_list: W0, W1, IO, sites x 3, set x 3.
 
