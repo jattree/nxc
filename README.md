@@ -63,7 +63,7 @@ setup, including the `browser.cfg` line, is in [firmware/README.md](firmware/REA
 
 ## Patches
 
-[`patches/`](patches/) holds the patches made so far and played through the real loader in JNext. Each has a `.nfo` beside it naming the exact game file it needs, what it changes, its cheats, its credits and how it was tested. None of them carries game code: you need your own copy of each game. Nothing has run on a real Next yet.
+[`patches/`](patches/) holds the patches made so far and played through the real loader in JNext, one folder per game. Each patch has a `.nfo` beside it naming the exact game file it needs, what it changes, its cheats, its credits and how it was tested. None of them carries game code: you need your own copy of each game. Nothing has run on a real Next yet.
 
 ## Making a patch
 

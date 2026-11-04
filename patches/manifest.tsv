@@ -1,20 +1,20 @@
-patch	old short name	title	game file (target)	patch md5	note
-Atic Atac (1983)(Ultimate Play The Game)[a8][a8].nxc	ATICATAC.NXC	Atic Atac	Atic Atac (1983)(Ultimate Play The Game)[a8][a8].z80	4061839bc4f47b642259e4f611a469b1	
-Chuckie Egg (1983)(A'n'F)[a3][a3].nxc	CHUCKIE.NXC	Chuckie Egg	Chuckie Egg (1983)(A'n'F)[a3][a3].z80	fccc69880ae3c0270ac8e3b41896cdfa	
-Commando (1985)(Elite Systems)[aka Space Invasion].nxc	COMMANDO.NXC	Commando	Commando (1985)(Elite Systems)[aka Space Invasion].z80	b08e62cd2e21283137c62de078095378	
-Cyclone (1985)(Vortex)[a][a].nxc	CYCLONE.NXC	Cyclone	Cyclone (1985)(Vortex)[a][a].z80	c2e5605ce81989a67288ce35b32b0f15	
-Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).nxc	DIZZY1.NXC	Dizzy	Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).z80	c02d3d274efe6fa5981121ae24e9c4cd	
-Incredible Shrinking Fireman, The (1986)(Mastertronic)[NexClash GPT].nxc	FIREGPT.NXC	Incredible Shrinking Fireman	Incredible Shrinking Fireman, The (1986)(Mastertronic).z80	abb195428a76e296379a6bce28cfc7f4	
-Incredible Shrinking Fireman, The (1986)(Mastertronic)[NexClash OPUS].nxc	FIREOPUS.NXC	Incredible Shrinking Fireman	Incredible Shrinking Fireman, The (1986)(Mastertronic).z80	210d7705814f5bea3d85471fea4f8981	
-Ikari Warriors (1988)(Elite Systems)(48K-128K).nxc	IKARI.NXC	Ikari Warriors	Ikari Warriors (1988)(Elite Systems)(48K-128K).z80	a902709f96f6ac164a61e298865ea673	no outline, by owner choice
-Jet Pac (1983)(Ultimate Play The Game)(16K)[a2][a2].nxc	JETPAC.NXC	Jetpac	Jet Pac (1983)(Ultimate Play The Game)(16K)[a2][a2].z80	11fdc5ab644400068a8f0595f9e908f9	our coloured build, not Dean's
-Knight Tyme (1986)(Mastertronic Added Dimension)(128K)[Magic Knight 3].nxc	KTYME.NXC	Knight Tyme	Knight Tyme (1986)(Mastertronic Added Dimension)(128K)[Magic Knight 3].z80	ced9c85893284caf9c98e449b3f75dd3	
-Midnight Resistance (1990)(Ocean)(128K).nxc	MIDNIGHT.NXC	Midnight Resistance	Midnight Resistance (1990)(Ocean)(128K).z80	e7de739eaab20907437b8305d9521095	
-Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].nxc	RAINBOWZ.NXC	Rainbow Islands	Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].z80	0e5cc6513051cb08dcc5642b9396b4d0	
-Rambo - First Blood Part II (1985)(Ocean).nxc	RAMBO.NXC	Rambo: First Blood II	Rambo - First Blood Part II (1985)(Ocean).z80	0aa0ab5a896304294d06e4150827c980	
-Renegade (1987)(Imagine)(128K).nxc	RENEG128.NXC	Renegade	Renegade (1987)(Imagine)(128K).z80	2d040df2a95e5e6a3c2914d011642c48	
-Smash TV (1991)(Ocean)(128K).nxc	SMASHTV.NXC	Smash TV	Smash TV (1991)(Ocean)(128K).z80	087ecd52e8d514409dc4f90ea52501e6	
-Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc	SPELLBND.NXC	Spellbound	Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80	0970da8dc79ed3b68754b62e16230414	
-Target - Renegade (1988)(Imagine)(128K).nxc	TARGETRE.NXC	Target: Renegade	Target - Renegade (1988)(Imagine)(128K).z80	606b6fd842ba461a88b993030e5ebdf2	
-Everyone's a Wally (1985)(Mikro-Gen).nxc	WALLY.NXC	Everyone's a Wally	Everyone's a Wally (1985)(Mikro-Gen).z80	b66462d96d6d8cbce735fd30fe5ba74c	
-Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a][sky fix].nxc	RAINBOWS.NXC	Rainbow Islands (sky fix test)	Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].z80	ea8748d9b0cd1ba892babc84b25d1db3	sky fix test variant of RAINBOWZ
+patch	title	game file (target)	patch md5
+Atic Atac (1983)(Ultimate Play The Game)/Atic Atac (1983)(Ultimate Play The Game)[a8][a8].nxc	Atic Atac	Atic Atac (1983)(Ultimate Play The Game)[a8][a8].z80	4061839bc4f47b642259e4f611a469b1
+Chuckie Egg (1983)(A'n'F)/Chuckie Egg (1983)(A'n'F)[a3][a3].nxc	Chuckie Egg	Chuckie Egg (1983)(A'n'F)[a3][a3].z80	fccc69880ae3c0270ac8e3b41896cdfa
+Commando (1985)(Elite Systems)/Commando (1985)(Elite Systems)[aka Space Invasion].nxc	Commando	Commando (1985)(Elite Systems)[aka Space Invasion].z80	b08e62cd2e21283137c62de078095378
+Cyclone (1985)(Vortex)/Cyclone (1985)(Vortex)[a][a].nxc	Cyclone	Cyclone (1985)(Vortex)[a][a].z80	c2e5605ce81989a67288ce35b32b0f15
+Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters)/Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).nxc	Dizzy	Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).z80	c02d3d274efe6fa5981121ae24e9c4cd
+Everyone's a Wally (1985)(Mikro-Gen)/Everyone's a Wally (1985)(Mikro-Gen).nxc	Everyone's a Wally	Everyone's a Wally (1985)(Mikro-Gen).z80	b66462d96d6d8cbce735fd30fe5ba74c
+Ikari Warriors (1988)(Elite Systems)(48K-128K)/Ikari Warriors (1988)(Elite Systems)(48K-128K).nxc	Ikari Warriors	Ikari Warriors (1988)(Elite Systems)(48K-128K).z80	a902709f96f6ac164a61e298865ea673
+Incredible Shrinking Fireman, The (1986)(Mastertronic)/Incredible Shrinking Fireman, The (1986)(Mastertronic)[NexClash GPT].nxc	Incredible Shrinking Fireman	Incredible Shrinking Fireman, The (1986)(Mastertronic).z80	abb195428a76e296379a6bce28cfc7f4
+Incredible Shrinking Fireman, The (1986)(Mastertronic)/Incredible Shrinking Fireman, The (1986)(Mastertronic)[NexClash OPUS].nxc	Incredible Shrinking Fireman	Incredible Shrinking Fireman, The (1986)(Mastertronic).z80	210d7705814f5bea3d85471fea4f8981
+Jet Pac (1983)(Ultimate Play The Game)(16K)/Jet Pac (1983)(Ultimate Play The Game)(16K)[a2][a2].nxc	Jetpac	Jet Pac (1983)(Ultimate Play The Game)(16K)[a2][a2].z80	11fdc5ab644400068a8f0595f9e908f9
+Knight Tyme (1986)(Mastertronic Added Dimension)(128K)/Knight Tyme (1986)(Mastertronic Added Dimension)(128K)[Magic Knight 3].nxc	Knight Tyme	Knight Tyme (1986)(Mastertronic Added Dimension)(128K)[Magic Knight 3].z80	ced9c85893284caf9c98e449b3f75dd3
+Midnight Resistance (1990)(Ocean)(128K)/Midnight Resistance (1990)(Ocean)(128K).nxc	Midnight Resistance	Midnight Resistance (1990)(Ocean)(128K).z80	e7de739eaab20907437b8305d9521095
+Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)/Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].nxc	Rainbow Islands	Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].z80	0e5cc6513051cb08dcc5642b9396b4d0
+Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)/Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a][sky fix].nxc	Rainbow Islands (sky fix test)	Rainbow Islands - The Story of Bubble Bobble 2 (1990)(Ocean)(128K)[a][a].z80	ea8748d9b0cd1ba892babc84b25d1db3
+Rambo - First Blood Part II (1985)(Ocean)/Rambo - First Blood Part II (1985)(Ocean).nxc	Rambo: First Blood II	Rambo - First Blood Part II (1985)(Ocean).z80	0aa0ab5a896304294d06e4150827c980
+Renegade (1987)(Imagine)(128K)/Renegade (1987)(Imagine)(128K).nxc	Renegade	Renegade (1987)(Imagine)(128K).z80	2d040df2a95e5e6a3c2914d011642c48
+Smash TV (1991)(Ocean)(128K)/Smash TV (1991)(Ocean)(128K).nxc	Smash TV	Smash TV (1991)(Ocean)(128K).z80	087ecd52e8d514409dc4f90ea52501e6
+Spellbound (1985)(Mastertronic Added Dimension)(128K)/Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc	Spellbound	Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80	0970da8dc79ed3b68754b62e16230414
+Target - Renegade (1988)(Imagine)(128K)/Target - Renegade (1988)(Imagine)(128K).nxc	Target: Renegade	Target - Renegade (1988)(Imagine)(128K).z80	606b6fd842ba461a88b993030e5ebdf2

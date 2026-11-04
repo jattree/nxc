@@ -14,12 +14,14 @@ On the Next
 1. Install the loader once: NEXCLASH in C:/DOT/, NXCHAND.BAS in C:/NEXTZXOS/,
    and the .nxc line in C:/NEXTZXOS/BROWSER.CFG (see the nxc repo's
    firmware/README.md).
-2. Copy a .nxc and its game file into the same folder.
+2. Copy a game's folder to the card and put your game file in it, beside
+   the .nxc.
 3. Choose the .nxc in the Browser. A menu shows the cheats and colour sets;
    ENTER builds the game and runs it.
 
-Patch names follow the game file's name, with .nxc in place of .z80. Where two
-patches share one game, a tag in brackets tells them apart.
+Each game has its own folder. Patch names follow the game file's name, with
+.nxc in place of .z80. Where two patches share one game, they share its folder
+and a tag in brackets tells them apart.
 
 Credits
 -------

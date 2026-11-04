@@ -16,4 +16,5 @@ build/
 tests/vectors/__pycache__/
 # Published patches: they carry no game code (see patches/README.txt).
 !patches/
-!patches/*.nxc
+!patches/*/
+!patches/*/*.nxc
