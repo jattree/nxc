@@ -9,7 +9,11 @@ byte for byte. See spec/NXC-FORMAT.md.
     nxc.py add-dump PATCH KNOWN_GAME NEW_DUMP -o OUT [--file NAME] [--zxdb ENTRY] [--title TITLE]   (also add-target)
     nxc.py import-pok PATCH POK GAME -o OUT [--publisher "Ocean, 1986"] [--only "Name,Name"]
     nxc.py credit PATCH GAME -o OUT [--patch-by NAME] [--colours-by NAME]
+    nxc.py help PATCH GAME -o OUT --line KEY=TEXT ...   (the menu's help: fix, colours, language, trainer_N, toggle_N)
     nxc.py handoff-bas -o NXCHAND.BAS
+
+Applying writes a .nex that carries its menu: it shows the menu when it starts and applies the choices then. --bare writes
+one without it, with the choices given on the command line fixed in it.
 
 Applying, listing, adding a target, importing cheats and crediting need only Python 3's standard library. Making a
 patch, or anything else that compresses, needs the zx0 compressor: set NXC_ZX0_DIR to its folder.
@@ -1311,6 +1315,138 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
         out[offs[b] + o] = v
     return bytes(out)
 
+# ---------------------------------------------------------------- the menu, and a .nex that carries it
+
+HELP_TAG = b'HLP1'; HELP_MAX = 64; HELP_READ = 1024; MENU_ROW = 32; MENU_LINES = 10; MENU_HOLD = 2   # help: two rows of 32
+STUB = os.path.join(HERE, '..', 'firmware', 'nxcstub.bin')   # assembled from firmware/nxcstub.asm, with firmware/menu.asm
+STUB_PARAMS = 8; STUB_DESC_END = 0x1D00; STUB_BLOCK = 57; MENU_ENTRY = 0xC000; NO_DATA = 0xFFFFFF
+
+def help_texts(f):
+    """HLP1's lines as a reader takes them: from its first HELP_READ bytes, each value's first HELP_MAX characters, anything
+    unprintable as ?. {} without the block."""
+    body = dict(blocks(f)[1]).get(HELP_TAG, b'')[:HELP_READ]; out = {}
+    for line in body.split(b'\n')[:-1] if body else ():
+        k, eq, v = line.partition(b'=')
+        if eq and k.decode('latin-1') not in out and v:
+            out[k.decode('latin-1')] = ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:HELP_MAX])
+    return out
+
+def wrap_help(text):
+    """A help text as two rows of MENU_ROW: a word that would cross the end of the first row starts the second, padded
+    with spaces. Wrong if it is then longer than HELP_MAX or not printable ASCII."""
+    if not text or '\n' in text or not text.isascii() or not text.isprintable(): raise Wrong('help is 1 to %d printable ASCII characters' % HELP_MAX)
+    text = ' '.join(text.split())
+    if len(text) > MENU_ROW and text[MENU_ROW] != ' ' and ' ' in text[:MENU_ROW]:
+        cut = text.rindex(' ', 0, MENU_ROW)
+        text = text[:cut].ljust(MENU_ROW) + text[cut + 1:]
+    elif len(text) > MENU_ROW and text[MENU_ROW] == ' ':
+        text = text[:MENU_ROW] + text[MENU_ROW + 1:]
+    if len(text) > HELP_MAX: raise Wrong('help does not fit two rows of %d: %r' % (MENU_ROW, text))
+    return text
+
+def menu_lines(f):
+    """The menu's lines as every reader shows them: [(kind, name, help key, payload)], kind 0 trainer, 1 the main line, 2 a
+    kind of set (payload its SET2 entries), 3 a toggle (payload its entry); trainers (payload their POKEs) fill what the
+    main line, the kinds and the toggles leave of ten, at most TRAINERS_SHOWN."""
+    kinds = [(KIND_NAMES_SET[k], 'Enhanced colours' if k == KIND_COLOURS else 'Language', offered(f, k)) for k in (KIND_COLOURS, KIND_LANGUAGE) if offered(f, k)]
+    tg = [e for e in sets(f) if e['kind'] in TOGGLE_KINDS and e['base'] == BASE_SPRITE][:TOGGLES_MAX]
+    room = min(TRAINERS_SHOWN, MENU_LINES - 1 - len(kinds) - len(tg))
+    out = [(0, t[1], 'trainer_%d' % (n + 1), t[2]) for n, t in enumerate(trainers(f)[:room])]
+    out.append((1, fix_label(f), 'fix', None))
+    out += [(2, label, key, es) for key, label, es in kinds]
+    out += [(3, e['name'].decode('ascii', 'replace'), 'toggle_%d' % (n + 1), e) for n, e in enumerate(tg)]
+    return out
+
+def set_help(f, game, texts):
+    """The patch with HLP1 holding texts, {key: text}, each wrapped as wrap_help does; an empty text removes its key, and
+    no keys left removes the block. The same nonce and encrypted blocks, with a new check value."""
+    st, bl = check_key(f, game)[:2]
+    keys = {k for _, _, k, _ in menu_lines(f)} | {'colours', 'language', 'fix'}
+    have = dict(help_texts(f))
+    for k, v in texts.items():
+        if k not in keys: raise Wrong('this patch has no menu line %s' % k)
+        if v: have[k] = wrap_help(v)
+        else: have.pop(k, None)
+    order = [k for _, _, k, _ in menu_lines(f) if k in have]
+    body = b''.join(b'%s=%s\n' % (k.encode(), have[k].encode()) for k in order)
+    if len(body) > HELP_READ: raise Wrong('the help must end within the first %d bytes of its block' % HELP_READ)
+    out = [[t, d] for t, d in bl if t != HELP_TAG]
+    if body:
+        at = max(i for i, (t, _) in enumerate(out) if t in (b'INF1', b'TRN1', SET_TAG) or t == b'TGT1') + 1
+        out.insert(at, [HELP_TAG, body])
+    return seal(f[:CHECK_AT], out, st)
+
+def menu_text(v, n):
+    return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:n]).encode()
+
+def set_runs(chunks):
+    """A set's chunks as the runs a menu .nex carries: bank, offset, length, bytes, then a bank of 0xFF."""
+    out = bytearray()
+    for b, chunk in chunks:
+        offsets = chunk_offsets(chunk); place = BITMAP
+        for start, end in spans(offsets):
+            out += struct.pack('<BHH', b, start, end - start) + chunk[place:place + end - start]; place += end - start
+    return bytes(out + b'\xff')
+
+def menu_description(f, st=None):
+    """(the description firmware/menu.asm draws, the data its lines point at) for a menu .nex. Without st (the patch's
+    key), sets and toggles get no data, as for the dot command's own menu."""
+    lines = menu_lines(f); helps = help_texts(f)
+    title = next((t['title'] for t in targets(f) if t.get('title')), b'') or b''
+    pub = inf1_value(f, 'publisher') or b''
+    colours = (inf1_value(f, 'colours_by') or b'') if colour_sets(f) else b''
+    d = bytearray((1, MENU_HOLD, len(lines)))
+    for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), 26), (pub, 16), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
+        d += menu_text(v, n) + b'\0'
+    data = bytearray(); where = []
+    for kind, name, key, payload in lines:
+        d += bytes((kind, 1 if kind == 1 else 0, len(payload) if kind == 2 else 0))
+        d += menu_text(name.encode(), 25) + b'\0' + menu_text(helps.get(key, '').encode(), HELP_MAX) + b'\0'
+        if kind == 2:
+            for e in payload: d += menu_text(e['name'], 25) + b'\0'
+        if kind == 1 or (st is None and kind != 0): where.append(NO_DATA); continue
+        where.append(len(data))
+        if kind == 0:
+            data += bytes((len(payload),)) + b''.join(struct.pack('<BHB', b, o, v) for b, o, v in payload)
+        else:
+            for e in (payload if kind == 2 else [payload]): data += set_runs(read_set(st, e)[1])
+    for w in where: d += struct.pack('<I', w)[:3]
+    return bytes(d), bytes(data)
+
+def stub_binary():
+    with open(STUB, 'rb') as g: return g.read()
+
+def menu_refusal(header, top):
+    """Why a build cannot carry its menu, or None."""
+    pc = struct.unpack_from('<H', header, 14)[0]
+    if header[4:8] != b'V1.2': return 'its .nex is %s, not V1.2' % header[4:8].decode('latin-1')
+    if struct.unpack_from('<H', header, 140)[0]: return 'its .nex passes its file handle on, so would read into the menu banks'
+    if pc < 0x4000 + STUB_BLOCK or 1 <= pc & 0x1FFF <= 4: return 'its start address, %#06x, leaves no room for the handoff' % pc
+    if top > 111: return 'it needs more banks than a Next has'
+    return None
+
+def apply_menu(f, game):
+    """The .nex that carries its menu (spec, "A .nex that carries its menu"): the bare .nex with nothing chosen, its header
+    changed to start the stub, then the menu banks: the stub, its parameters and the description, then the data."""
+    bare = apply(f, game=game)
+    opened = check_key(f, game); st, bl = opened[:2]
+    header = bytearray(bare[:512])
+    m0 = dict(bl)[b'OPT1'][2] + 1
+    desc, data = menu_description(f, st)
+    stub = bytearray(stub_binary())
+    if len(stub) + len(desc) > STUB_DESC_END: raise Wrong('the menu is too big for its bank')
+    count = 1 + -(-len(data) // BANK); top = m0 + count - 1
+    why = menu_refusal(header, top)
+    if why: raise Wrong('this build cannot carry its menu: %s; --bare writes it with the choices fixed' % why)
+    pc, sp = struct.unpack_from('<HH', header, 14)[0], struct.unpack_from('<H', header, 12)[0]
+    stub[-STUB_PARAMS:] = struct.pack('<BHHBBB', 2 * m0, pc, sp, 2 * header[139], count, 0)
+    for b in range(m0, top + 1): header[18 + b] = 1
+    header[9] += count
+    struct.pack_into('<H', header, 14, MENU_ENTRY); header[139] = m0
+    if top > 47: header[8] = 1
+    banks = [bytes(stub + desc).ljust(BANK, b'\0')] + [data[i:i + BANK].ljust(BANK, b'\0') for i in range(0, len(data), BANK)]
+    return bytes(header) + bare[512:] + b''.join(banks)
+
 def inf1_value(f, key):
     """An INF1 line as a loader takes it: from the first TEXT_READ bytes, ended by a newline; otherwise None."""
     text = dict(blocks(f)[1]).get(b'INF1', b'')[:TEXT_READ]
@@ -1420,6 +1556,22 @@ def run(argv):
         a = ap.parse_args(argv[1:])
         with open(a.output, 'wb') as g: g.write(handoff_bas())
         print('wrote', a.output)
+        return
+    if argv[:1] == ['help']:
+        ap = argparse.ArgumentParser(prog='nxc.py help', description="Set the menu's help text for its lines (HLP1).")
+        ap.add_argument('patch'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
+        ap.add_argument('--line', action='append', default=[], metavar='KEY=TEXT', help='fix, colours, language, trainer_N or toggle_N, then its help, up to two rows of %d; an empty TEXT removes it; repeatable' % MENU_ROW)
+        a = ap.parse_args(argv[1:])
+        refuse_same(a.output, a.patch, a.game, *a.also)
+        texts = {}
+        for kv in a.line:
+            k, eq, v = kv.partition('=')
+            if not eq: raise Wrong('--line takes KEY=TEXT')
+            texts[k] = v
+        f = set_help(read_file(a.patch), game_arg(a.game, a.also), texts)
+        with open(a.output, 'wb') as g: g.write(f)
+        for k, v in help_texts(f).items(): print('%s: %r' % (k, v))
         return
     if argv[:1] == ['import-pok']:
         ap = argparse.ArgumentParser(prog='nxc.py import-pok', description="Add a .pok's trainers to a patch.")
@@ -1542,6 +1694,7 @@ def run(argv):
     ap.add_argument('--trainer', action='append', help='a trainer by number from 1 or by name; repeatable')
     ap.add_argument('--original', action='store_true', help='no patch: write the game itself, or with trainers a snapshot of it with them in; for a tape, the start state as a .z80')
     ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a patch that wants a set of tapes; repeatable, in order')
+    ap.add_argument('--bare', action='store_true', help='a .nex without the menu, with the choices given here fixed in it; by default the .nex carries the menu, and the choices are made when it starts')
     a = ap.parse_args(argv); f = read_file(a.patch)
     print('colour sets:', ', '.join(['(default)'] + colour_sets(f)))
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
@@ -1557,7 +1710,10 @@ def run(argv):
         refuse_same(output, a.patch, a.game, *a.also)
         game = game_arg(a.game, a.also)
         if a.original: d = original_with_pokes(f, game, a.trainer)
-        else: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
+        elif a.bare: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
+        elif a.trainer or a.colours or a.language or a.toggle:
+            raise Wrong('a .nex with its menu has every choice on its menu, made when it starts: give --bare to fix them now')
+        else: d = apply_menu(f, game)
         with open(output, 'wb') as g: g.write(d)
         print('wrote', output, hashlib.md5(d).hexdigest())
 
