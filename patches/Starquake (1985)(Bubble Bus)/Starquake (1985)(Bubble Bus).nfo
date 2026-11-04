@@ -1,0 +1,101 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Starquake
+  Publisher   Bubble Bus Software, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Starquake (1985)(Bubble Bus).z80
+  MD5         b94691b08d31386d3e5661d04e6c164f
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        No outline on the figures: the owner chose that for this mostly
+              black game. The patch writes the whole alt ROM image (Sinclair's
+              ROM plus its hooks), which fixed a crash on the define-keys
+              screen.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite energy
+   3  No aliens
+   4  Immunity
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Bubble Bus Software, 1985, by its original authors. All rights
+              to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-04
+
+  Replay      IDENTICAL on 9 recordings, 40884 frames (t1 2563 from the
+              snapshot; b1-b3 8001/8001/8062 random play from an in-play state
+              with infinite lives, energy and immunity poked; new from the
+              snapshot: m1 4851 define keys, options 1-5, play with the new
+              keys and pause, game over, define keys again from the post-game
+              menu, play; m2-m4 3469/2457/2495 Kempston, cursor and Sinclair
+              play with pause; m5 985 quit prompt N, define keys, quit Y to
+              the goodbye screen and reset); three simulators in lockstep,
+              hook fetches not counted, the patched machine's alt ROM built
+              the way the Next's stub fills it, from NextZXOS ROM3: all memory
+              but the screen against the original, and everything against the
+              original with each frame's paint undone; sprite layer against an
+              independent model every plot; hooks e_pl 28780, e_un 28780, e_rc
+              218, e_cls 27, none never ran; 118383 figure plots, 17457337
+              sprite pixels compared, 245 hides checked; 12 negatives each
+              detected on a recording that exercises it, among them the
+              30763c45 build's alt ROM (NextZXOS ROM3 code left round the
+              hooks) and the old white outline; census over all 196 images: no
+              outline pixel, no see-through hole, nothing at the canvas edge
+
+  Emulator    JNext headless: the 30763c45 build crashes on the first key in
+              define keys and hangs at any menu redraw (its alt ROM kept
+              NextZXOS ROM3 code at 0x386E-, called by the IM 1 handler and
+              the UDG print; four red figures and BLOB left as sprites),
+              reproduced; this build defines keys from boot and after a game
+              over with no stray sprites, the quit prompt, play with the new
+              keys; plain, sprites and loading-screen .nex reach play; plain
+              and sprites reach the same room, score and BLOB place at frame
+              1650 with the same keys, enemies exactly as plain with the keys
+              one frame earlier or later (the game reseeds its random numbers
+              from FRAMES on entering a room, 0xA486, and this build's stub
+              runs a little longer); hook cost about 49K T per frame counted
+              at 3.5 MHz, run at 28 MHz; no white outline (owner, 2026-11-04)
+
+  Coverage    about 130 screens by walking and falling, a Cheops pyramid
+              screen, deaths; the menu, define keys twice (once from the menu
+              after a game over), all five control options, pause, game over,
+              the high-score table, the quit prompt both ways; 128 of the 196
+              image slots drawn; not reached: high-score name entry, the core
+              assembly, teleports by code (the code screen seen in JNext
+              only), the ending; cheats from the archive's .pok for this
+              release: lives, energy, immunity and no aliens shown in the
+              simulator on the original code, unplayed by a person; no .256,
+              no Enhanced set
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
