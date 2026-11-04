@@ -85,6 +85,10 @@ python tools/nxc.py make Game.nex Game.z80 -o Game.nxc --title "Game" --zxdb 000
 python tools/nxc.py import-pok Game.nxc Game.pok Game.z80 -o Game2.nxc --only "Infinite Lives,Immunity"
 ```
 
+On a 128K game, a `.pok` line at 0xC000 or above with bank 8 doesn't say which bank the game has paged
+there when it reads the byte, and the snapshot only knows the one paged when it was saved. Such a line is
+refused until you say which with `--top-bank N`, having watched the game run (or put the bank in the `.pok`).
+
 **3. Add colours or languages** when you package it. Each is the same build with that one change applied,
 and they can be combined if they don't touch the same bytes:
 

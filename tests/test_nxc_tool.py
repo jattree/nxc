@@ -57,9 +57,15 @@ class Pok(unittest.TestCase):
         self.assertEqual(nxc.poke_bank(8, 0xC123, Snap), (0, 0x123))
         Snap.is128 = True
         Snap.port7ffd = 0x13
-        self.assertEqual(nxc.poke_bank(8, 0xC123, Snap), (3, 0x123))
+        self.assertEqual(nxc.poke_bank(8, 0xBFFF, Snap), (2, 0x3FFF))
+        with self.assertRaisesRegex(nxc.Wrong, "bank 8 on a 128K game.*--top-bank"):
+            nxc.poke_bank(8, 0xC123, Snap)
+        self.assertEqual(nxc.poke_bank(8, 0xC123, Snap, top=0), (0, 0x123))
         self.assertEqual(nxc.poke_bank(6, 0xC123, Snap), (6, 0x123))
+        self.assertEqual(nxc.poke_bank(6, 0xC123, Snap, top=0), (6, 0x123))
         self.assertEqual(nxc.poke_bank(6, 0x8000, Snap), (2, 0))
+        with self.assertRaises(nxc.Wrong):
+            nxc.poke_bank(8, 0xC000, Snap, top=8)
         with self.assertRaises(nxc.Wrong):
             nxc.poke_bank(8, 0x3FFF, Snap)
         with self.assertRaises(nxc.Wrong):
@@ -265,3 +271,76 @@ class Zx0(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def z80_128(banks: dict, port: int) -> bytes:
+    """A version 3 .z80 of a 128K machine with 7FFD at port, its pages stored whole."""
+    head = bytearray(30)
+    head[8:10] = (0x6000).to_bytes(2, "little")
+    ext = bytearray(54)
+    ext[0:2] = (0x8000).to_bytes(2, "little")
+    ext[2] = 4
+    ext[3] = port
+    out = bytes(head) + (54).to_bytes(2, "little") + bytes(ext)
+    for b in range(8):
+        out += b"\xff\xff" + bytes((b + 3,)) + banks[b]
+    return out
+
+
+@unittest.skipUnless(nxc is not None and ZX0.exists(), "NexClash's snapshot reader or the zx0 compressor is missing")
+class TopBank(unittest.TestCase):
+    """A 128K game saved with bank 1 at 0xC000, whose .pok says bank 8 for an address there: the bank in play is not
+    the snapshot's to say, so the import refuses until it is given."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        rng = random.Random(128)
+        cls.banks = {b: bytes(rng.randrange(256) for _ in range(256)).ljust(16384, b"\0") for b in range(8)}
+        cls.tmp = tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR"))
+        tmp = Path(cls.tmp.name)
+        cls.game = z80_128(cls.banks, 0x11)
+        (tmp / "game.z80").write_bytes(cls.game)
+        built = dict(cls.banks)
+        built[2] = b"\x5a" * 64 + built[2][64:]
+        head = bytearray(512)
+        head[0:8] = b"NextV1.2"
+        head[9] = len(built)
+        for b in built:
+            head[18 + b] = 1
+        (tmp / "out.nex").write_bytes(bytes(head) + b"".join(built[b] for b in nxc.ORDER if b in built))
+        cls.path = tmp / "game.z80"
+        cls.patch, _ = nxc.make(str(cls.path), str(tmp / "out.nex"), dict(title="Paged", file="game.z80", length=len(cls.game)),
+                                dict(build="test", publisher="Tester, 2026"))
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def test_bank_8_at_c000_is_refused_without_the_bank_in_play(self) -> None:
+        self.assertTrue(nxc.snapshot_of(self.game, nxc.KIND_Z80).is128)
+        with self.assertRaisesRegex(nxc.Wrong, r"Immune: a POKE at 57119 \(0xDF1F\) has .pok bank 8 on a 128K game.*bank 1"):
+            nxc.import_pok(self.patch, str(self.path), "NImmune\nZ 8 57119 254 0\nY\n")
+
+    def test_the_bank_in_play_given_or_named(self) -> None:
+        given = nxc.import_pok(self.patch, str(self.path), "NImmune\nZ 8 57119 254 0\nY\n", top_bank=0)
+        named = nxc.import_pok(self.patch, str(self.path), "NImmune\nZ 0 57119 254 0\nY\n")
+        self.assertEqual(nxc.trainers(given), [(0, "Immune", [(0, 0x1F1F, 254)])])
+        self.assertEqual(given, named)
+        self.assertEqual(nxc.apply(given, game=self.game), nxc.apply(self.patch, game=self.game))
+
+    def test_below_c000_needs_no_bank(self) -> None:
+        out = nxc.import_pok(self.patch, str(self.path), "NTime\nM 8 25755 35 0\nM 8 43087 183 0\nZ 8 49151 1 0\nY\n")
+        self.assertEqual(nxc.trainers(out)[0][2], [(5, 25755 - 16384, 35), (2, 43087 - 32768, 183), (2, 16383, 1)])
+
+    def test_the_command_takes_top_bank(self) -> None:
+        tmp = Path(self.tmp.name)
+        (tmp / "in.nxc").write_bytes(self.patch)
+        (tmp / "g.pok").write_text("NImmune\nZ 8 57119 254 0\nY\n")
+        tool = [sys.executable, str(ROOT / "tools" / "nxc.py"), "import-pok", str(tmp / "in.nxc"), str(tmp / "g.pok"), str(self.path)]
+        refused = subprocess.run(tool + ["-o", str(tmp / "a.nxc")], capture_output=True, text=True)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertIn("--top-bank", refused.stdout + refused.stderr)
+        self.assertFalse((tmp / "a.nxc").exists())
+        made = subprocess.run(tool + ["-o", str(tmp / "b.nxc"), "--top-bank", "0"], capture_output=True, text=True)
+        self.assertEqual(made.returncode, 0, made.stderr)
+        self.assertEqual(nxc.trainers((tmp / "b.nxc").read_bytes())[0][2], [(0, 0x1F1F, 254)])

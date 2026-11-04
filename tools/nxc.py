@@ -6,7 +6,7 @@ byte for byte. See spec/NXC-FORMAT.md.
     nxc.py make NEX GAME -o OUT [--zxdb ENTRY] [--title T] [--publisher "Ocean, 1986"] [--patch-by N] [--colours-by N]
                  [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
     nxc.py add-dump PATCH KNOWN_GAME NEW_DUMP -o OUT [--file NAME] [--zxdb ENTRY] [--title TITLE]
-    nxc.py import-pok PATCH POK GAME -o OUT [--publisher "Ocean, 1986"] [--only "Name,Name"]
+    nxc.py import-pok PATCH POK GAME -o OUT [--publisher "Ocean, 1986"] [--only "Name,Name"] [--top-bank 0-7]
     nxc.py credit PATCH GAME -o OUT [--patch-by NAME] [--colours-by NAME]
     nxc.py handoff-bas -o NXCHAND.BAS
 
@@ -215,13 +215,22 @@ def sentence_case(name):
     words = name.split(' ')
     return ' '.join(w if i == 0 or w.isupper() else w.lower() for i, w in enumerate(words))
 
-def poke_bank(bank, address, snap):
-    """(16K bank, offset) for a .pok line. Bank field 0 to 7: that bank paged at 0xC000. 8: no paging, so the address
-    means what it does in the snapshot as it stands, with 7FFD deciding 0xC000 on a 128K game and bank 0 on a 48K one."""
+def poke_bank(bank, address, snap, top=None):
+    """(16K bank, offset) for a .pok line. Bank field 0 to 7: that bank paged at 0xC000. 8: no paging, so 0x4000 to
+    0xBFFF are banks 5 and 2, and 0xC000 up is bank 0 on a 48K game. On a 128K game 8 does not say which bank is at
+    0xC000 when the game reads the byte: the snapshot's 7FFD gives the bank paged when it was saved, which can be another
+    (Rainbow Islands is saved with bank 1 there and runs its code from bank 0). So that needs top, the bank paged there in
+    play, and is refused without it."""
     if not 0x4000 <= address <= 0xFFFF: raise Wrong('a POKE at %d is not in RAM' % address)
     if address < 0x8000: return 5, address - 0x4000
     if address < 0xC000: return 2, address - 0x8000
-    if bank == 8: bank = (snap.port7ffd & 7) if snap.is128 else 0
+    if bank == 8 and not snap.is128: bank = 0
+    elif bank == 8:
+        if top is None:
+            raise Wrong('a POKE at %d (0x%04X) has .pok bank 8 on a 128K game: the bank paged at 0xC000 in play need not be '
+                        'bank %d, which the snapshot pages; name it in the .pok, or give it with --top-bank'
+                        % (address, address, snap.port7ffd & 7))
+        bank = top
     if not 0 <= bank <= 7: raise Wrong('a POKE names bank %d' % bank)
     return bank, address - 0xC000
 
@@ -288,11 +297,12 @@ def select_trainers(entries, only):
             raise Wrong('trainer %r asks the player for a value, which a patch cannot hold' % name)
     return [e for e in entries if e[0] in only or sentence_case(e[0]) in only]
 
-def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None):
+def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None, top_bank=None):
     """The patch with the trainers of a .pok added and INF1's publisher set: the same nonce and encrypted blocks, with
     a new check value. Refuses a POKE that lands on a byte the patch changes, or on a bank the patch supplies: its target
     there is not the game's own code. Original values in the .pok are not stored.
-    only: names of the trainers to import; none: all of them."""
+    only: names of the trainers to import; none: all of them. top_bank: the bank paged at 0xC000 in play, for .pok lines
+    with bank 8 there on a 128K game, which are refused without it (see poke_bank)."""
     with open(game_path, 'rb') as g: game = g.read()
     opened = check_key(f, game); st, bl = opened[:2]
     snap = snapshot_of(game, opened.target['kind'])
@@ -304,7 +314,8 @@ def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None):
             continue
         pokes = []
         for bank_field, address, value, original in lines:
-            b, o = poke_bank(bank_field, address, snap)
+            try: b, o = poke_bank(bank_field, address, snap, top_bank)
+            except Wrong as e: raise Wrong('%s: %s' % (name, e))
             if not header[18 + b]: raise Wrong('%s: POKE %d is in bank %d, which the build does not have' % (name, address, b))
             if b in touched and (touched[b] is None or o in touched[b]):
                 raise Wrong('%s: POKE %d lands on a byte the patch changes' % (name, address))
@@ -899,11 +910,13 @@ def run(argv):
         ap.add_argument('patch'); ap.add_argument('pok'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
         ap.add_argument('--publisher', help='INF1 publisher line for the menu, such as "Ocean, 1986"')
         ap.add_argument('--only', help='import only these trainers, comma-separated, as the .pok names them: "Name,Name"')
+        ap.add_argument('--top-bank', type=int, choices=range(8), metavar='0-7',
+                        help='on a 128K game, the bank paged at 0xC000 in play, for .pok lines with bank 8 at 0xC000 or above')
         a = ap.parse_args(argv[1:]); notes = []
         only = [n.strip() for n in a.only.split(',')] if a.only is not None else None
         refuse_same(a.output, a.game, a.pok)
         with open(a.pok, encoding='latin-1') as g: pok = g.read()
-        f = import_pok(read_file(a.patch), a.game, pok, a.publisher, notes, only)
+        f = import_pok(read_file(a.patch), a.game, pok, a.publisher, notes, only, a.top_bank)
         with open(a.output, 'wb') as g: g.write(f)
         for n, why in notes: print('note: %s: %s' % (n, why))
         for k, t in enumerate(trainers(f)):
