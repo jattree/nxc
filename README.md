@@ -128,7 +128,7 @@ patch too: `patch_by` and `colours_by` on the menu, and the full `credit` (NexCl
 | Next loader | Tested on a Z80 emulator and in JNext on NextZXOS v2.09; run on a NextNano with NextZXOS v2.09 |
 | A `.nex` with its menu | Tested on a Z80 emulator and in JNext 1.1.104 |
 | Official Next board | **Not run** |
-| Review by Dean Woodyatt | **Not yet** |
+| Review by Dean Woodyatt | Testing, from 2026-11-04 |
 
 ## Making a patch
 
