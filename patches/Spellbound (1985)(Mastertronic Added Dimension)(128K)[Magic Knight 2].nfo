@@ -1,0 +1,93 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Spellbound
+  Publisher   Mastertronic Added Dimension, 1985
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic
+              Knight 2].z80
+  MD5         929d9e7ffaeeb9a88a3e03e32cfe9aef
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite strength
+   2  Infinite time
+   3  Infinite spell power
+   4  Their strength kept
+   5  Their spell power kept
+   6  Their happiness kept
+   7  Their stamina kept
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Mastertronic Added Dimension, 1985, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      IDENTICAL on 9 recordings, 39222 frames, default colours;
+              Enhanced (second version, 2026-11-03 evening, its own palette)
+              IDENTICAL on the same 9, 39222 frames; whole 128K compared each
+              frame with screen and buffers built from it excepted, attributes
+              only where the game's paint would differ, sprite layer against
+              an independent model; every hook ran (Enhanced: commits 28438,
+              object plots 67, character plots 20, smoke 35, ball plots 18626,
+              room builds 111, windows 216, palette ink checks 28560); 22 of
+              22 negatives detected, and 7 of 7 for the Enhanced palette (boot
+              check, map refused, verifier); outline census 117 figure frames,
+              4070 pixels called for, 0 missing, default and Enhanced; Gimbal
+              and the Banshee are never plotted on a recording: their Enhanced
+              colours checked by model and hook code only
+
+  Emulator    JNext 1.1.104 headless: plain, sprites and Enhanced .nex reach
+              play, by layer no figure on the ULA, the Knight at the same
+              place at frame 1400 in sprites and Enhanced; Enhanced figures
+              viewed in play in rooms 5, 20, 23, 25, 28 and 32 beside the
+              previous set; walking speed 22 px per 100 frames in plain and
+              sprites, music in step but for 3 frames at a room change
+              (earlier build, same hook code); real loader from the Browser on
+              a copy of card_all.img (this patch), MD5 exact: default,
+              Enhanced, and cheats 1+2+3+Enhanced; play frames viewed
+
+  Coverage    57 room numbers tried by poked exit and walked a little, room 47
+              dropping straight to 55 as entered there; natural walk rooms
+              19-24; commands, windows, examine, give, pick up, teleport, a
+              failed spell, game over and new game; puzzles, spells that
+              succeed, orders to characters and the ending not played; loading
+              hold not replayed, JNext only; cheats from the archive's POKEs
+              for this release, unplayed by a person: strength and time held
+              in the simulator on the original code, others not measured;
+              Enhanced is a painted set, no .256 exists, colourist not named;
+              second version after the owner's play of the first, unreviewed
+              by him
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

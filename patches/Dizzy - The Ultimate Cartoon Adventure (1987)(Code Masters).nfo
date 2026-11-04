@@ -1,0 +1,68 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Dizzy
+  Publisher   Code Masters
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy - The Ultimate Cartoon Adventure (1987)(Code Masters).z80
+  MD5         0659328fd54fd446e39d1740bafd02e7
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  Walk through walls
+   4  Stop the forest floor fro
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Code Masters, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      RZX IDENTICAL with the painted colour map (registers, memory,
+              ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 55 unit cases
+              + 11 negative controls PASS
+
+  Emulator    JNext 1.1.104 headless, through the real loader, reached play;
+              frames viewed; no person played it; with the loading screen:
+              JNext 1.1.104 headless through the real loader, MD5 exact,
+              reached the screen, the game and play frames, viewed; no person
+              played it
+
+  Coverage    Infinite lives on: its code was not reached by scripted keys, so
+              the cheat itself was not exercised; loading screen stub added in
+              bank 28, 2026-11-03: the replay and hardware lines are of the
+              build without it, whose game memory the stub restores at the
+              original start; the stub is emulator-tested only
+
+  Hardware    83ea050d (default colours) works on a real Next, looks perfect
+              (Dean, 2026-10-14); fb4cb148 = 38e1a491 drawn identically (only
+              never-drawn paper nibbles differ), untested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

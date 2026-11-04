@@ -1,0 +1,69 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Renegade
+  Publisher   Imagine, 1987
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Renegade (1987)(Imagine)(128K).z80
+  MD5         9432bbad61d76f7e2a6e1a079c0f363a
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite time
+   3  No death
+   4  Easy fight, one-hit falls
+   5  Start at level 2
+   6  Start at level 3
+   7  Start at level 4
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later); Enhanced colours from the MVV package's older Spec256
+              conversion, painter not established
+  Original    Imagine, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      4 bot recordings, 106055 frames, against the original: IDENTICAL
+              within the counted allowances in games/renegade128.md; hooks
+              ran; 13 of 13 negatives detected; stamped 2026-11-03
+
+  Emulator    JNext 1.1.104 headless: original, plain and sprite builds reach
+              play; sprite build reaches game over, the menu and a restart;
+              all four levels, every trainer and Enhanced seen; keys by
+              script, no human; music not heard
+
+  Coverage    all four levels and past the last boss by a bot with cheats;
+              ending frames not looked at; joysticks not exercised
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

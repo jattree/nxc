@@ -1,0 +1,82 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Knight Tyme
+  Publisher   Mastertronic Added Dimension, 1986
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Knight Tyme (1986)(Mastertronic Added Dimension)(128K)[Magic
+              Knight 3].z80
+  MD5         8e720b5cc11fe0d9445fe0af4825c8bf
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite time
+   2  Infinite strength
+   3  Infinite fuel
+   4  Strength (others)
+   5  Happiness (others)
+   6  Stamina (others)
+   7  Charisma (others)
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Mastertronic Added Dimension, 1986, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      IDENTICAL on 4 recordings, 33534 frames, default colours:
+              original and patched machines in lockstep, hook instructions
+              uncounted, whole 128K compared each frame apart from the screen
+              pixels and the draw buffers built from them; sprite layer and
+              ULA against an independent model at 3625 stable frames,
+              including the Bridge's seated crew as sprite tiles (5 Bridge
+              builds, 512 crew checks); 25,064 hook exits with registers
+              checked; 18 of 18 negatives detected, the 3 crew negatives on a
+              recording that reaches the Bridge; unit tests pass including a
+              full sprite pool and pictures inside windows; the UPDATE
+              attribute option is neutralised and has no lockstep replay, only
+              a check that its flag stays 0
+
+  Emulator    JNext 1.1.104: plain and sprites reach play headless, the Knight
+              walking past the Bridge's crew in front of them, the other
+              rooms' frames unchanged from the previous build; command window,
+              game over and return to the title viewed on the previous build;
+              real loader from the Browser on a copy of the test card, MD5
+              exact, default and with cheats 1+2, play frames viewed
+
+  Coverage    all 48 rooms entered by poked room change, with all objects and
+              all 6 character graphics placed by cheat; walking, jumping,
+              menus and commands; game over, new game; story puzzles,
+              transporter trips by play and the ending not reached; cheats
+              from the archive's 128K POKEs, time and others' stats held in
+              the simulator on the original code, strength and fuel not run,
+              all unplayed by a person
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

@@ -1,0 +1,74 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Ikari Warriors
+  Publisher   Elite Systems, 1988
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Ikari Warriors (1988)(Elite Systems)(48K-128K).z80
+  MD5         54ad66af6678df22a9d4443e3d04aadb
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+  Note        No outline on the figures, in both default and Enhanced: the
+              owner chose that for this game.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite fuel
+   3  Infinite ammo
+   4  Infinite grenades
+   5  Immunity
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Elite Systems, 1988, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      lockstep memory, registers and picture IDENTICAL on 8 scripted
+              recordings, 20982 game frames, default and Enhanced (both
+              without outline or paper edge, seams closed); negatives
+              detected: 7 (engine), 4 for the default figure edges (the old
+              default, outline kept, paper edge kept, seams open), 15 for
+              Enhanced (player, player 2, rotation map, pick-up keys, store
+              off, outline kept, paper edge kept, the third pass, paper border
+              painted, skin outside an enemy face, enemy without a face, seams
+              open, the fourth pass, the fifth pass, the 17:00 build)
+
+  Emulator    JNext headless, plain, sprites and Enhanced reach play from the
+              file's start; default and Enhanced through the Browser and the
+              loader, output byte-exact with apply
+
+  Coverage    level 1 to beyond the bridge, one and two players, wading, game
+              over, attract; no level end; no tank seen driven
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

@@ -1,0 +1,71 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Rambo: First Blood II
+  Publisher   Ocean, 1985
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Rambo - First Blood Part II (1985)(Ocean).z80
+  MD5         3eb7a65e19c9ffa82a49654d31a41886
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  No enemy
+   4  All weapons
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Ocean, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      3 script recordings, 55281 frames, IDENTICAL, default and
+              Enhanced builds, plus long1 30059 frames IDENTICAL; dirt checked
+              against the scenery at every blit, offset 0; 17/17 negatives
+              detected; heli hand-made state: 2 blits differ, the original's
+              rotor wrap; loading stub unchanged since its JNext check
+
+  Emulator    JNext 1.1.104 headless: Enhanced dirt moved with the scenery on
+              136 of 136 moving frames, one screenshot per frame over 1190
+              frames north, east, west and south, 0 frames split mid-picture;
+              real loader from the Browser, MD5 exact, default and Enhanced
+              reach play, frames viewed
+
+  Coverage    start of the game, score to about 3900, lives to 0; helicopter
+              (types 4E, 4F, 52) only from a hand-made state, 2 blits differ
+              there where the original wraps rotor bits; prison camp and types
+              47-4A, 4D, 50, 51, 53 not reached, frames checked on sheets
+              only; cheats unplayed except as noted
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

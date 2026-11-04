@@ -1,0 +1,67 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Rainbow Islands
+  Publisher   Ocean, 1990
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Rainbow Islands - The Story of Bubble Bobble 2
+              (1990)(Ocean)(128K)[a][a].z80
+  MD5         4c98b980b1726af545fccc99665ef29b
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+-- MENU ----------------------------------------------------------------------
+   1  Immune except to water
+   2  Press P for next level
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later)
+  Original    Ocean, 1990, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) +
+              diagnostic IDENTICAL, unit PASS (recovery 9 cases + control;
+              Z80N as-NOP controls); every simulated overrun frame credited as
+              the beam model
+
+  Emulator    JNext 1.1.104 headless, through the real loader, reached play;
+              frames viewed; no person played it; with the loading screen:
+              JNext 1.1.104 headless through the real loader, MD5 exact,
+              reached the screen, the game and play frames, viewed; no person
+              played it
+
+  Coverage    one cheat run, on and off with the same keys: Press P for next
+              level; other trainers not run; loading screen stub added in bank
+              32, 2026-11-03: the replay and hardware lines are of the build
+              without it, whose game memory the stub restores at the original
+              start; the stub is emulator-tested only
+
+  Hardware    bda21ab6 works but slows down in busy scenes (user, 2026-10-31);
+              69369c89 untested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

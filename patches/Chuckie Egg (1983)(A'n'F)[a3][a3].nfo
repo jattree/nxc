@@ -1,0 +1,66 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Chuckie Egg
+  Publisher   A'n'F, 1983
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Chuckie Egg (1983)(A'n'F)[a3][a3].z80
+  MD5         cddc0cfea8259d0c497b50fae0acd27e
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite bonus
+   3  Infinite time
+   4  Pass level instead of dyi
+   5  Very slow big bird
+   6  Big bird doesn't exist
+   7  Slower hens
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later); enhanced colours from an older Spec256 conversion (the
+              MVV package), painter not established
+  Original    A'n'F, 1983, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      RZX IDENTICAL, unit PASS
+
+  Emulator    JNext 1.1.104 headless, through the real loader, reached play
+              with the default and with Spec256 on, with Infinite lives on;
+              frames viewed; no person played it
+
+  Coverage    Spec256 colours judged by eye in one room; Infinite lives seen
+              working on the same base without the set
+
+  Hardware    untested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

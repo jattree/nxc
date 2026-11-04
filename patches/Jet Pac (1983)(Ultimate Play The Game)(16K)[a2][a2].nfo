@@ -1,0 +1,66 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Jetpac
+  Publisher   Ultimate, 1983
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Jet Pac (1983)(Ultimate Play The Game)(16K)[a2][a2].z80
+  MD5         5875d535442974a0de82737652854f1f
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+  Note        Coloured build (not Dean's Jetpac build).
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
+              later); enhanced colours from an older Spec256 conversion
+              (Spectrum Magic's jetpac_.zip), painter not established
+  Original    Ultimate, 1983, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-03
+
+  Replay      free run of 6000 frames IDENTICAL, no recording; negative
+              control 40/40
+
+  Emulator    JNext 1.1.104: the owner played the painted build through take-
+              off, rocket and fuel appearing; with the loading screen: JNext
+              1.1.104 headless through the real loader, MD5 exact, reached the
+              screen, the game and play frames, viewed; no person played it
+
+  Coverage    two players not exercised; full selftest not run; loading screen
+              stub added in bank 13, 2026-11-03: the replay and hardware lines
+              are of the build without it, whose game memory the stub restores
+              at the original start; the stub is emulator-tested only
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
