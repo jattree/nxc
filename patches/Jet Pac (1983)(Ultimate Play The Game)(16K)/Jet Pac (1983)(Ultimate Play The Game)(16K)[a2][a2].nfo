@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jetpac
   Publisher   Ultimate, 1983
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,6 +29,9 @@
               conversion (Spectrum Magic's jetpac_.zip), painter not
               established.
 
+  Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
+              hooks), so the ROM's own interrupt code can never run the hooks.
+
   Note        Coloured build (not Dean's Jetpac build).
 
 -- MENU ----------------------------------------------------------------------
@@ -49,18 +52,30 @@
   Owner       Played by Jon Attree in JNext through the real loader,
               2026-11-03
 
-  Replay      free run of 6000 frames IDENTICAL, no recording; negative
-              control 40/40
+  Replay      free run of 6000 frames IDENTICAL, no recording (20,433 draws,
+              100 erases, 23,192 colour paints, 5 clears, 2,193,166 sprite
+              pixels); alt ROM image modelled as the Next fills it, from
+              NextZXOS's ROM3 then the build's writes: whole image Sinclair's
+              48K ROM plus hooks, 0 bytes outside the hooks differ; IM 1
+              handler compared with the original's at all 5,149 interrupts,
+              IDENTICAL; unit tests 6,816 graphic cases, negative control
+              40/40; new negative: the previous partial image (hooks only over
+              ROM3) detected at 5,149 of 5,149 interrupts (hook code ran from
+              the IM 1 handler) and by 5,367 image bytes
 
-  Emulator    JNext 1.1.104: the owner played the painted build through take-
-              off, rocket and fuel appearing; with the loading screen: JNext
-              1.1.104 headless through the real loader, MD5 exact, reached the
-              screen, the game and play frames, viewed; no person played it
+  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04):
+              loading screen, menu, play and game over back to the menu,
+              default and Enhanced, frames viewed; alt ROM image dumped in
+              JNext equals the modelled Sinclair-plus-hooks image; with
+              NextZXOS's DivMMC 0x0038 trap removed, IM 1 ran Sinclair's
+              handler 1,609 times and no ROM3 handler; earlier: the owner
+              played the painted build through take-off, rocket and fuel
+              appearing; real loader runs were of the previous build
 
-  Coverage    two players not exercised; full selftest not run; loading screen
-              stub added in bank 13, 2026-11-03: the replay and hardware lines
-              are of the build without it, whose game memory the stub restores
-              at the original start; the stub is emulator-tested only
+  Coverage    two players not exercised; whole alt ROM image from 2026-11-04:
+              the previous build differs only in the alt ROM fill (stub) and
+              the image's low half; loading screen stub in bank 13, emulator-
+              tested only
 
   Hardware    none
 

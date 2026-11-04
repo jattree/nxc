@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Knight Tyme
   Publisher   Mastertronic Added Dimension, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,9 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
+              hooks), so the ROM's own interrupt code can never run the hooks.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
@@ -45,25 +48,34 @@
   Owner       Played by Jon Attree in JNext through the real loader,
               2026-11-03
 
-  Replay      IDENTICAL on 4 recordings, 33534 frames, default colours:
-              original and patched machines in lockstep, hook instructions
-              uncounted, whole 128K compared each frame apart from the screen
-              pixels and the draw buffers built from them; sprite layer and
-              ULA against an independent model at 3625 stable frames,
-              including the Bridge's seated crew as sprite tiles (5 Bridge
-              builds, 512 crew checks); 25,064 hook exits with registers
-              checked; 18 of 18 negatives detected, the 3 crew negatives on a
-              recording that reaches the Bridge; unit tests pass including a
-              full sprite pool and pictures inside windows; the UPDATE
+  Replay      IDENTICAL on 4 recordings, 33534 frames, default colours, on the
+              whole alt ROM build (2026-11-04: alt ROM image 1 is Sinclair's
+              48K ROM plus the hooks, 0x0000-0x3FFF all written by the build):
+              original and patched machines in lockstep, the patched machine's
+              ROM 1 modelled as the Next fills it, NextZXOS's ROM3 first then
+              the build's writes, so the IM 2 handler's jumps to 0x0038 run
+              that image; hook instructions uncounted, whole 128K compared
+              each frame apart from the screen pixels and the draw buffers
+              built from them; sprite layer and ULA against an independent
+              model at 3625 stable frames, including the Bridge's seated crew
+              as sprite tiles (5 Bridge builds, 512 crew checks); 25,064 hook
+              exits with registers checked; 19 of 19 negatives detected, the 3
+              crew negatives on a recording that reaches the Bridge, and the
+              new one, the previous build's image (hooks only over ROM3),
+              detected by the lockstep from frame 1; unit tests pass including
+              a full sprite pool and pictures inside windows; the UPDATE
               attribute option is neutralised and has no lockstep replay, only
               a check that its flag stays 0
 
-  Emulator    JNext 1.1.104: plain and sprites reach play headless, the Knight
-              walking past the Bridge's crew in front of them, the other
-              rooms' frames unchanged from the previous build; command window,
-              game over and return to the title viewed on the previous build;
-              real loader from the Browser on a copy of the test card, MD5
-              exact, default and with cheats 1+2, play frames viewed
+  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04): menu,
+              story screens, play, the command window and the Transporter Room
+              reached, frames viewed; the alt ROM image dumped in JNext equals
+              the modelled Sinclair-plus-hooks image; with NextZXOS's DivMMC
+              0x0038 trap removed, IM 1 ran Sinclair's handler 3,977 times and
+              the game played on, where the previous build reset to the
+              Browser; earlier, on the previous build: the Knight walking past
+              the Bridge's crew, command window, game over and return to the
+              title, real loader from the Browser, MD5 exact
 
   Coverage    all 48 rooms entered by poked room change, with all objects and
               all 6 character graphics placed by cheat; walking, jumping,
@@ -71,7 +83,9 @@
               transporter trips by play and the ending not reached; cheats
               from the archive's 128K POKEs, time and others' stats held in
               the simulator on the original code, strength and fuel not run,
-              all unplayed by a person
+              all unplayed by a person; whole alt ROM image from 2026-11-04:
+              the previous build differs only in the alt ROM fill (stub) and
+              the alt ROM image's page bytes
 
   Hardware    none
 

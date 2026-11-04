@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Spellbound
   Publisher   Mastertronic Added Dimension, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,6 +29,9 @@
               by its parts: Florin the dwarf with a winged helmet, red tunic
               and brown beard, Thor with red hair and a blue tunic, and the
               rest. A painted set, colourist not named.
+
+  Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
+              hooks), so the ROM's own interrupt code can never run the hooks.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite strength
@@ -52,29 +55,35 @@
   Owner       Played by Jon Attree in JNext through the real loader,
               2026-11-03
 
-  Replay      IDENTICAL on 9 recordings, 39222 frames, default colours;
-              Enhanced (second version, 2026-11-03 evening, its own palette)
-              IDENTICAL on the same 9, 39222 frames; whole 128K compared each
-              frame with screen and buffers built from it excepted, attributes
-              only where the game's paint would differ, sprite layer against
-              an independent model; every hook ran (Enhanced: commits 28438,
-              object plots 67, character plots 20, smoke 35, ball plots 18626,
-              room builds 111, windows 216, palette ink checks 28560); 22 of
-              22 negatives detected, and 7 of 7 for the Enhanced palette (boot
-              check, map refused, verifier); outline census 117 figure frames,
-              4070 pixels called for, 0 missing, default and Enhanced; Gimbal
-              and the Banshee are never plotted on a recording: their Enhanced
-              colours checked by model and hook code only
+  Replay      IDENTICAL on 9 recordings, 39222 frames, default colours, and
+              Enhanced IDENTICAL on the same 9, on the whole alt ROM build
+              (2026-11-04: alt ROM image 1 is Sinclair's 48K ROM plus the
+              hooks, 0x0000-0x3FFF all written by the build); the patched
+              machine's ROM 1 modelled as the Next fills it, NextZXOS's ROM3
+              first then the build's writes, so the IM 1 interrupts at the
+              start run that image; whole 128K compared each frame with screen
+              and buffers built from it excepted, attributes only where the
+              game's paint would differ, sprite layer against an independent
+              model; every hook ran (Enhanced: commits 28438, object plots 67,
+              character plots 20, smoke 35, ball plots 18626, room builds 111,
+              windows 216, palette ink checks 28560); 23 of 23 negatives
+              detected, the new one the previous build's image (hooks only
+              over ROM3), detected by the lockstep at frame 2, and 7 of 7 for
+              the Enhanced palette; unit tests pass; outline census 117 figure
+              frames, 4070 pixels, 0 missing (previous build, same hook code);
+              Gimbal and the Banshee are never plotted on a recording: their
+              Enhanced colours checked by model and hook code only
 
-  Emulator    JNext 1.1.104 headless: plain, sprites and Enhanced .nex reach
-              play, by layer no figure on the ULA, the Knight at the same
-              place at frame 1400 in sprites and Enhanced; Enhanced figures
-              viewed in play in rooms 5, 20, 23, 25, 28 and 32 beside the
-              previous set; walking speed 22 px per 100 frames in plain and
-              sprites, music in step but for 3 frames at a room change
-              (earlier build, same hook code); real loader from the Browser on
-              a copy of card_all.img (this patch), MD5 exact: default,
-              Enhanced, and cheats 1+2+3+Enhanced; play frames viewed
+  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04):
+              default and Enhanced reach play, the Knight walking from the
+              Start Room into the L-shaped Room, frames viewed; the alt ROM
+              image dumped in JNext equals the modelled Sinclair-plus-hooks
+              image; with NextZXOS's DivMMC 0x0038 trap removed the game
+              played on, where the previous build reset to the Browser;
+              earlier, on the previous build: by layer no figure on the ULA,
+              Enhanced figures viewed in rooms 5, 20, 23, 25, 28 and 32,
+              walking speed equal to plain, real loader from the Browser, MD5
+              exact
 
   Coverage    57 room numbers tried by poked exit and walked a little, room 47
               dropping straight to 55 as entered there; natural walk rooms
@@ -85,8 +94,9 @@
               for this release, unplayed by a person: strength and time held
               in the simulator on the original code, others not measured;
               Enhanced is a painted set, no .256 exists, colourist not named;
-              second version after the owner's play of the first, unreviewed
-              by him
+              whole alt ROM image from 2026-11-04: the previous build differs
+              only in the alt ROM fill (stub) and the alt ROM image's page
+              bytes
 
   Hardware    none
 
