@@ -10,9 +10,9 @@ NexClash is by Dean Woodyatt (`bleughb/nexclash`, GPL-3.0-or-later). This format
 
 ## What a patch holds
 
-A patch does not contain the game file or repeat its memory: a loader takes the game's own banks from the player's copy. But a patch does hold things.
+A patch does not contain the game file or repeat its memory: a loader takes the game's own banks from the player's copy, a snapshot or a tape. But a patch does hold things.
 
-**Readable by anyone, in the clear:** the name, length and MD5 of each accepted game file, and its ZXDB entry and title; the publisher, credits and proof text; each trainer's name and POKEs (bank, offset, value); each set's name, kind and identifiers; the bank numbers and trimmed lengths of the banks it supplies; the sizes of all its blocks. The MD5s of accepted dumps are public anyway.
+**Readable by anyone, in the clear:** the name, length and MD5 of each accepted game file, and its ZXDB entry and title; the publisher, credits and proof text; each trainer's name and POKEs (bank, offset, value); each set's name, kind and identifiers; the bank numbers and trimmed lengths of the banks it supplies; which tape targets share a tape table; the sizes of all its blocks. The MD5s of accepted dumps are public anyway.
 
 **Held encrypted:**
 
@@ -21,6 +21,7 @@ A patch does not contain the game file or repeat its memory: a loader takes the 
 - whole banks the game does not supply (`BNK1`): start-up code, hooks and sprites. **Sprite data is derived from the game's graphics**, so a patch holds a transformed form of part of the game, encrypted. It is not free of the game's content;
 - sets (`SET2`), such as colours and languages, which may hold repainted graphics, translated text and new code;
 - a loading screen, if there is one (`SCR1`). **Such a screen, unlike sprites derived from the game, may be art the player's own file does not contain, so a patch with one holds that art, encrypted.**
+- for a tape, its table (`TAP1`): where in memory the tape's bytes go, the registers the game starts with, and **the bytes of that start that are not on the tape**: the screen as drawn, variables, the stack, and tables the game's own code made as it ran. Those are derived from the game, as sprites are. Anything the tape holds as it is, code above all, is taken from the player's tape and not carried.
 
 Encryption is not protection from someone who owns an accepted dump: see below.
 
@@ -81,6 +82,8 @@ An extra block must never be required to play. A patch that truly needs more tha
 | `SCR1` | one per 16K of screen | yes, after its first 3 bytes | Part of the `.nex`'s loading screen |
 | `SET2` | no, zero or more | yes, after its name and the heads of its chunks | One choice of a kind: a colour set, a language |
 | `TRN1` | no, zero or more | no | One trainer: its name and its POKEs |
+| `TAP1` | one for each group of tape targets | yes, after its first 2 + n bytes | How one or more tapes become the game's banks |
+| `HLP1` | no, once | no | Help for the menu's lines |
 
 A second `OPT1`, `INF1`, `OUT1`, `NEX1` or `SIT1` is damage at once, however many there are.
 
@@ -90,7 +93,6 @@ These names and their rules are reserved. They are not defined further, and no t
 
 | Tag | For |
 |---|---|
-| `TAP1` | A recipe for rebuilding from a tape image rather than a snapshot |
 | `BUN1` | A bundled `.nex`: a build the owner may distribute whole |
 | `CAC1` | A build cache. Its identity must include the patch's content and every option chosen |
 | `TRN2` | A trainer that asks the player for a value |
@@ -103,18 +105,26 @@ Custom loaders are not part of this standard. A game that needs one is out of sc
 
 ### OPT1
 
-Exactly 3 bytes. Byte 0: the loader level this patch needs. Byte 1: flags, reserved, must be 0. A reader that does not have the level, or sees a flag set, stops and says it needs a newer loader. Byte 2: the highest 16K bank the rebuilt game needs, 0 to 111. Any other length or value is damage.
+Exactly 3 bytes. Byte 0: the loader level this patch needs. Byte 1: flags, each something the patch needs besides its level. A reader that does not have the level, or sees a flag set for something it cannot do, stops and says it needs a newer loader. Byte 2: the highest 16K bank the rebuilt game needs, 0 to 111. Any other length or value is damage.
+
+| Flag | Means the patch needs a loader that can | A patch must set it when |
+|---|---|---|
+| Bit 0 | Read tape targets, with `TAP1` | It has no snapshot target (`.z80` or `.sna`) at all |
+| Bit 1 | Read targets of several tape files, below | Every target it has is a set of files |
+| Bits 2 to 7 | Reserved, 0 | |
+
+A patch with only tape targets that does not set bit 0 is damage, and so is one whose targets are all sets of files that does not set bit 1. A patch that also accepts the game in one file leaves bit 1 clear, since a loader without sets can use that entry. Tapes are a flag and not a level because levels are a ladder, each including those below, and a loader that reads tapes need not read `.sna` or write snapshots. A loader older than this flag sees it set and refuses, as it should; one that skipped it would find no target it could read, and say the same.
 
 | Level | Means the loader can | A patch must say it when |
 |---|---|---|
 | 1 | Read `.z80` targets, and everything in this document but `SCR1` | Always at least this |
 | 2 | Also write a loading screen from `SCR1` | It holds a `SCR1` |
-| 3 | Also read `.sna` targets | It has no `.z80` target at all |
+| 3 | Also read `.sna` targets | It has a snapshot target, but no `.z80` one |
 | 4 | Reserved: snapshot output, below | It has no sprite build at all. Nothing here writes or reads it |
 
-A loader that is shown a patch of its level or below can do all of it. `SCR1` makes a level necessary rather than optional because a loader that skipped it would write a wrong `.nex`: a patch with a `SCR1` that says level 1 is damage. A `.sna` target in a patch that also has a `.z80` target does not raise the level, as a level 1 or 2 loader skips the entry and uses the others.
+A loader that is shown a patch of its level or below can do all of it. `SCR1` makes a level necessary rather than optional because a loader that skipped it would write a wrong `.nex`: a patch with a `SCR1` that says level 1 is damage. A `.sna` target in a patch that also has a `.z80` target does not raise the level, as a level 1 or 2 loader skips the entry and uses the others. The level is worked out from the snapshot targets alone, so a patch with only tapes is level 1, or 2 with a `SCR1`, and sets bit 0; a tape in a patch that has a snapshot target too raises nothing, as a loader that cannot read tapes skips the entry.
 
-`tools/nxc.py` is level 3 and `firmware/nexclash.asm` is level 2. Both refuse level 4. `SET2` raises no level: it is an extra, so a loader that does not know it skips it and offers no such line, and the game still plays.
+`tools/nxc.py` is level 3 and reads tapes, sets of them included. `firmware/nexclash.asm` is level 2 and reads tapes, sets of them included. Both refuse level 4. `SET2` raises no level: it is an extra, so a loader that does not know it skips it and offers no such line, and the game still plays.
 
 **Memory.** Byte 2 lets a loader on a smaller machine refuse rather than start a game that breaks. A writer works it out from the `.nex`: the highest bank the header lists, or 48 if the header's byte 8 asks for 1792K, whichever is higher. That is all the file shows: a build may use banks at run time that it does not load, such as Layer 2 buffers, so an author may raise it, and nothing can lower it. A reader refuses a value below a bank the header lists.
 
@@ -133,10 +143,10 @@ One block per accepted dump, at least 1 and at most 32. The most was set by meas
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | Index: its place among the file's `TGT1` blocks, from 0 |
-| 1 | 1 | Kind: 1 `.z80`, 2 `.sna` |
+| 1 | 1 | Kind: 1 `.z80`, 2 `.sna`, 3 `.tap`, 4 `.tzx` |
 | 2 | 4 | The file's length in bytes |
 | 6 | 24 | Key wrap, encrypted: the ASCII text `NXC1-KEY`, then the 16-byte master key |
-| 30 | | Text |
+| 30 | | Text, or for a set of files the fields below, then text |
 
 A reader skips an entry of a kind it does not know, or cannot read, for finding the game, but still checks its index and name. Text keys:
 
@@ -145,15 +155,27 @@ A reader skips an entry of a kind it does not know, or cannot read, for finding 
 - `title`: optional. A loader's menu shows the first one in the file.
 - `zxdb_entry`: optional. Absent if ZXDB does not list the file.
 
+**A set of files.** A release whose game is on several tapes, such as a side A and a side B, is one entry naming every file. Its kind has bit 7 set over the first file's kind (0x83 or 0x84); offset 2 is the first file's length, as for any entry, so a reader finds a set's first file as it finds a single one. Then, after the key wrap:
+
+| Offset | Size | Field |
+|---|---|---|
+| 30 | 1 | n, the number of files, 2 to 8 |
+| 31 | 5 each | For files 2 to n in order: kind (3 `.tap` or 4 `.tzx`), then the length, 4 bytes |
+| 31 + 5(n - 1) | | Text |
+
+Only tapes make sets: a first or later kind other than 3 or 4, or n out of range, is damage. The text names them all: `file` the first, `file_2` to `file_n` the others, each with the same rules as `file`, and each required within the first 252 bytes, or the entry is damage; and a writer adds `md5_2` to `md5_n` beside `md5`. No name appears twice in one entry, whatever the case. **The key wrap of a set is keyed over all of its files in order**: `dump_base(nonce, file_1 + file_2 + ... + file_n)`, the files' bytes one after another. Several releases may still be accepted, each an entry of its own with its whole set; a set and a single file may be entries of one patch, and two sets may share a file, which then has the same name, length and MD5 in each. A writer refuses a set and a single file whose first files have the same length, and two sets whose first files have the same length unless they name the same further files with the same lengths: so a loader knows from the first file's length alone whether the game is a set, and which further files to look for. A loader that does not read sets skips such an entry as a kind it does not know. Data blocks are numbered within each file, from 0, and `TAP1` names a file by its place in the set: see "TAP1".
+
 **`file` is a bare name, never a path.** 1 to 127 bytes of printable ASCII, with none of `/ \ : * ? " < > |`, no `..` anywhere, no space first, no space or dot last. Anything else makes the whole patch damage, whichever kind the entry is, so that a wrong name can never open another path. A loader puts it after the patch's own folder: if that does not fit, it refuses, and never cuts a name short. `firmware/nexclash.asm` holds 223 bytes of path.
 
-A writer refuses two entries with the same MD5, or the same `file` whatever the case, so that a loader does not open one file twice for two entries. A reader need not check this.
+A writer refuses two entries with the same MD5 (for sets, the same MD5s in the same order), or the same `file` whatever the case (a name used in two sets must name the same file in both), so that a loader does not open one file twice for two entries; and two entries of different kinds with the same length, so that a loader can tell from the length alone which kind a file is. A reader need not check this.
 
-Every entry in a patch must rebuild the same banks. A writer checks that, by rebuilding, before it writes anything: only the banks matter, since the `.nex` carries its own start-up state, so dumps with different registers but the same memory are the same to it. With the clash fix off each player gets their own file, so its registers are theirs.
+Every entry in a patch must rebuild the same banks. A writer checks that, by rebuilding, before it writes anything: only the banks matter, since the `.nex` carries its own start-up state, so dumps with different registers but the same memory are the same to it. With the clash fix off each player gets their own file, so its registers are theirs. A tape's banks are those its `TAP1` makes, which include any extra banks, so a tape that places a multiload's blocks and a snapshot cannot be entries of one patch.
 
 ### INF1
 
 Keys: `publisher` (for the menu, such as `Ocean, 1986`; a loader may show the first 16 characters), `patch_by` and `colours_by` (optional, for the menu's credit line), `build`, `nex_md5`, `nexclash`, `credit`, and for languages, all optional and not needed to play: `game_language`, the ISO 639 code of the language the game itself is in; `language_codes`, each language set's code as `Name=code`, comma-separated, such as `Espanol=es`; and `text_by`, who translated it, kept here and not on the menu. A writer always includes `credit`, and a patch from NexClash carries "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)", which `nxc.py make` writes. Anything derived from its GPL-3.0-or-later code keeps those terms as well. `credit` lives here and in the project's documentation, including who painted a colour set: a loader need not show it on its menu or play screens. `nxc.py credit PATCH GAME -o OUT --patch-by NAME --colours-by NAME` sets the two menu names, right after `publisher`, and refuses if they would end past the first 252 bytes.
+
+**`fix_label`**, optional: the menu's name for its main line, the rebuilt NexClash game on or off, for a game where "Colour clash fix" is the wrong words, such as `Colour` for a game that never had clash. It is 1 to 25 printable ASCII characters, as a toggle's name is, so `[ON]` keeps its column. A writer refuses a longer one, or one that would end past the first 252 bytes, and writes it after `publisher`, `patch_by` and `colours_by`. A reader that finds it longer shows the first 25, with anything unprintable as `?`. **Absent, the line reads `Colour clash fix`**: a patch without the key, or with it cut off at 252 bytes, shows the menu it always did, and a reader that does not know the key shows that too. It names the line and nothing else: what the line does, its `[ON]` and `[OFF]`, and the `[N/A]` of the lines after it with it off, are the clash fix's. `nxc.py make --fix-label TEXT` sets it.
 
 ### PRF1
 
@@ -202,7 +224,7 @@ Changes to banks that come from the game. Empty if there are none. Otherwise thi
 - 2 bytes: the number of sites
 - for each site: 1 byte bank, 2 bytes offset, 2 bytes length, then the new bytes
 
-A reader refuses a site whose bank the snapshot lacks, that the `.nex` header does not list, or that a `BNK1` supplies; whose offset plus length passes 16,384, or which runs past the end of the table; and a table with bytes left over.
+A reader refuses a site whose bank the game lacks (for a tape, the banks its `TAP1` makes), that the `.nex` header does not list, or that a `BNK1` supplies; whose offset plus length passes 16,384, or which runs past the end of the table; and a table with bytes left over.
 
 The table must be no longer than 24,576 bytes once decompressed, which is what the loader holds at once. The largest in 52 builds is 23,058.
 
@@ -253,7 +275,7 @@ An optional set of byte replacements, on the menu: a colour set, a language. One
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | Stream index, in the clear. **Unique among all `SET2` blocks**, of any kind or base, or two would use one stream. A repeat is damage |
-| 1 | 1 | Kind: 1 colours, 2 language. Others are reserved |
+| 1 | 1 | Kind: 1 colours, 2 language, 3 a toggle that changes only what is shown or heard, 4 a toggle that changes the game's logic. Others are reserved |
 | 2 | 1 | Choice ID: which choice this is within its kind. It stays the same when a patch is remade, and is shared by the versions of one choice on different bases. A writer keeps kind, choice and base unique together |
 | 3 | 1 | Base: 1 the sprite build, 2 the plain game (reserved: see "Snapshot output") |
 | 4 | 1 | Length of the name, 1 to 25 |
@@ -300,6 +322,25 @@ A reader that does not know a kind or a base checks the block's shape and index,
 **Memory.** A loader needs one bitmap and its bytes for each set chosen, for one bank at a time, as well as `SIT1`: `firmware/nexclash.asm` keeps three 8K pages for each, so 72K for one set and 96K for two, the same whatever the size of the set, and says so if it cannot get them. A 1MB Next has 96 8K pages of ZX memory, so this is well within it. What a build needs to run is separate, and is in `OPT1`.
 
 **A set can change how a game starts.** It cannot change the header, but it can change any byte of any listed bank, and those banks hold the start-up code and hooks. An unchanged header says nothing about that. A set from a stranger is code, as the rest of a patch is.
+
+### Toggles: SET2 kinds 3 and 4
+
+A **toggle** is a set of its own kind, on its own menu line, for a bug fix or an extra such as smooth scrolling. It is a `SET2` block exactly as above (stream index, choice, base, name, CRC, chunks), with kind 3 or 4:
+
+- **Kind 3, display only.** It changes what the player sees or hears, never the game's logic: the game's memory and registers, outside what the toggle's own code keeps, are as without it. Its proof says so by replay: `PRF1`'s `replay` states the game logic was IDENTICAL with it on, and how its own layer was checked.
+- **Kind 4, changes the logic**, as a bug fix does. It cannot be proven identical to the original, and is not. Its proof states what it changes and how that was checked instead: `PRF1` key `toggle_<choice>` (the toggle's choice ID in decimal), one line saying what the toggle does, what was replayed or tested with it on, and against what. A writer refuses a kind 4 toggle without that line. The menu does not show the difference: the name says what it is.
+
+**What a toggle may change.** Bytes, code or data, in banks the base build already lists, as any set; the base build reserves the room (a toggle's hook code lives in pages the base already has, and its chunks fill them). It cannot add a bank, change the header, or change the length of the output.
+
+**Choice and name.** Each toggle is one choice: its choice ID is unique among the toggles of its kind and stays the same when a patch is remade. Its name, 1 to 25 characters, is its menu line. A writer keeps names unique among all toggles.
+
+**Together.** Any toggles may be on together, and with one colour set, one language and any trainers. So a writer refuses a patch where any two toggles, or a toggle and any set of another kind, or a toggle and any trainer's POKE, could write the same byte, even the same value; and a reader that finds such an overlap among what is chosen, comparing the chunks' bitmaps as for two sets and each chosen POKE against them, refuses the patch as damaged before it makes any file. Several toggles combine in the CRC as several sets do: one term each.
+
+**Limits.** A patch has at most 4 toggles of the sprite build. A reader that finds a fifth offers the first 4 and ignores the rest, as a writer never makes one.
+
+**Compatibility.** A reader that does not know kinds 3 and 4 checks the block's shape and index as for any `SET2`, offers no line, and the game plays without it. So toggles raise no level and set no flag in `OPT1`. Patches and vectors made before toggles are unchanged byte for byte.
+
+**Memory, and a reader's limit.** A chosen toggle is held as a chosen set is: one chunk at a time, in the same pages. **A reader may hold fewer chosen sets and toggles at once than a patch offers.** It states its limit N, and its menu then lets no more than N be on: a key that would turn on one more does nothing, and the line stays `[OFF]`, so a choice it cannot make is never offered and then refused. `firmware/nexclash.asm` holds 2, in three 8K pages each. A writer warns when a patch offers more sets and toggles that can be on together than 2: a colour line, a language line and each toggle count one each.
 
 ### Reserved: snapshot output
 
@@ -357,6 +398,46 @@ A cheat, in the terms of a `.pok`, resolved when the patch is made. Not encrypte
 The length of the block must be exactly that. All of these are checked for every trainer, chosen or not, before the menu, so that readers agree on whether a patch is good. `nxc.py import-pok` builds these from a `.pok`. A `.pok` line's bank field 0 to 7 means that bank paged at 0xC000; 8 means no paging: bank 5 at 0x4000, bank 2 at 0x8000, and at 0xC000 bank 0 on a 48K game. On a 128K game, bank 8 at 0xC000 or above says nothing of which bank is paged there when the game reads the byte, and the snapshot's 7FFD gives only the bank paged when it was saved, which can be another: Rainbow Islands is saved with bank 1 there and runs the code its cheat changes from bank 0. So `nxc.py import-pok` refuses such a line unless `--top-bank N` names the bank paged there in play, found by watching the game run; a `.pok` line naming its bank needs nothing. Below 0x4000 is refused. A trainer asking the player for a value (256 in the `.pok`) is left out for now. A POKE landing on a byte the patch changes, the changes of any set included, or in a bank the patch supplies, is refused when the patch is made, since its target is no longer the game's own code there. `--only "Name,Name"` imports just those trainers, in the `.pok`'s order; a name the `.pok` lacks or that asks for a value is an error. A writer keeps names unique; a loader goes by position.
 
 Trainers apply to what is chosen, in the order of the file, so with two on the same byte the later wins. With the clash fix on they apply over the base build, and over any sets on, after the CRC is computed: the CRC and length in `OUT1` and the CRC in a set are always of the build without POKEs, and a failure leaves no file. A loader offers the first 8, or the first 7 when it offers two kinds of set, as only ten lines have keys, and holds at least 128 POKEs at once, refusing a choice with more. A trainer's bank must exist in what is being written.
+
+### TAP1: a game from a tape
+
+A tape target, `TGT1` kind 3 (`.tap`) or 4 (`.tzx`), is found and keyed as any target is: by its length, then the key wrap, with `dump_base` absorbing the whole file. Its banks do not come from the file by a fixed layout, as a snapshot's do. They come from a table in a `TAP1` block: copies of bytes from the tape's data blocks into banks, then sites for what the tape does not hold, over banks of zeros. What that makes is the game's memory at the point the build starts from, and from then on a tape target is treated as a snapshot with those banks: `SIT1`, `BNK1`, sets and trainers work on them as on a snapshot's. The data blocks are defined in "Tapes", below.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | Stream index, in the clear. **Unique among all `TAP1` blocks.** A repeat is damage |
+| 1 | 1 | n, the number of tape targets it serves, 1 to 32 |
+| 2 | n | Their `TGT1` indices, in the clear |
+| 2 + n | | The table, ZX0-compressed, then encrypted under `TAP1` with the stream index as index. Not empty |
+
+Every tape target is in exactly one `TAP1`, and a `TAP1` names only tape targets, each once: anything else is damage. A set is a tape target, and a table that serves it may name any of its files; one that also serves a single file can name only file 0, which a writer checks by rebuilding. Releases of one game, such as its `.tap` and its `.tzx`, share a `TAP1` when one table makes the same banks from each, which a writer checks by rebuilding; otherwise each has its own, under the next stream index.
+
+**The table**, at most 24,576 bytes once decompressed, the most a loader holds at once, as for `SIT1`:
+
+| Size | Field |
+|---|---|
+| 55 | The start state: a `.z80` version 2 header. Bytes 6 and 7 are 0, bytes 30 and 31 are 23, and byte 34, the hardware mode, is 0 for a 48K game or 3 for a 128K one |
+| 4 | The CRC-32 of the snapshot the clash fix off writes from it, without POKEs: see below |
+| 2 | The number of copies |
+| 10 each | A copy: 2 bytes data block, 3 bytes offset in that block's bytes, 2 bytes length (1 to 16,384), 1 byte bank, 2 bytes offset in the bank. Of the data block field, bits 0 to 9 are the block's number in its file and bits 12 to 14 the file's place in a set, 0 for the first; bits 10, 11 and 15 are 0. For a single file, then, the field is the block's number, as it always was |
+| 2 | The number of sites |
+| each | A site: 1 byte bank, 2 bytes offset, 2 bytes length (at least 1), then that many bytes |
+
+and nothing after them. The header holds the start's registers, IFF1 and IFF2, interrupt mode, border, 7FFD, the last register selected on port 0xFFFD and the 16 AY registers (bytes 38 to 54), where a `.z80` file has them. Bytes a build does not use still count in the CRC.
+
+A reader refuses as damage: a table that is not exactly those fields; a header breaking its rules; a copy with bits 10, 11 or 15 of its block field set, or naming a file past the target's last; a copy naming a data block past its file's, or past the first 1,024, or whose offset plus length passes that block's end; a copy or site whose bank is 112 or above, whose length is out of range, or whose offset plus length passes 16,384; and copies, or sites, out of order. Each of the two lists goes through banks in `.nex` order, and within a bank by rising offset, with no two of one list overlapping. A copy and a site may overlap, and then the site wins.
+
+**The banks.** The machine's banks (0 to 7 for 128K; 5, 2 and 0 for 48K), and any other bank a copy or site names, start as 16,384 zeros. The copies are made, in order, then the sites. The machine's banks are then the game's memory at the start; another bank is an **extra bank**. Building the `.nex`, an extra bank its header does not list is damage, since it would never be used and readers could differ over whether it matters; the clash fix off uses only the machine's banks, and does not read the header. A reader works out the CRC below before it uses a bank, and refuses a mismatch as damage.
+
+**What it holds of the game.** The copies say where things go, and the bytes come from the player's tape. The sites hold what is not on the tape: the screen as drawn, variables, the stack, and tables the game's code made when it ran, which are derived from the game. **A writer takes from the tape every run of 16 bytes or more of the start that the tape holds, wherever it holds it, and carries only the rest.** So a table holds none of the tape's code or data as it is, and no more than the 24,576 bytes a snapshot patch's `SIT1` may. `tools/nxc.py` also refuses more than 8,192 bytes of sites unless told otherwise: a start state the tape does not hold is a sign of a packed or encrypted tape, whose unpacked form is the game, and a plain copy recipe is not for those.
+
+**Where the build starts** is the writer's choice, usually a `.z80` taken in an emulator from that tape, and the build is made from that `.z80`. The fewer of its bytes that are not on the tape, the better. For The New Zealand Story in JNext (128K), with this format's writer: at the jump into the main code, 5,151 bytes in 312 sites; at "LEVEL 1-1 READY", after the first world loads and before play, 3,813 bytes in 101 sites, with 68,367 bytes in 125 copies; in play, 6,536.
+
+**Multiload.** A build that keeps a multiload's blocks in memory names extra banks for them. Copies place those blocks, or parts of them, wherever in those banks the build wants them; a writer takes them from the tape alone, and carries anything else the build has in such a bank in `SIT1`, as a change of its own. Hooking the game's loader to read the blocks from there is the engine's work, done in its own banks and sites: this format only places them. `OPT1` byte 2 counts them, as the `.nex` lists them.
+
+**Memory.** A loader holds the table, at most 24,576 bytes, and builds a bank at a time from it. `firmware/nexclash.asm` gives it three 8K pages of its own, and reads each copy from the tape straight into the bank being built, so a tape needs 24K more than a snapshot, however long it is.
+
+**Clash fix off.** A tape is never handed over as it is, nor is a set of them. The plain game is the start as a `.z80`: the table's header, then the machine's banks as whole pages, each 0xFFFF, its page number, then 16,384 bytes, pages 3 to 10 for 128K and 8, 4, 5 for 48K. It is written only after the keyed check, with or without a trainer. Its CRC-32 without POKEs must equal the table's; the POKEs then go in, and each must be in one of the machine's banks.
 
 ## The keys and streams
 
@@ -423,11 +504,12 @@ No two uses share a stream. Each tag has one purpose, and within a tag the index
 
 | Base | Tag | Index | Used for |
 |---|---|---|---|
-| dump | `TGT1` | The entry's index | The key wrap |
+| dump | `TGT1` | The entry's index | The key wrap. A set's dump base absorbs every file of the set in order |
 | master | `CHK1` | 0 | The check value. It is never a block's tag |
 | master | `OUT1`, `NEX1`, `SIT1` | 0 | Those blocks |
 | master | `BNK1` | The bank number | That bank |
 | master | `SCR1` | The piece's index | That piece |
+| master | `TAP1` | The block's stream index | That tape table |
 | master | `SEB` then the set's stream index, as one byte | 255 | That set's CRC |
 | master | `SEB` then the set's stream index, as one byte | The bank | That set's chunk for that bank |
 
@@ -453,62 +535,185 @@ Packing: `ED ED n v` is `n` copies of `v`, and `n` may be 0. An `ED` with fewer 
 
 **`.sna`.** 27 bytes of registers, then bank 5, bank 2, and the bank paged at 0xC000. 49,179 bytes is a 48K file, whose third bank is bank 0. Otherwise it is a 128K file of 131,103 or 147,487 bytes: after the third bank come 2 bytes of PC, 1 byte 7FFD, whose low 3 bits say which bank was third, 1 byte for TR-DOS, then the banks other than 5, 2 and the third, in rising order. A paged bank 5 or 2 is in the file twice, which gives the longer length. A `.sna` holds what a `.z80` holds of memory, and registers elsewhere.
 
+## Tapes
+
+A tape target's bytes are named by **data block**, counted from 0 in the order the file stores them, and by offset in that block's bytes as stored. On a standard ROM block the flag byte is offset 0 and the checksum byte the last.
+
+**`.tap`.** Blocks, each 2 bytes of length then that many bytes, to the end of the file. Every block is a data block, one of length 0 included. A length that runs past the end is damage.
+
+**`.tzx`.** `ZXTape!`, 0x1A, a major version of 1 and any minor version, then blocks to the end of the file, each an ID byte and its body. Data blocks, whatever their timings, pauses and used bits:
+
+| ID | Block | Its bytes start at | Their length |
+|---|---|---|---|
+| 0x10 | Standard speed data | body + 4 | 2 bytes at body + 2 |
+| 0x11 | Turbo speed data | body + 18 | 3 bytes at body + 15 |
+| 0x14 | Pure data | body + 10 | 3 bytes at body + 7 |
+
+These are skipped, and get no number. Each is sized as TZX 1.20 sizes it, as a head of fixed length and, after it, the count it holds times a unit:
+
+| ID | Head | Count, from the body's start | Unit |
+|---|---|---|---|
+| 0x12 pure tone | 4 | none | |
+| 0x13 pulse sequence | 1 | 1 byte at 0 | 2 |
+| 0x15 direct recording | 8 | 3 bytes at 5 | 1 |
+| 0x18 CSW recording, 0x19 generalised data, 0x2A stop the tape if 48K, 0x2B set signal level | 4 | 4 bytes at 0 | 1 |
+| 0x20 pause, 0x23 jump, 0x24 loop start | 2 | none | |
+| 0x21 group start, 0x30 text | 1 | 1 byte at 0 | 1 |
+| 0x22 group end, 0x25 loop end, 0x27 return | 0 | none | |
+| 0x26 call sequence | 2 | 2 bytes at 0 | 2 |
+| 0x28 select, 0x32 archive info | 2 | 2 bytes at 0 | 1 |
+| 0x31 message | 2 | 1 byte at 1 | 1 |
+| 0x33 hardware type | 1 | 1 byte at 0 | 3 |
+| 0x35 custom information | 20 | 4 bytes at 16 | 1 |
+| 0x5A glue | 9 | none | |
+
+Any other ID, the deprecated 0x16, 0x17, 0x34 and 0x40 among them, and a block that runs past the end, make a file that cannot be a tape target: a writer refuses it, and a reader treats it as damage. Jumps, loops and calls change nothing here, since the numbering is the file's order, not the order a deck plays it. Direct recordings, CSW and generalised data hold a signal, not bytes, so nothing can be copied from them in this version, and a game held only in them cannot be a tape target.
+
+A reader walks a tape from its start until it has found the highest data block its table names, refusing on the way what this section refuses, and reads nothing after that block. **For a set, the files are walked in order, as one tape after another:** each file before the last one the table names is walked to its end, and may hold no more than 1,024 data blocks; the last one named is walked to the highest block the table names in it, as a single file is; a file after it is still opened, found and keyed, but not walked. A reader may so meet damage in an earlier file after the blocks the table names there, and refuses it, as a writer does. This is what lets a loader walk a set with one file open at a time. A writer checks every whole file.
+
 ## Applying a patch, in this order
 
 Nothing is decompressed before step 5, and nothing is written before step 6. A set's chunks are decoded in both, one at a time for each set.
 
 1. Open the patch, and refuse it if its name is one of the outputs: see below. Read the header. Refuse it as "not a patch" as above.
-2. Walk every block, once, up to the end of the file. Refuse anything that does not fit. Refuse a second required block at once. For `OPT1`: its length, level and flags. For each `TGT1`: its shape, index and `file`. For each `TRN1`: its shape, flags and every POKE. For each `SET2`: its name fitting, its stream index unique. Take `INF1`'s text. At the end: every required block there; at least one target this reader can read, or say a newer loader is needed; a `SCR1` only with level 2 or above.
-3. Find the game: the first file that exists, in this order, whose length equals that of a target this reader can read: each target's `file` beside the patch, then the patch's own name with `.z80`. One that is not there is passed over. One that is there under an output's name is refused. One of no listed length is noted and passed over. None found: say which file is needed, and that the one there is wrong if one was noted. Show the menu.
-4. Clash fix on, or off with a trainer on: absorb the file once, as `dump_base`. Take the targets of that length, from a copy of that state each, until a wrap's first 8 bytes are right: that is the master key. The file is never read again for another entry. None right: go on to the next file from step 3, or refuse as the wrong file. Build `key_base`, and check the value at offset 22. Refuse as damage if it differs. Decrypt `OUT1`.
-5. Clash fix on: walk the `BNK1` blocks and index them, refusing bad lengths and repeats. Decrypt and decode `NEX1`, and read the game's pages. Decode `SIT1` and check the whole of it. Refuse a listed bank with no source, or a `BNK1` for a bank not listed. Size any screen from byte 10 and check all its `SCR1` headers. For each set chosen, decrypt its CRC. Then go through the listed banks in `.nex` order, decoding and checking the chunk each set has for that bank, and with two, refusing any bit set in both bitmaps. A chunk not reached that way is refused. Work out what the output's CRC-32 must be, from `OUT1` and theirs. Check the chosen POKEs' banks exist.
+2. Walk every block, once, up to the end of the file. Refuse anything that does not fit. Refuse a second required block at once. For `OPT1`: its length, level and flags. For each `TGT1`: its shape, index and `file`. For each `TRN1`: its shape, flags and every POKE. For each `SET2`: its name fitting, its stream index unique. For each `TAP1`: its head, its stream index unique. Take `INF1`'s text. At the end: every required block there; at least one target this reader can read, or say a newer loader is needed; a `SCR1` only with level 2 or above; every tape target in exactly one `TAP1`, and nothing else in any; with only tape targets, `OPT1`'s bit 0 set.
+3. Find the game: the first file that exists, in this order, whose length equals that of a target this reader can read, tapes included: each target's `file` beside the patch, then the patch's own name with `.z80`. One that is not there is passed over. One that is there under an output's name is refused. One of no listed length is noted and passed over. None found: say which file is needed, and that the one there is wrong if one was noted. **For a set** whose first file is found, each other file it names must be beside the patch under its name with its length, in order: one missing is refused, naming it as needed; one of another length is refused, naming it as the wrong file. Show the menu.
+4. Clash fix on, or off with a trainer on: absorb the file once, as `dump_base` (for a set, each of its files in turn, then the nonce). Take the targets of that length, from a copy of that state each, until a wrap's first 8 bytes are right: that is the master key. The file is never read again for another entry. None right: go on to the next file from step 3, or refuse as the wrong file (for a set, that its files are not the release the patch wants). Build `key_base`, and check the value at offset 22. Refuse as damage if it differs. Decrypt `OUT1`.
+5. Clash fix on: walk the `BNK1` blocks and index them, refusing bad lengths and repeats. Decrypt and decode `NEX1`, and read the game's pages. For a tape, decrypt and decode its `TAP1`, check the whole table against the tape's data blocks, build the banks it makes, check its CRC, and refuse an extra bank the header does not list. Decode `SIT1` and check the whole of it. Refuse a listed bank with no source, or a `BNK1` for a bank not listed. Size any screen from byte 10 and check all its `SCR1` headers. For each set chosen, decrypt its CRC. Then go through the listed banks in `.nex` order, decoding and checking the chunk each set has for that bank, and with two, refusing any bit set in both bitmaps. A chunk not reached that way is refused. Work out what the output's CRC-32 must be, from `OUT1` and theirs. Check the chosen POKEs' banks exist.
 6. Create the output. Write the `.nex`: the header; any screen, a piece at a time; then each bank the header lists, in `.nex` order (5, 2, 0, 1, 3, 4, 6, 7, then upward), from `BNK1` if present, otherwise from the game with `SIT1` applied. Fill short banks with zeros. Decode each chosen set's chunk for that bank again, check it again, apply it, run the CRC over it, then apply the trainers' POKEs, then write it.
 7. Check the CRC-32 against the value from step 5, and the length against `OUT1`. If either differs, delete the file and report damage.
 8. Start the `.nex` with NextZXOS's own loader.
 
 **Outputs and inputs.** The loader writes to fixed names, `/tmp/NEXCLASH.NEX` and `/tmp/NEXCLASH.Z80`, on the system drive, whichever the choice. It must not be reading one of those: making the output would truncate its own input. Before it reads a patch or a game, it asks NextZXOS for the file's folder (`F_GETCWD` with A=0xFF), which gives one form, such as `C:/TMP/`, for `/tmp/x`, `c:\tmp\x`, `tmp/x` from the root, `x` from `/tmp` and any path through `..`; and compares the folder, then the name after the last `/`, `\` or `:`, without regard to case, and ignoring dots and spaces at the name's end, which FAT drops. Either output name in that folder is refused for a patch or a game, whichever route is chosen. A folder NextZXOS will not resolve is refused too. It only ever deletes an output it has created. Being in `/tmp` under another name, or under that name on another drive, is fine.
 
-**The clash fix off with a trainer on** writes the game as a `.z80` of whole pages with the POKEs in place, under the game's own header (version 1 becomes version 2), after the checks of step 4. With no trainer it is the game file itself, found as in step 3, with no further check at all, as `nxc.py --original` is. `tools/nxc.py` writes the same for a `.z80`, and for a `.sna` keeps its layout, with the POKEs in place in each copy of a bank.
+**The clash fix off with a trainer on** writes the game as a `.z80` of whole pages with the POKEs in place, under the game's own header (version 1 becomes version 2), after the checks of step 4. With no trainer it is the game file itself, found as in step 3, with no further check at all, as `nxc.py --original` is. `tools/nxc.py` writes the same for a `.z80`, and for a `.sna` keeps its layout, with the POKEs in place in each copy of a bank. **A tape**, trainer or not, is checked as in steps 4 and 5 and written as its start, as `TAP1` says.
 
 ## The menu
 
-A loader offers the same choices for every game, with trainers off, the clash fix on and enhanced colours off to begin with:
+Every reader that offers choices shows this one menu, the same in the dot command and in a `.nex` that carries it (below), from one source, `firmware/menu.asm`. It is a standard ULA screen of 32 columns and 24 rows, in the ROM's 8 x 8 font, every attribute BRIGHT. The word NexClash appears nowhere on it.
 
 ```text
- JETPAC                    Ultimate, 1983
-
- TRAINER
-  1  Infinite lives            [OFF]
-
- NEXCLASH
-  2  Colour clash fix          [ON]
-  3  Enhanced colours          [OFF]
-
- ENTER to play
-
-Patch: Jon Attree  Colours: Jane Painter
+row  0   RENEGADE                    ////   blue bar, yellow title, four stripes
+row  1   Imagine, 1987                             the publisher, white
+row  2
+row  3  TRAINER                                    yellow
+row  4  1 Infinite lives           [ ON]           ON green
+row  5  2 Infinite time            [OFF]
+row  6
+row  7  OPTIONS                                    yellow
+row  8  3 Colour clash fix         [ ON]
+row  9  4 Enhanced colours         [OFF]           OFF red
+row 10
+row 11  ENTER play   BREAK exit                    green, red
+row 12
+row 13  Infinite time:                             cyan: the name of the line last keyed
+row 14  the clock stops at every round.            its help, two rows of 32
+row 21  Colours: Jane Painter
+row 22  Patch: Jon Attree
+row 23                                  ////   blue bar, four stripes
 ```
 
-- **Colour clash fix.** On, the rebuilt NexClash `.nex`. Off, the player's own game, with any trainers.
-- **One line for each kind of set offered,** after the clash fix: `Enhanced colours`, then `Language`. Its key steps from `[OFF]` through the kind's sets, in the file's order, and back. Only sets with the sprite build as their base are offered. With one colour set the line is `[ON]` or `[OFF]`, not its name. Otherwise it shows the name, cut to 17 characters, ending in the last column. A loader with no room to step may offer the first alone and must say so in its documentation: this one has room. With the fix off each line reads `[N/A]`, its key does nothing and no set is applied, and the choice is back when the fix is turned on.
-- **The credit line.** `Patch: <patch_by>     Colours: <colours_by>`, under the rest, showing only the parts present, the colours only for a patch with a colour set, and no line if neither. It starts in the first column and fits 41. A name is cut to 32 characters, and with both the gap of 5 closes to 2 before a name is cut: the first then keeps at least 11 characters and the second what is left. So `Patch: Jon Attree     Colours: Jane Painter`, at 44 columns, shows with a gap of 2. Anything unprintable shows as `?`. Dean's credit is not on this line; it stays in usage and documentation.
-- Lines are numbered from 1 and the keys match, so the tenth line is on key 0. Ten lines are all there are keys for: 8 trainers with the fix and one kind, or 7 trainers with the fix and two.
-- ENTER and SPACE both start with what the menu shows. BREAK cancels.
+**Colours.** Attribute bytes, BRIGHT (0x40) in each: paper black and ink white (0x47) wherever nothing else is said; the bars 0x4E (blue paper, yellow ink); headings 0x46; `ON` 0x44, `OFF` 0x42, `N/A` and the brackets 0x47; a set's name, shown when it is on, 0x44; `ENTER play` 0x44 and `BREAK exit` 0x42; the help's first row 0x45. No line is highlighted. The border is not changed. **The stripes** are the four last cells of each bar, each the same glyph, its pixels set where x + y >= 7 (x from the left, y from the top, 0 to 7: bytes 01 03 07 0F 1F 3F 7F FF), with paper and ink blue and red, red and yellow, yellow and green, green and cyan.
 
-The set a patch makes its NexClash look is its base build.
+**Rows.** **The title is never cut:** it has the blue bar to itself, in capitals, from column 1 to 27, before the stripes in 28 to 31. A longer one wraps at its last space within the first 27 characters (or at 27 if there is none) to a second bar row, also with its stripes; a writer keeps a title to 54 characters, two bar rows, and a reader shows no more. The publisher, `INF1`'s `publisher` as it stands, is on the row below in white, from column 1, or from column 0 when it needs all 32; it is cut only past 32. Then a blank row, unless the title took two. Then `TRAINER` and the trainers' lines, if there are any, then a blank row, then `OPTIONS` and its lines: the main line, one line for each kind of set offered, one for each toggle. A blank row, then `ENTER play` in columns 0 to 9 and `BREAK exit` in 13 to 22. A blank row, unless the help would then end past row 20, then the help: the name of the line last keyed (line 1 to begin with) and `:` (cut to 31), then its help text, characters 1 to 32 and 33 to 64, if the patch gives it; otherwise those rows are blank. With ten lines and both sections the help ends in row 20. Row 21: `Colours: ` and `colours_by`, cut to 23, only for a patch with a colour set offered and that name. Row 22: `Patch: ` and `patch_by`, cut to 25, if it is there. Row 23, always: the bar with its stripes and no text. (The engines' author is credited in each patch's `credit` field and its `.nfo`.) Anything unprintable shows as `?`.
 
-The loader is the dot command `firmware/nexclash.asm`. It writes to `/tmp` and leaves `%x` as 1 for a `.nex` or 2 for a `.z80`, and a line in `browser.cfg` with a small merged program starts the result: see `firmware/README.md`, which also gives what was tried and what is assumed. Both have run in JNext on real NextZXOS, not on a Next.
+**A line.** Column 0 its key, `1` to `9`, then `0` for the tenth; its name from column 2; its value ending in column 31: `[ ON]`, `[OFF]` or `[N/A]`, or for a kind with more than one set, the chosen set's name, cut to 12, in brackets. The name is cut to leave a blank column before the value. Names are up to 25 characters, so `[ ON]` keeps its column.
+
+**What the lines are** is as before, in this order:
+
+- **Trainers**, one line each, `[OFF]` to begin with (in a `.nex`, where its writer left them), in the file's order.
+- **The main line,** `INF1`'s `fix_label`, or `Colour clash fix` without one. `[ ON]` to begin with: on, the rebuilt NexClash `.nex`; off, the player's own game, with any trainers. Wherever this document says the clash fix, it means this line. **In a `.nex` that carries its menu, the line is shown `[ ON]` and its key does nothing,** by definition: that file is the rebuilt game and holds no copy of the plain one.
+- **One line for each kind of set offered,** `Enhanced colours`, then `Language`. Its key steps from `[OFF]` through the kind's sets, in the file's order, and back. With one set of the kind the line is `[ ON]` or `[OFF]`; otherwise the value names the set. Only sets with the sprite build as their base are offered.
+- **One line for each toggle,** its name, `[OFF]` to begin with, its key turning it on and off.
+- With the main line off, every set's and toggle's line reads `[N/A]`, its key does nothing and nothing of it is applied; the choices come back when it is on again.
+- Ten lines are all there are keys for: the main line, one line for each kind of set and one for each toggle come first, and trainers fill what is left, at most 8.
+
+**The limit.** A reader states how many sets and toggles it can hold chosen at once, N: a key that would turn on one more does nothing. The dot command's N is 2. A `.nex` carrying its menu holds its N, and a writer sets it to 2, so that the two menus offer exactly the same choices.
+
+**Keys.** A line's key acts on it as above, and its help shows. There is no cursor and no highlight: the number keys are the only way to change a line. ENTER and SPACE both start with what the menu shows. BREAK, CAPS SHIFT with SPACE, cancels.
+
+**Defined behaviour in a `.nex` that carries its menu:** the main line is fixed `[ ON]` and its key does nothing; ENTER and SPACE start the game alike; BREAK resets the Next (NextREG 0x02 = 1), as nothing is left to return to. **In the dot command:** BREAK stops with `Cancelled`; after ENTER or SPACE the keys' row reads `Patching...` (or `Loading...` with the main line off) in FLASH, BRIGHT yellow on black (0xC6), and the menu screen stays up until the command is done, as a rebuild can take a few seconds; with the main line on, ENTER writes the bare `.nex` with the choices fixed, so the game starts straight after its title with no second menu, and SPACE writes the `.nex` that carries its menu, its lines starting where they were left; with the main line off, either key writes the player's own game, with any trainers, as before.
+
+**Help text** comes from `HLP1`, below, and is optional: without it, or without a line's key, the help rows are blank. A reader that does not know `HLP1` shows no help.
+
+### HLP1: help for the menu
+
+An optional text block, in the clear, covered by the check value as every block is, and skipped by a reader that does not know it, so it raises no level and sets no flag. Lines of `key=value`, as in "Text blocks":
+
+| Key | The help of |
+|---|---|
+| `fix` | the main line |
+| `trainer_N` | trainer N, from 1, in the order of the file's `TRN1` blocks |
+| `colours`, `language` | that kind's line |
+| `toggle_N` | toggle N, from 1, in the order of the file's toggles (kinds 3 and 4 together) |
+
+A value is 1 to 64 printable ASCII characters, shown as two rows of 32, the first 32 then the rest, as they are: a reader does not wrap. `nxc.py help` wraps a text at the last space before column 33 by padding with spaces, and refuses one that is then longer than 64, an unknown key, or a `trainer_N` or `toggle_N` past the patch's last. A reader reads at most the first 1,024 bytes of the block; a line cut off there counts as absent. A longer value shows its first 64. Changing help keeps the nonce and key, like `credit`, and needs the game, as any change to a patch does.
+
+## A .nex that carries its menu
+
+A rebuilt game must stay usable without this project. So the **default** output of both `nxc.py` and the dot command is a `.nex` with the menu in it: when it starts, on any Next or emulator that runs a `.nex` through `.nexload` or its own `.nex` loader, it shows the menu above, with every trainer, every set and every toggle the patch offers, applies the choices to the game's memory in place, from data carried in the file, and starts the game. **With choices X the game starts in exactly the state the `.nex` written by a reader for choices X starts in:** the same bytes in every bank the game's header lists, the same CPU registers but R, the same IFF, IM and I, the same MMU and the same stack. A writer offers a **bare** `.nex`, the one this document defined before, with the choices fixed when it is made: `nxc.py --bare`.
+
+### The file
+
+It is the bare `.nex` with nothing chosen, as `OUT1` describes it, changed only as follows:
+
+- **The header.** Each menu bank's flag set (byte 18 + bank) and byte 9 increased by their count. The start address (bytes 14, 15) is 0xC000 and the entry bank (byte 139) the first menu bank, M0. Byte 8 is set to 1 if a menu bank is above 47. Nothing else changes: the stack pointer, border, screen flags, core version, delays and the rest are the build's own.
+- **The menu banks,** M0, M0 + 1, ..., in `.nex` order after the build's own banks, so the file is the bare file's screen and banks followed by them. M0 is `OPT1`'s byte 2 plus 1: a bank the build never uses, by that byte's definition. A writer refuses past bank 111.
+
+**A writer refuses a menu** for a build whose header is not `V1.2`; whose start address is 0, below 0x4000 + 57, or one to four bytes into an 8K page (see the handoff); or whose header asks `.nexload` to pass the file's handle on (bytes 140, 141 not 0), as that game would read on into the menu banks. It says so, and `--bare` is still there. The builds of all 17 published patches and of The New Zealand Story's 8 are `V1.2`, start at 0xC000 in their entry bank with the stack at 0xDFFE, and pass no handle.
+
+**M0** is seen from 0x0000 to 0x3FFF while the stub runs:
+
+| Offset | Size | Holds |
+|---|---|---|
+| 0x0000 | | The stub, `firmware/nxcstub.bin`, assembled from `firmware/nxcstub.asm`, which includes `firmware/menu.asm` |
+| | 8 | Its parameters, the stub's last 8 bytes: M0's first 8K page, the build's start address (2), its stack pointer (2), its entry bank's first 8K page, how many menu banks, then 0 |
+| | | The menu's description, below |
+| to 0x1D00 | | All of that must end by here: a writer refuses a menu that does not |
+| 0x1D00 | 57 | Where the last 57 bytes are put together |
+| to 0x2000 | | Free, but for the shadow below |
+| 0x2000 | 6,912 | Bank 5's first 6,912 bytes, kept while the menu is on the screen |
+| 0x3B00 | 768 | The font, copied from the ROM at 0x3D00 |
+| 0x3E00 | 384 | The stub's variables, then its stack, the registers kept at entry at its top (0x3F80) |
+| 0x3F80 | 128 | Free, but for the shadow below |
+
+**The description** is what `firmware/menu.asm` draws and changes, in the same form in the dot command's memory: a flags byte (bit 0: the main line is fixed `[ ON]`); N; the number of lines, 1 to 10; then zero-terminated strings: the title, the publisher, `colours_by` (empty when no colour set is offered) and `patch_by`; then each line: its kind (0 trainer, 1 the main line, 2 a kind of set, 3 a toggle), its state (0 off; for a kind of set, 0 or the chosen set from 1), the number of sets for a kind of set or 0, then zero-terminated its name, its help, and for a kind of set each set's name; then for each line, 3 bytes: where its data starts in the data, below, as an offset from the data's first byte, or 0xFFFFFF for none.
+
+**The data** starts at the first byte of M0 + 1 and runs on through the menu banks after it, the last padded with zeros to 16K; without data there is only M0. For a trainer: its count of POKEs, 1 to 255, then each POKE's bank, offset (2) and value, as in `TRN1`. For each set of a kind of set, in the file's order, and for a toggle: its chunks, decoded, in `.nex` order, each its bank, the chunk's length (2) and the chunk, the bitmap of 2,048 bytes then a byte for each bit set, exactly as `SET2` holds it once decoded; then a bank of 0xFF. Every bank is one the build lists.
+
+**The starting states.** The description's states are where the menu starts: a writer takes them from the choices it was given (`nxc.py PATCH GAME --trainer 1 --colours Enhanced` without `--bare`, or the dot command's menu when ENTER is pressed), or all off without; the main line is always on. The data does not depend on them, so the same patch, game and choices always give the same file.
+
+Sets and toggles are carried decoded, in the clear: this file is the player's own built game, which holds the rest of the game's memory in the clear already, and it is not for handing around, as a bare `.nex` is not.
+
+### What the stub does
+
+1. **Entry,** at 0xC000 with M0 there, as `.nexload` leaves it. Before anything else, without touching the game's memory or stack: keeps SP, moves the stack into M0, keeps AF, reads IFF2 with `LD A,I` and keeps it, disables interrupts, keeps BC, DE, HL, IX, IY and the alternates, and copies the ROM font. Then it maps M0's pages at 0x0000 and 0x2000 and runs there, so that slots 2 to 7 are free to page.
+2. **The menu.** It keeps bank 5's first 6,912 bytes, draws the menu, and runs it. NextREGs are written through ports 0x243B and 0x253B; port 0xFE is only read. The border, the palette and the layers are not touched, so a build whose loading screen leaves Layer 2 over the ULA hides the menu: none of the pilot's builds does, and a writer that knows it would need to say so.
+3. **The choices.** Bank 5's 6,912 bytes are put back. **The shadow:** with the build's stack in its entry bank (SP − 16 at 0xC000 or above, wrapping), `.nexload` writes below that stack before it starts the stub, into M0, which is there in its place: JNext's loader pushes the start address and returns. So a writer fills M0's 16 bytes below SP − 0xC000 with the entry bank's own bytes there, and the stub copies them back into the entry bank, so it holds what `.nexload` would have left. Those 16 bytes must lie in M0's free room, after the description to 0x1D00, 0x1D40 to 0x2000 or 0x3F80 to 0x4000, and no trainer, set or toggle may change them, or the writer refuses the menu. Then each chosen set and toggle is applied, in the order of the lines, and then each chosen trainer's POKEs, in the order of the lines: as a reader applies them to the `.nex` it writes. A trainer is applied whether or not the main line is on, since it is always on here.
+4. **The handoff,** the same for every build: the MMU as `.nexload` leaves it for the build's own header: slots 0 and 1 to 0xFF, the ROM; 2 and 3 to pages 10 and 11; 4 and 5 to 4 and 5; 6 and 7 to the entry bank's two pages; the registers kept at entry; SP as `.nexload` left it; interrupts as they were. To leave nothing of itself in the game's memory, the stub puts its last 57 bytes into M0's second page, maps that page at the one or two 8K slots that hold the 57 bytes before the start address P, puts back every other slot, and jumps there. Those bytes are the registers, then: `LD SP` to them, the pops, `EXX`, `EX AF,AF'`, the pops, `LD SP` to the header's, `NEXTREG` slot 0 and 1 back to the ROM, then `NEXTREG` for the slot holding the 57 bytes' start if it is not P's (or four `NOP`s), `EI` if interrupts were on (or `NOP`), and last `NEXTREG` for P's own slot, which ends at P. The next fetch, at P, is from the game's page. This is why P cannot be 1 to 4 bytes into a page: with the 57 bytes in two slots, the `EI` or `NOP` and the last instruction must lie in P's slot, after the earlier slot is given back.
+
+**What is not the same** as a bare `.nex` started by `.nexload`: R; the time taken; NextREG port 0x243B's selection, which is left at the last register the stub wrote, as a game always selects one before it reads or writes; and the menu banks, which hold the stub, and which the build never uses.
+
+**RAM.** The menu banks are above everything the build needs, so a menu `.nex` needs `2 x (M_last + 1)` 8K banks where the bare one needs `2 x (byte 2 + 1)`: one more 16K bank for a patch with only trainers, and more for sets, as their data needs. A writer sets byte 8 when that passes 1MB, and a reader that checks memory checks the menu `.nex`'s need.
+
+### Versions and compatibility
+
+Nothing here changes a patch: `HLP1` is a new optional block, skipped by every reader before it, and old patches without it show the new menu with no help. Every existing vector is unchanged byte for byte, and so is the bare `.nex` for any choices. The default output changing is a change of the readers, not the format: a reader older than this one writes the bare `.nex`, as it always did. A menu `.nex` is a `V1.2` `.nex` that any `.nex` loader starts.
+
+### The dot command's menu .nex
+
+`firmware/nexclash.asm` writes the same file as `tools/nxc.py` for the same patch, game and starting states, byte for byte. Its menu, `firmware/menu.asm` and what builds the description, is read from the command's own file into an 8K page of its own before the menu, which also holds the stub; it takes the font from the card's `C:/MACHINES/NEXT/enNextZX.rom` (ROM 3, at 0xFD00), as a dot command cannot see the ROM, and refuses without it. After the menu it writes the bare `.nex` with nothing chosen, as before, then a part read over the game's part writes M0 and the data, decoding each set a chunk at a time, and puts the header, the stub's count of banks and the lines' offsets in place. It checks the bare part's CRC and length as before, and the whole file's length. It needs the page for the menu and three for decoding sets, beyond what the bare file needs.
 
 ## Test vectors
 
-`tests/vectors/` holds a whole patch, the game files it accepts and the intermediate states, all made from synthetic bytes by `tests/vectors/make_vectors.py`. Nothing there comes from any real game.
+`tests/vectors/` holds a whole patch, the game files it accepts and the intermediate states, all made from synthetic bytes by `tests/vectors/make_vectors.py`; and a tape patch, its `.tap`, its `.tzx`, the `.z80` it starts from and its table, made by `tests/vectors/make_tape_vectors.py`, which also makes a patch for one target of two files, `tapeset_a.tap` and `tapeset_b.tzx`, with its table. `vector_toggle.nxc` adds a display toggle, and `vector_label.nxc` a `fix_label`. Nothing there comes from any real game.
 
 ## Limits of version 1
 
 - **Listed files only.** One byte different from every listed dump is refused. Accepting another dump means adding an entry for it, with its bytes in hand.
-- **Snapshots only.** `.z80` and, for tools, `.sna`. Tapes need a new kind of target: `TAP1` is reserved for it.
+- **Snapshots, and plain tapes.** `.z80`, `.sna` for tools, and `.tap` and `.tzx` whose game is in data blocks as it runs. A tape that decrypts or unpacks its game as it loads has no start a copy table can make from it, and is refused by the 8,192-byte rule. Other snapshot formats, `.szx` among them, are not targets.
 - **Rebuilding is not proof of playing.** An exact rebuild shows the file is identical to the original build. It says nothing that the build's own testing did not.
-- **Multi-load games** are out of scope.
+- **Multi-load games** are the engine's to hook. `TAP1` can place every block of a tape in memory for a build, and that is all it does.
 
 ## Open questions
 

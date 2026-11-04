@@ -817,9 +817,15 @@ class SeveralDumps(Case):
 class Split(Case):
     def test_the_first_part_is_exactly_what_nextzxos_loads(self) -> None:
         self.assertGreater(len(self.binary), H.FIRST_PART)
-        self.assertEqual(len(self.binary), H.FIRST_PART + self.symbols["ov_size"])
-        self.assertEqual(self.binary[-4:], b"NXQ1")
+        sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size", "tape3_size", "mp_size", "mnx_size")]
+        self.assertEqual(len(self.binary), H.FIRST_PART + sum(sizes))
+        at = H.FIRST_PART
+        for size in sizes:                                  # the overlay, a tape's three parts, the menu's, the writer's: each ends in the tag
+            at += size
+            self.assertEqual(self.binary[at - 4:at], b"NXQ1")
         self.assertLessEqual(self.symbols["code_end"], self.symbols["patch_path"])
+        for n in ("tape1_size", "tape2_size", "tape3_size"):
+            self.assertLessEqual(self.symbols["z80_part_at"] + self.symbols[n], self.symbols["code_end"])
 
     def test_every_message_fits_what_nextzxos_shows(self) -> None:
         # In JNext, NextZXOS cut an error message of 40 characters at 32.
@@ -830,8 +836,9 @@ class Split(Case):
 
     def test_a_cut_or_mixed_file_gives_a_clear_message(self) -> None:
         said = "NEXCLASH cut or mixed: recopy it"
-        for name, binary in (("first part only", self.binary[:H.FIRST_PART]), ("cut short", self.binary[:-1]), ("cut more", self.binary[:H.FIRST_PART + 100]),
-                             ("another's tail", self.binary[:-4] + b"XXXX")):
+        end = H.FIRST_PART + self.symbols["ov_size"]              # a snapshot reads no further than the overlay
+        for name, binary in (("first part only", self.binary[:H.FIRST_PART]), ("cut short", self.binary[:end - 1]), ("cut more", self.binary[:H.FIRST_PART + 100]),
+                             ("another's tail", self.binary[:end - 4] + b"XXXX" + self.binary[end:])):
             with self.subTest(name):
                 m = self.machine({"patch.nxc": self.patch, "game.z80": self.game}, binary=binary)
                 failed, message = m.run('"patch.nxc"')
@@ -922,15 +929,15 @@ class Sets(Case):
         self.assertFalse(failed, message)
         line = lambda s, label: next(x for x in s.split("\n") if label in x)  # noqa: E731
         self.assertEqual([line(s, "Enhanced colours").split("colours")[1].strip() for s in m.screens[1:5]], ["[OFF]", "[Red]", "[Blue]", "[OFF]"])
-        self.assertEqual(m.screens[-2].split("\n")[3:9], ["  1  Lives                     [OFF]", "", " NEXCLASH", "  2  Colour clash fix          [ON]",
-                                                          "  3  Enhanced colours          [OFF]", "  4  Language                  [Espanol]"])
+        self.assertEqual(m.screens[-2].split("\n")[3:10], ["TRAINER", T.row("1", "Lives", "[OFF]"), "", "OPTIONS", T.row("2", "Colour clash fix", "[ ON]"),
+                                                           T.row("3", "Enhanced colours", "[OFF]"), T.row("4", "Language", "[Espanol]")])
         self.assertEqual(bytes(m.written[NEX]), self.want(None, "Espanol"))
 
     def test_with_the_fix_off_each_line_is_not_available_and_comes_back(self) -> None:
         m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "3", "4", "2", "enter"])
         self.assertFalse(failed, message)
-        self.assertIn("Language                  [N/A]", m.screens[4])
-        self.assertIn("Enhanced colours          [N/A]", m.screens[4])
+        self.assertIn(T.row("4", "Language", "[N/A]"), m.screens[4])
+        self.assertIn(T.row("3", "Enhanced colours", "[N/A]"), m.screens[4])
         self.assertEqual(bytes(m.written[NEX]), self.want("Red", "Deutsch"))
         m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "enter"])
         self.assertFalse(failed, message)
@@ -942,9 +949,9 @@ class Sets(Case):
         patch = self.two_kinds(self.variant, colours=("Red",), languages=("A language of 25 letters!",), changes=longer)
         m, failed, message = self.go(patch, keys=["3", "4", "enter"])
         self.assertFalse(failed, message)
-        self.assertIn("  3  Enhanced colours          [ON]", m.screens[-2])
-        self.assertIn("  4  Language " + " " * 8 + "[A language of 25 ]", m.screens[-2])
-        self.assertLessEqual(max(len(x) for x in m.screens[-2].split("\n")), 41)
+        self.assertIn(T.row("3", "Enhanced colours", "[ ON]"), m.screens[-2])
+        self.assertIn(T.row("4", "Language", "[ ON]"), m.screens[-2])
+        self.assertLessEqual(max(len(x) for x in m.screens[-2].split("\n")), 32)
         self.assertEqual(bytes(m.written[NEX]), self.want("Red", "Deutsch"))
 
     def test_two_kinds_leave_room_for_seven_trainers(self) -> None:
@@ -955,11 +962,11 @@ class Sets(Case):
         m, failed, message = self.go(patch, keys=["9", "0", "enter"])
         self.assertFalse(failed, message)
         screen = m.screens[-2]
-        self.assertIn("  7  T6", screen)
+        self.assertIn("7 T6", screen)
         self.assertNotIn("T7", screen)
-        self.assertIn("  8  Colour clash fix", screen)
-        self.assertIn("  9  Enhanced colours          [Red]", screen)
-        self.assertIn("  0  Language                  [Deutsch]", screen)
+        self.assertIn("8 Colour clash fix", screen)
+        self.assertIn(T.row("9", "Enhanced colours", "[Red]"), screen)
+        self.assertIn(T.row("0", "Language", "[Deutsch]"), screen)
         self.assertEqual(bytes(m.written[NEX]), self.want("Red", "Deutsch"))
 
     def test_selectable_sets_that_overlap_are_refused_when_made(self) -> None:
@@ -1076,7 +1083,7 @@ class Sets(Case):
         self.assertIsNone(nxc.inf1_value(patch, "colours_by"))
         m, failed, message = self.go(patch, keys=["3", "enter"])
         self.assertFalse(failed, message)
-        self.assertIn("  3  Language                  [Deutsch]", m.screens[-2])
+        self.assertIn(T.row("3", "Language", "[ ON]"), m.screens[-2])
         self.assertNotIn("Enhanced", m.screens[-2])
         self.assertEqual(bytes(m.written[NEX]), self.want(None, "Deutsch"))
 
@@ -1170,7 +1177,7 @@ class Memory(Case):
         said = "Needs more RAM: turn fix off"
         m, failed, message = self.go(needs_more, total_pages=96)
         self.assert_refused(m, failed, message, said)
-        self.assertEqual(m.ever_allocated, [])
+        self.assertEqual(m.ever_allocated, [m.menu_page])       # the menu's page alone
         # A 2MB machine plays it. The bank that just fits a 1MB machine plays on one.
         m, failed, message = self.go(needs_more, total_pages=224)
         self.assertFalse(failed, message)
@@ -1199,12 +1206,12 @@ class Memory(Case):
         self.refused_by_both(bytes(bad))
 
     def test_controls(self) -> None:
-        m, failed, message = self.control([(""".go:    call    wait_release
-        call    check_ram
-""", """.go:    call    wait_release
+        m, failed, message = self.control([("""        call    check_ram
+        call    toggles_to_slots
+""", """        nop
         nop
         nop
-        nop
+        call    toggles_to_slots
 """)], self.with_bank(48), total_pages=96)
         self.assertFalse(failed, "a loader with no check of the memory refused it, so this test proves nothing")
         m, failed, message = self.control([("""        ld      a,(ram_bank)                ; OPT1 may say more than the header lists, not less
@@ -1250,7 +1257,7 @@ class MakeCommand(Case):
         self.assertEqual(blocks[b"ROM1"], b"\x01")
         self.assertEqual(blocks[b"OPT1"], bytes((1, 0, 47)))
         self.assertEqual(blocks[b"PRF1"], b"emulator=none\nreplay=none\nhardware=none\nhardware_when=2026-11-03\n")
-        self.assertEqual(nxc.credit_line(f), "Patch: Ann     Colours: Bob")
+        self.assertEqual(nxc.credit_line(f), "Colours: Bob\nPatch: Ann")
         self.assertEqual(nxc.inf1_value(f, "publisher"), b"Tester, 2026")
         self.assertEqual(nxc.inf1_value(f, "nex_md5"), hashlib.md5(self.nex).hexdigest().encode())
         target = nxc.targets(f)[0]
@@ -1295,7 +1302,9 @@ class MakeCommand(Case):
         r = self.run_tool("make", str(self.tmp / "o.nex"), str(self.tmp / "game.z80"), "-o", str(self.tmp / "o.nex"))
         self.assertIn("one of the inputs", r.stderr)
         (self.tmp / "game.tap").write_bytes(self.game)
-        self.assertIn("is .z80 or .sna", self.make(game="game.tap").stderr)
+        self.assertIn("needs --start", self.make(game="game.tap").stderr)
+        (self.tmp / "game.szx").write_bytes(self.game)
+        self.assertIn("is .z80, .sna, .tap or .tzx", self.make(game="game.szx").stderr)
         self.assertIn("No such file", self.make(game="nothing.z80").stderr)
         r = subprocess.run([sys.executable, "-W", "ignore", str(ROOT / "tools/nxc.py"), "make", str(self.tmp / "o.nex"), str(self.tmp / "game.z80"), "-o", str(self.tmp / "out.nxc")],
                            capture_output=True, text=True, env=dict(os.environ, NXC_ZX0_DIR=str(self.tmp)))

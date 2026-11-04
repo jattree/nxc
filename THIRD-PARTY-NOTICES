@@ -30,3 +30,15 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+----------------------------------------------------------------------------------------------------
+
+tools/nxc.py's Z80Snapshot, its .z80 reader, was written for this repository to give exactly what the
+reader in Dean Woodyatt's NexClash gives (bleughb/nexclash, nexclash/z80tonex.py, class Z80Snapshot,
+GPL-3.0-or-later, https://github.com/bleughb/nexclash): the same banks, version, 128K flag and 7FFD, and
+the same reading of each register field. It follows that reader's structure and rules, so it is credited
+here as derived from it, under the same licence as this repository, GPL-3.0-or-later. Copyright of
+NexClash: Dean Woodyatt. tests/test_snapshot_reader.py compares the two.
+
+The menu's font is not in this repository: a .nex that carries its menu copies it from the machine's own
+ROM when it starts.

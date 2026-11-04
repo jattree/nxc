@@ -9,18 +9,17 @@ The `.nex` you make contains the game, so it's for your own use. Share the `.nxc
 
 ## What you need
 
-- **Python 3** (3.8 or later). On Windows, install it from python.org and use `py` where this page says `python3`.
-- **git**, or download the two repositories below as zip files.
-- **This repository** and a **NexClash** checkout, whose snapshot reader the tool uses:
+- **Python 3** (3.8 or later), and nothing else: no other checkout, no packages, no settings. On Windows, install it
+  from python.org and use `py` where this page says `python3`.
+- **git**, or download this repository as a zip file:
 
 ```sh
 git clone https://github.com/jattree/nxc.git
-git clone https://github.com/bleughb/nexclash.git
 ```
 
-- **Your copy of the game**, as the exact file the patch was made for. Each patch's `.nfo` names it and gives its
-  MD5. For example, `patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/…[Magic Knight 2].nfo` asks for
-  `Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80`. Check yours matches:
+- **The patch,** a `.nxc` file, with its `.nfo` if it came with one.
+- **Your copy of the game**, as the exact file the patch was made for. The patch names it, and its `.nfo` gives its
+  MD5. Check yours matches:
 
 ```sh
 md5sum "Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80"     # Linux
@@ -32,15 +31,14 @@ A different dump of the same game won't do: the tool refuses it and says which f
 
 ## 1. See what the patch offers
 
-Point `NEXCLASH_REPO` at the NexClash checkout, then give the tool the patch on its own:
+Give the tool the patch on its own:
 
 ```sh
-export NEXCLASH_REPO=$PWD/nexclash          # Windows: set NEXCLASH_REPO=%CD%\nexclash
-python3 nxc/tools/nxc.py "nxc/patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc"
+python3 nxc/tools/nxc.py Spellbound.nxc
 ```
 
-It lists the colour sets, the cheats (trainers) by number, the RAM the game needs, the game file it accepts, and how
-the patch was tested:
+It lists the colour sets, the cheats (trainers), the RAM the game needs, the game files it accepts, and how the patch
+was tested:
 
 ```
 colour sets: (default), Enhanced
@@ -55,37 +53,53 @@ accepts Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z8
 python3 nxc/tools/nxc.py PATCH.nxc YOUR_GAME.z80 -o Game.nex
 ```
 
-Options, as many as you like:
-
-| Option | Does |
-|---|---|
-| `--colours Enhanced` | the Enhanced colour set, where the patch has one; leave it out for the game's own colours |
-| `--trainer 1` | a cheat, by number from the list or by name; repeat for more: `--trainer 1 --trainer 3` |
-| `--language NAME` | a language set, where the patch has one |
-| `--original` | the game without the patch (with `--trainer`, a checked snapshot of it with the cheats in) |
-
-For example, Spellbound with Enhanced colours and infinite strength:
+For a game on two tapes, such as a side A and a side B, give the first file, then the second with `--also`, in the order
+the patch's `accepts` line lists them:
 
 ```sh
-python3 nxc/tools/nxc.py "nxc/patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc" \
-    "Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80" --colours Enhanced --trainer 1 -o Spellbound.nex
+python3 nxc/tools/nxc.py new_zealand_story.nxc "New Zealand Story, The (1989)(Ocean)(48K-128K).tap" \
+    --also "New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx" -o NZS.nex
 ```
 
-It prints `wrote Spellbound.nex` and the file's MD5. The same patch, game file and options always give the same
-`.nex`, byte for byte, the same as the loader on a Next makes.
+It prints `wrote Game.nex` and the file's MD5. The same patch and game files always give the same `.nex`, byte for byte.
 
 ## 3. Run it
 
 - **On a Next:** copy `Game.nex` to the SD card and choose it in the Browser.
 - **In an emulator:** open `Game.nex` in JNext, CSpect or ZEsarUX. For example: `jnext --load Game.nex`.
 
+**The menu comes first.** The `.nex` carries the patch's menu, with every cheat, colour set, language and toggle the
+patch offers:
+
+- the number keys turn a line on or off, or step a colour or language line through its choices;
+- pressing a line's number also shows that line's help under the keys;
+- ENTER or SPACE plays, with what the menu shows; BREAK resets the Next.
+
+The choices are applied to the game as it starts, and the game then starts exactly as a `.nex` built with those
+choices fixed would. Choose again every time you run it.
+
+## A .nex with the choices fixed
+
+To build one without the menu, starting straight into the game with your choices, add `--bare` and the choices:
+
+| Option | Does |
+|---|---|
+| `--colours Enhanced` | the Enhanced colour set, where the patch has one; leave it out for the game's own colours |
+| `--trainer 1` | a cheat, by number from the list or by name; repeat for more: `--trainer 1 --trainer 3` |
+| `--language NAME` | a language set, where the patch has one |
+| `--toggle NAME` | a toggle, such as smooth scrolling, where the patch has one |
+
+```sh
+python3 nxc/tools/nxc.py Spellbound.nxc \
+    "Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80" --bare --colours Enhanced --trainer 1 -o Spellbound.nex
+```
+
+Without `--bare`, the choices are refused, as they belong on the menu. `--original` writes the game without the patch
+(with `--trainer`, a checked snapshot of it with the cheats in).
+
 ## Good to know
 
-- **The choices are fixed in the file.** A `.nex` built this way starts with the colours and cheats you picked. To
-  change them, build it again. A `.nex` that carries the patch's menu and every option inside it is planned, so a
-  built file can offer the same menu as the Next's loader.
-- **Some games need several files.** A patch for a tape game can ask for more than one tape file (a Side A and a Side
-  B, say). Its `.nfo` lists them all. Tape patches need a newer version of the tool than this one, which is in
-  progress.
-- **Problems.** "Refused: this is not the game file this patch was made for" means your file isn't the exact dump the patch lists: check the
-  MD5 against the `.nfo`. "No module named nexclash" means `NEXCLASH_REPO` isn't set to the NexClash checkout.
+- **The menu needs a little more memory:** one 16K bank for the menu, and more for colour sets. The tool says if a build
+  can't carry one, and `--bare` always works.
+- **Problems.** "Refused: this is not the game file this patch was made for" means your file isn't the exact dump the
+  patch lists: check the MD5 against the `.nfo`. "this build cannot carry its menu" names why; `--bare` still works.

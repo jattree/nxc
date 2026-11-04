@@ -72,7 +72,7 @@ F_FSTAT         equ $a1
 F_GETCWD        equ $a8
 F_UNLINK        equ $ad
 FA_READ         equ $01
-FA_CREATE       equ $0e                     ; write, create or truncate
+FA_CREATE       equ $0f                     ; read and write, create or truncate
 
 IDE_BANK        equ $01bd
 IDE_INTEGER_VAR equ $01c9
@@ -88,7 +88,19 @@ NR_MMU4         equ $54
 NR_MMU5         equ $55
 
 LOADER_LEVEL    equ 2                       ; 1: .z80; 2: and a loading screen; 3 adds .sna only
-KIND_Z80        equ 1                       ; the one container this loader reads
+OPT_TAPE        equ 1                       ; OPT1's flag for a patch only a tape can play: this loader reads tapes
+OPT_TAPE_SET    equ 2                       ; and for one whose targets are all sets of tape files: it reads those too
+KIND_SET        equ $80                     ; a target's kind with this bit: a set of tape files, the first of that kind
+SET_FILES_MAX   equ 8
+KIND_Z80        equ 1                       ; the containers this loader reads: .z80,
+KIND_TAP        equ 3                       ; .tap
+KIND_TZX        equ 4                       ; and .tzx
+TAPE_PAGES      equ 3                       ; for a tape's table, after all the others
+TAPE_FIXED      equ 2                       ; TAP1's stream index and count of targets
+START_SIZE      equ 55                      ; the start state in a tape table, a .z80 v2 header
+COPIES_AT       equ START_SIZE + 6          ; then its CRC and the count of copies
+COPY_SIZE       equ 10
+TAPE_BLOCKS_MAX equ 1024
 TARGETS_MAX     equ 32
 FILE_NAME_MAX   equ 127
 KEY_ROUNDS      equ 16
@@ -97,13 +109,16 @@ TARGET_FIXED    equ 30
 BANK_SIZE       equ 16384
 PAGES           equ 6
 SET_PAGES       equ 3                       ; more, for each set chosen
-KINDS           equ 2                       ; colours, language
+KINDS           equ 2                       ; colours, language: also the sets or toggles chosen at once
+KIND_TOGGLE     equ 3                       ; a toggle: 3 display only, 4 changes the logic
+TOGGLES_MAX     equ 4
 SET_FIXED       equ 5                       ; stream index, kind, choice, base, name's length
 SET_CRC_INDEX   equ 255                     ; the stream of a set's CRC; a chunk's is its bank
 BITMAP          equ 2048                    ; a chunk's first part: one bit for each byte of a bank
 REC             equ 9                       ; a chosen set's cursor: position 4, left 4, stream 1
 BASE_SPRITE     equ 1                       ; the sprite build: the one base a set here may have
 CREDIT_NAME     equ 32                      ; of a name, as "Colours: " leaves 32
+FIX_LABEL_MAX   equ 25                      ; INF1's fix_label: a toggle's name's length, so [ON] keeps its column
 TRAINERS_SHOWN  equ 8
 TRAINER_SIZE    equ 7                       ; on, name's length, count, position
 POKES_HELD      equ 128
@@ -147,17 +162,63 @@ SMALLBUF_END_HI equ $3F
 SMALLBUF_SIZE   equ $0100
 TEXT_MAX        equ 252
 stack_top       equ $4000
-stack_floor     equ $3F40                   ; 192 of stack
+stack_floor     equ $3F66                   ; 154 of stack (64 the most measured)
 rc4_s           equ $3D00                   ; aligned
 statbuf         equ smallbuf                ; read at once, and nothing else is there
 rc4_base        equ $AA00                   ; in the I/O page
+
+; File A (from 0) of the set the game is, open as gh, its length in gsize and its kind in
+; game_kind; the names are in patch_path, each ended by a zero, and the folder in game_a. One copy
+; in each tape part, as no part can call another. Closes the one open before.
+        macro   OPEN_FI name
+name:   ld      hl,cur_fi
+        cp      (hl)
+        ret     z
+        ld      (hl),a
+        push    af
+        ld      hl,gh
+        call    close_at
+        pop     af
+        push    af
+        ld      hl,patch_path
+        or      a
+        jr      z,.got
+        ld      b,a
+.skip:  push    bc
+        xor     a
+        ld      bc,PATH_SIZE
+        cpir
+        pop     bc
+        djnz    .skip
+.got:   ld      de,(game_a_file)
+.cp:    ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        inc     de
+        or      a
+        jr      nz,.cp
+        ld      hl,game_a
+        call    try_open
+        ld      hl,msg_game_bad
+        jp      c,fail_hl
+        pop     af
+        ld      b,a
+        inc     b
+        ld      a,(set_kinds)
+.k:     rrca
+        djnz    .k
+        ld      a,KIND_TAP
+        adc     a,0
+        ld      (game_kind),a
+        ret
+        endm
 
 ; Variables, downwards from the key state, cleared at the start.
         macro   VAR vname, vsize
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A4F
+vars            equ $3A4B
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -170,8 +231,10 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     mmu4, 1
         VAR     mmu5, 1
         VAR     mapped, 1
-        VAR     page_count, 1
-        VAR     page_list, PAGES + KINDS * SET_PAGES ; WORK x 2, I/O, sites x 3, each set x 3
+        VAR     page_count, 1               ; with the menu's page, all_pages[0]
+        VAR     all_pages, 1
+        VAR     page_list, PAGES + KINDS * SET_PAGES + TAPE_PAGES ; WORK x 2, I/O, sites x 3, each set x 3, a tape's x 3
+        VAR     menu_route, 1               ; 1: the .nex written carries its menu
         VAR     ph, 1                       ; handles; 0: not open
         VAR     gh, 1
         VAR     oh, 1
@@ -182,7 +245,8 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     game_which, 1               ; the next name to try: targets, then the patch's own
         VAR     seen_wrong, 1               ; a file was there, and was not the game
         VAR     target_count, 1
-        VAR     target_kinds, 1             ; not 0 if a target is one this loader reads
+        VAR     target_kinds, 1             ; not 0 if a target is one this loader reads; after the menu, the game's kind
+game_kind       equ target_kinds
         VAR     scan_pos, 4                 ; where the search for a game has got to; 0: start
         VAR     open_path, 2
         VAR     handoff, 1
@@ -199,7 +263,6 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     mode_changed, 1
         VAR     mode_old_layer, 1
         VAR     mode_old_sub, 1
-        VAR     mode_old_width, 1
         VAR     out_rec, 8                  ; position, length of OUT1
         VAR     nex_rec, 8                  ; of NEX1
         VAR     sit_rec, 8                  ; and of SIT1
@@ -246,19 +309,30 @@ game_b          equ patch_path              ; once open, its extension becomes .
         display "variables end ", /h, var_at
         assert  var_at == rc4_s, "the variables must end where the key state starts"
 ; Only up to the menu, or scratch until a key state is made, so these can lie in it.
-        VAR     title, 24
-        VAR     publisher, 17
         VAR     seen, 5                     ; how many of each required block
         VAR     text_len, 2
         VAR     col, 1
-        VAR     patch_by, CREDIT_NAME + 1
-        VAR     colours_by, CREDIT_NAME + 1
         VAR     pal_seen, 32                ; a bit per colour-set index
         VAR     opt_level, 1
-        VAR     cur_line, 1
-        VAR     cur_name, 1
         VAR     scr_seen, 1
+        VAR     opt_flags, 1
+        VAR     snap_seen, 1                ; a .z80 or .sna target
+        VAR     tapes_listed, 4             ; a bit for each tape target
+        VAR     tapes_served, 4             ; and for each a TAP1 names
+        VAR     tap_streams, 32             ; a bit for each TAP1 stream index
+        VAR     single_seen, 1              ; a target of one game file this loader reads
+        VAR     set_seen, 1                 ; a target that is a set of tapes
+        VAR     set_key, 8                  ; "file_K=", for a set's Kth file
+        VAR     set_tab, 1 + 5 * (SET_FILES_MAX - 1) ; a set's n, then each further file's kind and length
+        VAR     set_kind1, 1                ; and kind, with KIND_SET
+        VAR     set_cmp, 4                  ; a name being compared: where, how long
+        VAR     tg_count, 1                 ; toggles offered, at most TOGGLES_MAX
+        VAR     tg_on, 1                    ; a bit for each, on
+        VAR     tg_kind, TOGGLES_MAX        ; each one's kind, 3 or 4
+        VAR     tg_rank, TOGGLES_MAX        ; and its place among the toggles of that kind, from 1
+        VAR     tg_seen, 2                  ; how many of kind 3, and of 4, so far
 vars_end        equ var_at
+        assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
 var_at          =   $3F00
         VAR     psize, 4
@@ -274,6 +348,14 @@ var_at          =   $3F00
         VAR     src_end_hi, 1
         VAR     base_i, 1
         VAR     base_j, 1
+        VAR     set_n, 1                    ; the game is a set of this many tapes; 0: one file
+        VAR     set_kinds, 1                ; a bit for each file of the set that is a .tzx
+        VAR     cur_fi, 1                   ; which of them gh has open
+        VAR     readable_kind, 1            ; KIND_Z80; the set's kind once a set is the game
+        VAR     slot_kinds, 3               ; the SET2 kind each set slot holds: 1, 2 or a toggle's; [2] for the menu
+        VAR     set_len1, 4                 ; before the menu: a set's first file's length
+        VAR     text_at, 4                  ; and where its text starts in the patch
+        VAR     fix_label, FIX_LABEL_MAX + 1 ; up to the menu: INF1's name for the main line; 0: "Colour clash fix"
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -286,27 +368,47 @@ after_menu:
 ; The rest of this command, over the code that is only used up to the menu. The
 ; file must be there as the first part expects, or nothing can follow.
 load_overlay:
-        rst     $08
-        db      M_GETHANDLE
-        ld      hl,msg_overlay
-        jp      c,fail_hl
         ld      hl,ov_start
         ld      bc,ov_size
+; BC bytes of this file, from where the last read left it, to HL. Short, or not ending in the
+; tag, it was cut or mixed with another, and nothing can follow. A tape's parts come this way.
+load_part:
+        push    bc
+        push    hl
+        rst     $08
+        db      M_GETHANDLE
+        pop     hl
+        pop     bc
+        jr      c,.bad
+        push    bc
+        push    hl
         rst     $08
         db      F_READ
-        ld      hl,msg_overlay
-        jp      c,fail_hl
-        ld      a,b
-        cp      high ov_size
-        jp      nz,fail_hl
-        ld      a,c
-        cp      low ov_size
-        jp      nz,fail_hl
-        ld      hl,ov_tag
+        pop     hl
+        pop     de
+        jr      c,.bad
+        ex      de,hl
+        or      a
+        sbc     hl,bc                       ; all of it
+        jr      nz,.bad
+        ex      de,hl
+        add     hl,bc
+        ld      de,-4
+        add     hl,de
         ld      de,ov_tag_want
         call    same_tag
-        ld      hl,msg_overlay
-        jp      nz,fail_hl
+        ret     z
+.bad:   ld      hl,msg_overlay
+        jp      fail_hl
+
+; Z when A is a kind this loader reads.
+kind_readable:
+        ld      hl,readable_kind            ; .z80, or once a set is the game, that set's kind
+        cp      (hl)
+        ret     z
+        cp      KIND_TAP
+        ret     z
+        cp      KIND_TZX
         ret
 
 ; ------------------------------------------------------------------ reading
@@ -488,7 +590,7 @@ target_name:
         call    copy4
         call    target_fixed
         ld      a,(smallbuf+1)
-        cp      KIND_Z80
+        call    kind_readable
         scf
         ret     nz
         call    read_text
@@ -514,8 +616,11 @@ find_set:
         ld      a,(tagbuf+3)
         cp      BASE_SPRITE
         jr      nz,.next
-        ld      a,(cur_kind)
-        inc     a
+        ld      a,(cur_kind)            ; the kind that slot holds
+        ld      hl,slot_kinds
+        add     a,l
+        ld      l,a
+        ld      a,(hl)
         ld      hl,tagbuf+1
         cp      (hl)
         jr      nz,.next
@@ -576,7 +681,7 @@ length_wanted:
         ld      bc,6
         call    read_patch
         ld      a,(tagbuf+1)
-        cp      KIND_Z80
+        call    kind_readable
         jr      nz,.next
         ld      hl,tagbuf+2
         ld      de,gsize
@@ -841,17 +946,6 @@ put:    ld      hl,col
         ret
 
 mode_off:
-        ld      a,(mode_old_width)          ; 0 before mode_on
-        or      a
-        ret     z
-        ld      a,30
-        rst     $10
-        ld      a,(mode_old_width)
-        rst     $10
-        ld      a,14
-        rst     $10
-        xor     a
-        ld      (mode_old_width),a
         ld      a,(mode_changed)
         or      a
         ret     z
@@ -862,7 +956,10 @@ mode_off:
         ld      a,(mode_old_layer)
         ld      b,a
         ld      a,1
-        jr      call_mode
+        call    call_mode
+        ld      a,14                        ; the window, which the menu drew over
+        rst     $10
+        ret
 
 call_mode_bc0:
         ld      bc,0
@@ -929,7 +1026,7 @@ finish: ld      hl,gh
         ld      (page_count),a
         ld      e,a
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      e,(hl)
         ld      d,0
@@ -948,7 +1045,7 @@ finish: ld      hl,gh
         and     3
         ld      e,a
         ld      a,NR_SPEED
-        jp      nr_write
+        jr      nr_write
 
 ; Errors: HL is the message, whose last character has bit 7 set. Any state.
 fail_de:
@@ -989,13 +1086,6 @@ print:  ld      a,(hl)
         ret
 
 ; ------------------------------------------------------------------ NextREG
-
-nr_read:
-        ld      bc,NR_SELECT
-        out     (c),a
-        inc     b
-        in      a,(c)
-        ret
 
 nr_write:
         ld      bc,NR_SELECT
@@ -1046,7 +1136,6 @@ is_zero32:
         or      (hl)
         ret
 
-magic_nxc1:     db "NXC1"
 first_tags:
 magic_opt1:     db "OPT1"
 magic_inf1:     db "INF1"
@@ -1060,7 +1149,6 @@ key_file:       db "file=",0
 str_tmp:        db "C:/TMP/",0
 nex_out_name:   db "/tmp/NEXCLASH.NEX",0
 z80_out_name:   db "/tmp/NEXCLASH.Z80",0
-opt_size:       dd 3
 eight:          dd 8
 target_size:    dd TARGET_FIXED
 msg_no_os:      db "Needs NextZXO", 'S' | $80
@@ -1072,7 +1160,6 @@ msg_game_bad:   db "Game file is damage", 'd' | $80
 msg_long:       db "File name too lon", 'g' | $80
 msg_alias:      db "Input has the /tmp output's nam", 'e' | $80
 msg_overlay:    db "NEXCLASH cut or mixed: recopy i", 't' | $80
-msg_no_patch:   db "Cannot open the .nx", 'c' | $80
 msg_level:      db "Patch needs a newer .NEXCLAS", 'H' | $80
 
 ov_start_at:
@@ -1096,6 +1183,14 @@ start_menu:
         pop     af
         ld      (interrupts),a
         ld      (entry_sp),sp
+        xor     a                           ; one game file, until a set is found
+        ld      (set_n),a
+        ld      a,KIND_Z80
+        ld      (readable_kind),a
+        ld      a,1                         ; slot 0 colours, slot 1 language, until the menu says
+        ld      (slot_kinds),a              ; (HL is the argument line: kept)
+        inc     a
+        ld      (slot_kinds+1),a
         ld      a,h
         or      l
         jp      z,usage
@@ -1153,7 +1248,7 @@ start_menu:
         call    walk_first
         call    build_game_b
         call    next_game
-        call    c,refuse_game
+        call    c,set_game
         call    menu
         jp      after_menu
 
@@ -1215,6 +1310,9 @@ walk_first:
         ld      de,magic_set2
         call    tag_is
         call    z,note_set
+        ld      de,magic_tap1_p
+        call    tag_is
+        call    z,note_tape
         ld      de,magic_scr1_p
         call    tag_is
         jr      nz,.next
@@ -1229,7 +1327,7 @@ walk_first:
         ld      hl,.next
         push    hl
         cp      5
-        jr      z,first_opt1
+        jp      z,first_opt1
         cp      4
         jp      z,first_inf1
         ld      de,out_rec
@@ -1260,22 +1358,539 @@ walk_first:
         cp      2
         jp      c,bad_patch
 .level_ok:
-        ld      a,(set_counts)              ; ten lines have keys: two kinds leave room for 7
+        ld      b,9                         ; ten lines have keys: the fix, each kind, each toggle,
+        ld      a,(set_counts)              ; and trainers in what is left
         or      a
-        jr      z,.lines
-        ld      a,(set_counts+1)
+        jr      z,.k1
+        dec     b
+.k1:    ld      a,(set_counts+1)
         or      a
-        jr      z,.lines
+        jr      z,.k2
+        dec     b
+.k2:    ld      a,(tg_count)
+        neg
+        add     a,b
+        ld      b,a
         ld      a,(trainer_count)
-        cp      TRAINERS_SHOWN
+        cp      b
         jr      c,.lines
-        dec     a
+        ld      a,b
         ld      (trainer_count),a
-.lines: ld      a,(target_kinds)            ; targets, and none this loader can read
+.lines: ld      hl,tapes_listed             ; every tape target in exactly one TAP1
+        ld      de,tapes_served
+        call    same_tag
+        jp      nz,bad_patch
+        ld      hl,tapes_listed             ; only tapes: OPT1 must say so
+        call    is_zero32
+        jr      z,.flag_ok
+        ld      a,(snap_seen)
+        or      a
+        jr      nz,.flag_ok
+        ld      a,(opt_flags)
+        and     OPT_TAPE
+        jp      z,bad_patch
+.flag_ok:
+        ld      a,(set_seen)                ; only sets: OPT1 must say that too
+        or      a
+        jr      z,.sets_ok
+        ld      a,(single_seen)
+        or      a
+        jr      nz,.sets_ok
+        ld      a,(opt_flags)
+        and     OPT_TAPE_SET
+        jp      z,bad_patch
+.sets_ok:
+        ld      a,(target_kinds)            ; targets, and none this loader can read
         or      a
         ret     nz
         ld      hl,msg_level
         jp      fail_hl
+
+; A TAP1's clear head: its stream index unique, 1 to 32 targets, each named once, and a table
+; after them. Whether each is a tape target is known at the end.
+note_tape:
+        ld      hl,blk_len
+        ld      bc,0
+        ld      de,TAPE_FIXED + 1
+        call    below32
+        jp      c,bad_patch
+        ld      hl,smallbuf
+        ld      bc,TAPE_FIXED
+        call    read_patch
+        ld      a,(smallbuf)
+        ld      hl,tap_streams
+        call    bit_at
+        ld      c,a
+        and     (hl)
+        jp      nz,bad_patch
+        ld      a,c
+        or      (hl)
+        ld      (hl),a
+        ld      a,(smallbuf+1)
+        dec     a
+        cp      32
+        jp      nc,bad_patch
+        inc     a
+        ld      c,a
+        ld      b,0
+        push    bc
+        inc     bc                          ; the targets, and a table
+        inc     bc
+        inc     bc
+        ld      d,b
+        ld      e,c
+        ld      bc,0
+        ld      hl,blk_len
+        call    below32
+        jp      c,bad_patch
+        pop     bc
+        ld      hl,smallbuf
+        push    bc
+        call    read_patch
+        pop     bc
+        ld      b,c
+        ld      de,smallbuf
+.t:     ld      a,(de)
+        inc     de
+        cp      32
+        jp      nc,bad_patch
+        ld      hl,tapes_served
+        call    bit_at
+        ld      c,a
+        and     (hl)
+        jp      nz,bad_patch
+        ld      a,c
+        or      (hl)
+        ld      (hl),a
+        djnz    .t
+        ret
+
+; HL at the byte of the bitmap at HL that holds bit A, and A that bit. Keeps B, DE.
+bit_at: push    bc
+        ld      c,a
+        rrca
+        rrca
+        rrca
+        and     31
+        add     a,l
+        ld      l,a
+        ld      a,0
+        adc     a,h
+        ld      h,a
+        ld      a,c
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,$80
+.r:     rlca
+        djnz    .r
+        pop     bc
+        ret
+; ------------------------------------------------------------ sets of tapes (before the menu)
+
+; A set's head, after its fixed part: n, 2 to SET_FILES_MAX, then each further file's kind (a
+; tape) and length, into set_tab; the first file's kind (in A, with KIND_SET) must be a tape too.
+; Its length is taken off blk_len, so that the text comes next. Anything else is damage.
+set_head:
+        ld      (set_kind1),a
+        and     $7f
+        call    is_tape_kind
+        ld      hl,smallbuf+2
+        ld      de,set_len1
+        call    copy4
+        ld      hl,blk_len                  ; n, at least
+        ld      bc,0
+        ld      de,1
+        call    below32
+        jp      c,bad_patch
+        ld      hl,set_tab
+        ld      bc,1
+        call    read_patch
+        ld      a,(set_tab)
+        sub     2
+        cp      SET_FILES_MAX - 1
+        jp      nc,bad_patch
+        inc     a                           ; n - 1
+        ld      b,a
+        add     a,a
+        add     a,a
+        add     a,b
+        ld      c,a                         ; 5(n - 1)
+        ld      b,0
+        push    bc
+        ld      d,b
+        ld      e,c
+        inc     de
+        ld      hl,blk_len
+        push    de
+        ld      bc,0
+        call    below32
+        jp      c,bad_patch
+        pop     de
+        ld      hl,work32
+        ld      (hl),e
+        inc     hl
+        ld      (hl),d
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+        pop     bc
+        ld      hl,set_tab+1
+        push    bc
+        call    read_patch
+        pop     bc
+        ld      a,(set_tab)
+        dec     a
+        ld      b,a
+        ld      hl,set_tab+1
+.k:     ld      a,(hl)
+        call    is_tape_kind
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .k
+        ret
+
+; A kind of tape, 3 or 4, or damage.
+is_tape_kind:
+        cp      KIND_TAP
+        jp      c,bad_patch
+        cp      KIND_TZX + 1
+        jp      nc,bad_patch
+        ret
+
+; DE at the key for file K (A, from 2) of a set: "file_K=".
+set_key_for:
+        ld      hl,set_key
+        ld      de,key_file
+        ld      bc,4
+        ex      de,hl
+        ldir
+        ex      de,hl
+        ld      (hl),'_'
+        inc     hl
+        add     a,'0'
+        ld      (hl),a
+        inc     hl
+        ld      (hl),'='
+        inc     hl
+        ld      (hl),0
+        ld      de,set_key
+        ret
+
+; Each further file of a set, named in its text (as read): a name as file's, no two alike
+; whatever the case. Nothing for one file.
+set_names:
+        ld      a,(set_tab)
+        or      a
+        ret     z
+        ld      b,a
+        ld      a,2
+.f:     push    af
+        push    bc
+        call    set_key_for
+        call    text_find
+        jp      c,bad_patch
+        push    hl
+        push    bc
+        call    check_name
+        pop     bc
+        pop     hl
+        pop     de                          ; D: files left, E: unused
+        pop     af
+        push    af
+        push    de
+        call    name_twice                  ; against file and each before it
+        pop     bc
+        pop     af
+        inc     a
+        cp      b
+        jr      c,.f
+        jr      z,.f
+        ret
+
+; HL, BC: the name of file A (from 2). Damage if file or file_2 .. file_(A-1) is the same name.
+name_twice:
+        ld      (set_cmp),hl
+        ld      (set_cmp+2),bc
+        dec     a
+        ld      b,a                         ; how many before it
+.e:     push    bc
+        ld      a,b
+        ld      de,key_file
+        cp      1
+        call    nz,set_key_for
+        call    text_find
+        jp      c,bad_patch
+        ld      a,(set_cmp+2)           ; lengths: below 128, so one byte says it
+        cp      c
+        jr      nz,.diff
+        ld      de,(set_cmp)
+.c:     ld      a,(de)
+        call    lower
+        ld      (set_cmp+3),a               ; the length's high byte is 0: names are short
+        ld      a,(hl)
+        call    lower
+        push    hl
+        ld      hl,set_cmp+3
+        cp      (hl)
+        pop     hl
+        jr      nz,.diff
+        inc     hl
+        inc     de
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.c
+        jp      bad_patch
+.diff:  pop     bc
+        djnz    .e
+        ret
+
+lower:  cp      'A'
+        ret     c
+        cp      'Z' + 1
+        ret     nc
+        or      $20
+        ret
+
+; Seek the patch to the set's text and read it again: opening a file uses the small buffer.
+set_text:
+        ld      hl,text_at
+        call    seek_patch
+        jp      read_text
+
+; No target of one file had its file there. Try each set: its first file there, with its length,
+; then every other with its own; the first that is all there is the game, its first file left
+; open as gh. Without sets, as before. A set's further file missing or of another length is
+; refused, naming it; no set's first file there is refused as for one file, naming the first set's.
+set_game:
+        ld      a,(set_seen)
+        or      a
+        jp      z,refuse_game
+        call    walk_begin
+.next:  call    walk_next
+        jp      z,.none
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.next
+        ld      hl,pos                      ; where the walk goes on from
+        ld      de,scan_pos
+        call    copy4
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        bit     7,a
+        jp      z,.again
+        call    set_head
+        ld      hl,blk_pos                  ; the text: after the fixed part and the head
+        ld      de,text_at
+        call    copy4
+        ld      a,(set_tab)
+        dec     a
+        ld      b,a
+        add     a,a
+        add     a,a
+        add     a,b
+        add     a,TARGET_FIXED + 1
+        ld      hl,work32
+        ld      (hl),a
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,text_at
+        ld      de,work32
+        call    add32
+        ld      de,key_file                 ; its first file
+        call    set_open
+        jr      c,.again
+        ld      hl,gsize
+        ld      de,set_len1
+        call    same_tag
+        jr      z,.first
+        ld      a,1
+        ld      (seen_wrong),a
+        ld      hl,gh
+        call    close_at
+        jr      .again
+.first: ld      hl,gh
+        call    close_at
+        ld      a,(set_tab)                 ; each other file: there, with its length
+        ld      b,a
+        dec     b
+        ld      a,2
+        ld      hl,set_tab+2
+.f:     push    af
+        push    bc
+        push    hl
+        call    set_key_for
+        call    set_open
+        ld      a,1
+        ld      (need_name),a
+        ld      hl,msg_no_game
+        jp      c,fail_hl
+        pop     hl
+        push    hl
+        ld      de,gsize
+        call    same_tag
+        ld      hl,msg_wrong_game
+        jp      nz,fail_hl
+        xor     a
+        ld      (need_name),a
+        ld      hl,gh
+        call    close_at
+        pop     hl
+        ld      de,5
+        add     hl,de
+        pop     bc
+        pop     af
+        inc     a
+        djnz    .f
+        jr      .found
+.again: ld      hl,scan_pos
+        ld      de,pos
+        call    copy4
+        jp      .next
+.found: ld      a,(set_tab)                 ; the game: its kinds, and the names after the menu
+        ld      (set_n),a
+        ld      b,a
+        dec     b
+        ld      hl,set_tab+1
+        ld      c,0
+        ld      d,2                         ; bit for file 1
+.kb:    ld      a,(hl)
+        cp      KIND_TZX
+        jr      nz,.kt
+        ld      a,c
+        or      d
+        ld      c,a
+.kt:    sla     d
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .kb
+        ld      a,(set_kind1)
+        and     $7f
+        cp      KIND_TZX
+        jr      nz,.k0
+        set     0,c
+.k0:    ld      a,c
+        ld      (set_kinds),a
+        xor     a
+        ld      (cur_fi),a
+        call    set_list                    ; the names, over patch_path
+        ld      de,key_file                 ; and the first file open again, as the game
+        call    set_open_listed
+        ld      a,(set_kind1)               ; from now on that set's kind is one this loader reads
+        ld      (readable_kind),a
+        or      a
+        ret
+.none:  ld      a,(single_seen)             ; no set there: as for one file, or naming the first set's
+        or      a
+        jp      nz,refuse_game
+        call    walk_begin
+.n1:    call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.n1
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        call    set_head
+        call    read_text
+        ld      de,key_file
+        call    text_find
+        call    build_game_a
+        ld      a,1
+        ld      (need_name),a
+        ld      a,(seen_wrong)
+        or      a
+        ld      hl,msg_no_game
+        jp      z,fail_hl
+        ld      hl,msg_wrong_game
+        jp      fail_hl
+
+; The set's file named by the key at DE, beside the patch: open as gh, its length in gsize, and
+; never an output's name. Carry when it is not there.
+set_open:
+        push    de
+        call    set_text
+        pop     de
+        call    text_find
+        jp      c,bad_patch
+        call    build_game_a
+        ld      hl,game_a
+        call    try_open
+        ret     c
+        ld      hl,game_a
+        call    check_alias
+        or      a
+        ret
+
+; The first file again, from the names now in patch_path (the folder is still in game_a).
+set_open_listed:
+        ld      hl,patch_path
+        ld      de,(game_a_file)
+.c:     ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        inc     de
+        or      a
+        jr      nz,.c
+        ld      hl,game_a
+        call    try_open
+        ld      hl,msg_no_game
+        jp      c,fail_hl
+        ret
+
+; Every name of the set, each ended by a zero, over patch_path (no longer needed once the files
+; are found): what opens them after the menu. Too long for it is refused, as a long path is.
+set_list:
+        ld      de,patch_path
+        ld      a,1
+.n:     push    af
+        push    de
+        ld      de,key_file
+        cp      1
+        call    nz,set_key_for
+        push    de
+        call    set_text
+        pop     de
+        call    text_find
+        pop     de
+        push    hl
+        ld      hl,patch_path + PATH_SIZE - 1
+        or      a
+        sbc     hl,de
+        sbc     hl,bc
+        pop     hl
+        jr      c,.long
+        ldir
+        xor     a
+        ld      (de),a
+        inc     de
+        pop     af
+        inc     a
+        ld      hl,set_tab
+        cp      (hl)
+        jr      c,.n
+        jr      z,.n
+        ret
+.long:  ld      hl,msg_long
+        jp      fail_hl
+
 ; Exactly 3 bytes: a level this loader has, no flags, the highest 16K bank needed.
 first_opt1:
         ld      hl,blk_len
@@ -1290,7 +1905,8 @@ first_opt1:
         jp      nc,bad_patch
         ld      (ram_bank),a
         ld      a,(smallbuf+1)
-        or      a
+        ld      (opt_flags),a
+        and     ~(OPT_TAPE | OPT_TAPE_SET) & $ff
         ld      hl,msg_level
         jp      nz,fail_hl
         ld      a,(smallbuf)
@@ -1311,25 +1927,19 @@ first_out1:
         ldir
         ret
 first_inf1:
+        xor     a                           ; below the stack, so not cleared with the rest
+        ld      (fix_label),a
         call    read_text
-        ld      de,key_publisher
+        ld      de,key_fix_label
         call    text_find
-        ld      de,publisher
-        ld      a,16
-        call    nc,copy_text
-        ld      de,key_patch_by
-        call    text_find
-        ld      de,patch_by
-        call    nc,copy_credit
-        ld      de,key_colours_by
-        call    text_find
-        ld      de,colours_by
+        ld      de,fix_label
+        ld      a,FIX_LABEL_MAX
         ret     c
-copy_credit:
-        ld      a,CREDIT_NAME
         jp      copy_text
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
 first_tgt1:
+        xor     a
+        ld      (set_tab),a                 ; one file, unless set_head says otherwise
         call    target_fixed
         ld      a,(target_count)
         cp      TARGETS_MAX
@@ -1342,24 +1952,35 @@ first_tgt1:
         ld      a,c
         ld      (target_count),a
         ld      a,(smallbuf+1)
-        cp      KIND_Z80
+        bit     7,a
+        jr      z,.one
+        call    set_head                    ; a set of tapes: its head, checked
+        ld      a,1
+        ld      (set_seen),a
+        ld      (target_kinds),a
+        jr      .tape
+.one:   cp      KIND_TAP                    ; a tape, or a snapshot
+        jr      c,.snap
+        cp      KIND_TZX + 1
+        jr      nc,.kind
+.tape:  ld      a,(smallbuf)
+        ld      hl,tapes_listed
+        call    bit_at
+        or      (hl)
+        ld      (hl),a
+        jr      .kind
+.snap:  ld      (snap_seen),a
+.kind:  ld      a,(smallbuf+1)
+        call    kind_readable
         jr      nz,.other
         ld      (target_kinds),a
+        ld      (single_seen),a
 .other: call    read_text
         ld      de,key_file
         call    text_find
         jp      c,bad_patch
         call    check_name
-        ld      a,(title)
-        or      a
-        ret     nz                          ; the first with a title
-        ld      de,key_title
-        call    text_find
-        ret     c
-        ld      de,title
-        ld      a,23
-        call    copy_text
-        jp      upper_title
+        jp      set_names
 ; HL, BC: a file name. 1 to FILE_NAME_MAX bytes, printable, none of / \ : * ? " < > |,
 ; no "..", no space first, no space or dot last: never a path. Otherwise damage.
 check_name:
@@ -1438,20 +2059,6 @@ copy_text:
 .end:   xor     a
         ld      (de),a
         ret
-
-upper_title:
-        ld      hl,title
-.c:     ld      a,(hl)
-        or      a
-        ret     z
-        cp      'a'
-        jr      c,.n
-        cp      'z'+1
-        jr      nc,.n
-        sub     'a'-'A'
-        ld      (hl),a
-.n:     inc     hl
-        jr      .c
 
 ; game_b: the patch's whole path with its extension changed to .z80, in place,
 ; as nothing needs that name once the patch is open.
@@ -1645,7 +2252,39 @@ note_set:
         cp      BASE_SPRITE
         ret     nz
         ld      a,(smallbuf+1)
-        dec     a
+        cp      KIND_TOGGLE
+        jr      c,.set
+        cp      KIND_TOGGLE + 2
+        ret     nc
+        ld      c,a                         ; a toggle: its rank among its kind, and a line if room
+        ld      hl,tg_seen - KIND_TOGGLE
+        ld      b,0
+        add     hl,bc
+        inc     (hl)
+        ld      e,(hl)
+        ld      a,(tg_count)
+        cp      TOGGLES_MAX
+        ret     nc
+        ld      hl,tg_kind
+        ld      d,b
+        push    af
+        ld      a,l
+        pop     af
+        push    af
+        ld      l,a
+        ld      h,0
+        ld      bc,tg_kind
+        add     hl,bc
+        ld      a,(smallbuf+1)
+        ld      (hl),a
+        ld      bc,TOGGLES_MAX
+        add     hl,bc
+        ld      (hl),e
+        pop     af
+        inc     a
+        ld      (tg_count),a
+        ret
+.set:   dec     a
         cp      KINDS
         ret     nc
         ld      c,a
@@ -1658,74 +2297,92 @@ note_set:
 
 ; ----------------------------------------------------------------- the menu
 
-menu:   call    mode_on
-        call    menu_draw
-.wait:  call    wait_release
-.poll:  call    scan_keys
+; The menu is firmware/menu.asm, read with what draws it from this file's menu part into a page of
+; its own, mapped at 0xA000 while it runs, with interrupts off. The page stays the first in the
+; list, so that the .nex writer can take the stub and the description from it, and is freed with
+; the rest. Carry from the part: BREAK.
+menu:   ld      hl,BANK_ALLOC
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ld      hl,msg_ram_menu
+        jp      nc,fail_hl
+        ld      a,e
+        ld      (all_pages),a
+        ld      a,1
+        ld      (page_count),a
+        call    mode_on
+        di
+        ld      a,1
+        ld      (mapped),a
+        ld      a,(all_pages)
+        ld      e,a
+        ld      a,NR_MMU5
+        call    nr_write
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_menu_at
+        call    seek_file
+        ld      hl,MP_AT
+        ld      bc,mp_size
+        call    load_part
+        call    MP_AT
+        push    af
+        call    nc,menu_busy                ; not after BREAK
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_overlay_at
+        call    seek_file
+        call    unmap
+        ld      a,(interrupts)
         or      a
-        jr      z,.poll
-        cp      13
-        jr      z,.go
-        cp      1
-        jr      z,.cancel
-        cp      ' '                         ; as ENTER: with what the menu shows
-        jr      z,.go
-        sub     '0'                         ; a digit
-        ld      c,a
-        ld      a,(trainer_count)
-        inc     a
-        cp      c
-        jr      z,.version
-        jr      c,.colours
-        ld      a,c
-        dec     a
-        call    trainer_entry
-        ld      a,(ix+0)
-        xor     1
-        ld      (ix+0),a
-.again: call    menu_draw
-        jr      .wait
-.version:
-        ld      a,(ver_original)
-        xor     1
-        ld      (ver_original),a
-        jr      .again
-.colours:                                   ; each line after: a kind that offers any
-        ld      hl,set_counts
-        ld      b,KINDS
-.kind:  ld      e,(hl)
-        inc     e
-        dec     e
-        jr      z,.not_this
-        inc     a
-        cp      c
-        jr      z,.step
-.not_this:
-        inc     hl
-        djnz    .kind
-        jr      .wait                       ; no such line
-.step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
-        or      a
-        jr      nz,.wait
-        ld      a,e                         ; off, then each in turn, then off
-        ld      de,KINDS
-        add     hl,de
-        cp      (hl)
-        jr      nz,.more
-        ld      (hl),0
-        jr      .again
-.more:  inc     (hl)
-        jr      .again
-.go:    call    wait_release
-        call    check_ram
-        jp      mode_off
-.cancel:
+        jr      z,.di
+        ei
+.di:    pop     af
         ld      hl,msg_cancelled
-        jp      fail_hl
+        jp      c,fail_hl
+        call    check_ram
+        call    toggles_to_slots
+        ret                                 ; the menu stays up, saying so, until finish puts the display back
 
-; The rebuilt game must fit this machine: its highest bank is within the 8K banks NextZXOS
-; says there are. The player's own game with the fix off needs nothing of the kind. If
-; the call fails, nothing is known, and it goes on.
+file_menu_at:   dd FILE_MENU_AT
+file_overlay_at: dd FIRST_PART
+
+; Layer 0, the ULA screen the menu draws on, if the caller has another; mode_off puts it back.
+mode_on:
+        xor     a
+        call    call_mode_bc0
+        ld      hl,msg_no_os
+        jp      nc,fail_hl
+        ld      d,a
+        and     3
+        ld      (mode_old_layer),a
+        ld      b,a
+        ld      a,d
+        rrca
+        rrca
+        and     3
+        ld      (mode_old_sub),a
+        or      b
+        ret     z
+        ld      a,1
+        ld      bc,0
+        call    call_mode
+        ld      hl,msg_no_os
+        jp      nc,fail_hl
+        ld      a,1
+        ld      (mode_changed),a
+        ret
+
+nr_read:
+        ld      bc,NR_SELECT
+        out     (c),a
+        inc     b
+        in      a,(c)
+        ret
+
 check_ram:
         ld      a,(ver_original)
         or      a
@@ -1747,410 +2404,73 @@ check_ram:
         jp      fail_hl
 
 ; Until no key is down, steadily.
-wait_release:
-.again: ld      hl,DEBOUNCE
-.loop:  ld      bc,$00fe
-        in      a,(c)
-        and     $1f
-        cp      $1f
-        jr      nz,.again
-        dec     hl
-        ld      a,h
-        or      l
-        jr      nz,.loop
+toggle_find:
+        ld      e,a
+        ld      d,0
+        ld      hl,tg_kind
+        add     hl,de
+        ld      a,(hl)
+        ld      (slot_kinds+2),a
+        ld      hl,tg_rank
+        add     hl,de
+        ld      a,(hl)
+        ld      (cur_n),a
+        ld      a,2
+        ld      (cur_kind),a
+        jp      find_set
+
+; HL at tg_on, A the bit of toggle A.
+toggle_bit:
+        ld      b,a
+        inc     b
+        ld      a,$80
+.r:     rlca
+        djnz    .r
+        ld      hl,tg_on
         ret
 
-; A: 0 none, 13 Enter, ' ' Space, 1 Break, or '1' to '9', and '9'+1 for key 0,
-; which is the tenth line.
-scan_keys:
-        ld      bc,$bffe                    ; Enter
-        in      a,(c)
-        rra
-        ld      a,13
-        ret     nc
-        ld      bc,$7ffe                    ; Space, or Break with Caps Shift
-        in      a,(c)
-        rra
-        jr      c,.digits
-        ld      bc,$fefe
-        in      a,(c)
-        rra
-        ld      a,' '
-        ret     c
-        ld      a,1
-        ret
-.digits:
-        ld      bc,$f7fe                    ; 1 to 5: bits 0 to 4
-        in      a,(c)
-        ld      e,'1'
-        ld      b,5
-.left:  rra
-        jr      nc,.found
-        inc     e
-        djnz    .left
-        ld      bc,$effe                    ; 6 to 9, 0: bits 4 down to 0
-        in      a,(c)
-        ld      e,'6'
-        ld      b,5
-.right: bit     4,a
-        jr      z,.found
-        add     a,a
-        inc     e
-        djnz    .right
-        xor     a
-        ret
-.found: ld      a,e
-        ret
-
-menu_draw:
-        ld      a,14                        ; clear the window
-        rst     $10
-        xor     a
-        ld      (col),a
-        ld      a,' '
-        call    put
-        ld      hl,title
-        call    put_z
-        ld      hl,publisher
-        call    len_z
-        jr      z,.no_publisher
-        ld      a,41                        ; flush with the last column
-        sub     c
-        call    pad_to
-.no_publisher:
-        ld      hl,publisher
-        call    put_z
-        call    newline
-        call    newline
-        ld      a,(trainer_count)
+; A: how many sets and toggles are chosen.
+toggles_to_slots:
+        ld      a,(tg_count)
         or      a
-        jr      z,.no_trainers
-        ld      hl,str_trainer
-        call    put_z
-        call    newline
-        ld      a,(trainer_count)
+        ret     z
         ld      b,a
         ld      c,0
-.row:   push    bc
+.t:     push    bc
         ld      a,c
-        call    digit_row
-        pop     bc
+        call    toggle_bit
+        and     (hl)
+        jr      z,.n
+        ld      hl,set_choices
+        ld      de,slot_kinds
+        ld      a,(hl)
+        or      a
+        jr      z,.free
+        inc     hl
+        inc     de
+        ld      a,(hl)
+        or      a
+        jp      nz,bad_patch                ; cannot be: the menu counted
+.free:  pop     bc
         push    bc
-        ld      a,c
-        call    trainer_entry
-        push    ix                          ; the name lies before the POKEs
-        pop     hl
-        ld      de,3
-        add     hl,de
-        ld      de,work32
-        call    copy4
-        ld      a,(ix+1)                    ; - (name's length + 1)
-        inc     a
-        neg
-        ld      e,a
-        ld      d,$ff
-        ld      (left),de
-        ld      hl,$ffff
-        ld      (left+2),hl
-        ld      hl,work32
-        ld      de,left
-        call    add32
-        ld      hl,work32
-        call    seek_patch
-        ld      c,(ix+1)
+        push    hl
+        ld      hl,tg_kind
         ld      b,0
-        ld      hl,smallbuf
-        call    read_patch
-        ld      b,(ix+1)
-        ld      hl,smallbuf
-        call    put_name
-        pop     bc
-        push    bc
-        ld      a,c
-        call    trainer_entry
-        ld      a,(ix+0)
-        call    put_on_off
-        pop     bc
+        add     hl,bc
+        ld      a,(hl)
+        ld      (de),a
+        ld      de,TOGGLES_MAX
+        add     hl,de
+        ld      a,(hl)
+        pop     hl
+        ld      (hl),a
+.n:     pop     bc
         inc     c
-        dec     b
-        jr      nz,.row
-        call    newline
-.no_trainers:
-        ld      hl,str_nexclash
-        call    put_line
-        ld      a,(trainer_count)
-        call    digit_row
-        ld      hl,str_fix
-        call    put_z
-        ld      a,(ver_original)
-        xor     1
-        call    put_on_off
-        ld      a,(trainer_count)
-        ld      (cur_line),a
-        xor     a
-        call    kind_line
-        ld      a,1
-        call    kind_line
-        call    newline
-        ld      hl,str_keys
-        call    put_line
-; The credit line, if there is anything to show: "Patch: a     Colours: b", in 41
-; columns from the first. Colours only with a set. With both, the words and a gap of
-; 2 leave 23 for the names: a keeps 11 or what b leaves, b the rest, and the gap is 5
-; if that fits. A name is cut in its buffer, so all this can repeat.
-        ld      a,(set_counts)
-        or      a
-        jr      nz,.sets
-        ld      (colours_by),a
-.sets:  ld      a,(patch_by)
-        ld      hl,colours_by
-        or      (hl)
-        ret     z                           ; neither
-        call    newline
-        ld      a,(patch_by)
-        or      a
-        ld      hl,str_colours
-        jr      z,.no_patch
-        ld      hl,colours_by
-        call    len_z
-        jr      z,.one
-        cp      12                          ; both: b, or 12 of it, has its room
-        jr      c,.short
-        ld      a,12
-.short: neg
-        add     a,23
-        ld      hl,patch_by
-        call    cut_name
-        ld      hl,patch_by
-        call    len_z
-        neg
-        add     a,23
-        ld      hl,colours_by
-        call    cut_name
-.one:   ld      hl,str_patch
-        call    put_z
-        ld      hl,patch_by
-        call    put_z
-        ld      hl,colours_by
-        call    len_z
-        jp      z,newline
-        neg
-        add     a,41 - 9                    ; "Colours: b" ends in the last column
-        ld      d,a
-        ld      a,(col)
-        add     a,5
-        cp      d
-        jr      c,.gap
-        ld      a,d
-.gap:   call    pad_to
-        ld      hl,str_colours
-.no_patch:
-        call    put_z
-        ld      hl,colours_by
-        jp      put_line
+        djnz    .t
+        ret
 
 ; The line of kind A, if it offers any. Colours with one set is [ON] or [OFF]; otherwise it
 ; says [OFF] or the name, from the patch, at most 17 characters, ending in the last column.
-kind_line:
-        ld      (cur_kind),a
-        ld      c,a
-        ld      b,0
-        ld      hl,set_counts
-        add     hl,bc
-        ld      a,(hl)
-        or      a
-        ret     z
-        ld      hl,cur_line
-        inc     (hl)
-        ld      a,(hl)
-        call    digit_row
-        ld      a,(cur_kind)
-        or      a
-        ld      hl,str_enhanced
-        jr      z,.label
-        ld      hl,str_language
-.label: call    put_z
-        ld      a,(ver_original)
-        or      a
-        jr      nz,.unavailable
-        ld      a,(cur_kind)
-        ld      c,a
-        ld      b,0
-        ld      hl,set_choices
-        add     hl,bc
-        ld      a,(hl)
-        or      a
-        jp      z,put_on_off                ; A=0: [OFF]
-        ld      (cur_n),a
-        ld      a,(cur_kind)
-        or      a
-        jr      nz,.name
-        ld      a,(set_counts)
-        dec     a
-        jr      nz,.name
-        inc     a
-        jp      put_on_off                  ; [ON]
-.name:  call    find_set
-        ld      a,(tagbuf+4)
-        cp      18
-        jr      c,.short
-        ld      a,17
-.short: ld      (cur_name),a
-        ld      c,a                         ; only as much as is shown, in any case
-        ld      b,0
-        ld      hl,smallbuf
-        call    read_patch
-        ld      a,(cur_name)
-        neg
-        add     a,41-2
-        cp      31
-        jr      c,.pad
-        ld      a,31                        ; [ON] and [OFF] start here, and names that fit
-.pad:   call    pad_to
-        ld      a,'['
-        call    put
-        ld      a,(cur_name)
-        ld      b,a
-        ld      hl,smallbuf
-        call    put_name
-        ld      hl,str_close
-        jp      put_line
-.unavailable:
-        ld      a,31
-        call    pad_to
-        ld      hl,str_unavailable
-        jp      put_line
-
-; End the name at HL after A characters.
-cut_name:
-        ld      e,a
-        ld      d,0
-        add     hl,de
-        ld      (hl),d
-        ret
-
-put_line:
-        call    put_z
-        jr      newline
-
-; B bytes of a name from HL; anything unprintable is shown as '?'.
-put_name:
-.name:  ld      a,(hl)
-        cp      ' '
-        jr      c,.q
-        cp      $7f
-        jr      c,.n
-.q:     ld      a,'?'
-.n:     push    hl
-        push    bc
-        call    put
-        pop     bc
-        pop     hl
-        inc     hl
-        djnz    .name
-        ret
-
-; From column 31, [ON] if A is not 0, otherwise [OFF], and the end of the line.
-put_on_off:
-        push    af
-        ld      a,31
-        call    pad_to
-        pop     af
-        or      a
-        ld      hl,str_on
-        jr      nz,put_line
-        ld      hl,str_off
-        jr      put_line
-
-; "  n  " for line A (from 0). The tenth line's key is 0.
-digit_row:
-        push    af
-        ld      hl,str_indent
-        call    put_z
-        pop     af
-        add     a,'1'
-        cp      '9'+1
-        jr      nz,.digit
-        ld      a,'0'
-.digit: call    put
-        ld      hl,str_indent
-        jp      put_z
-; C = the length of the string at HL.
-len_z:  ld      c,0
-.c:     ld      a,(hl)
-        or      a
-        jr      z,.end
-        inc     hl
-        inc     c
-        jr      .c
-.end:   ld      a,c
-        or      a
-        ret
-
-; Spaces up to column A.
-pad_to: ld      hl,col
-        cp      (hl)
-        ret     c
-        ret     z
-        push    af
-        ld      a,' '
-        call    put
-        pop     af
-        jr      pad_to
-
-newline:
-        xor     a
-        ld      (col),a
-        ld      a,13
-        rst     $10
-        ret
-
-; A window that holds the menu's 41 columns: 6-pixel characters on layer 1,1
-; (layer 0 has only 32 columns and no such codes). Anything that was changed
-; is put back by mode_off.
-mode_on:
-        xor     a
-        call    call_mode_bc0
-        ld      hl,msg_no_os
-        jp      nc,fail_hl
-        ld      d,a
-        ld      a,b
-        ld      (mode_old_width),a
-        ld      a,d
-        and     3
-        ld      (mode_old_layer),a
-        ld      e,a
-        ld      a,d
-        rrca
-        rrca
-        and     3
-        ld      (mode_old_sub),a
-        ld      c,a
-        ld      a,e                         ; layer 0, or lo-res: too narrow
-        or      a
-        jr      z,.change
-        dec     a
-        jr      nz,.width
-        ld      a,c
-        or      a
-        jr      nz,.width
-.change:
-        ld      a,1
-        ld      b,1
-        ld      c,1
-        call    call_mode
-        ld      hl,msg_no_os
-        jp      nc,fail_hl
-        ld      a,b
-        ld      (mode_old_width),a
-        ld      a,1
-        ld      (mode_changed),a
-.width: ld      a,30                        ; character width 6
-        rst     $10
-        ld      a,6
-        rst     $10
-        ret
-
 usage:  ld      hl,msg_usage
         call    print
         or      a
@@ -2203,24 +2523,16 @@ parse_name:
 
 magic_trn1:     db "TRN1"
 magic_scr1_p:   db "SCR1"
+magic_tap1_p:   db "TAP1"
 key_title:      db "title=",0
 key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
+key_fix_label:  db "fix_label=",0
 key_colours_by: db "colours_by=",0
 ext_z80:        db ".z80",0
-str_trainer:    db " TRAINER",0
-str_nexclash:   db " NEXCLASH",0
-str_indent:     db "  ",0
-str_on:         db "[ON]",0
-str_off:        db "[OFF]",0
-str_close:      db "]",0
-str_unavailable: db "[N/A]",0
 str_fix:        db "Colour clash fix",0
 str_enhanced:   db "Enhanced colours",0
 str_language:   db "Language",0
-str_keys:       db " ENTER to play",0
-str_patch:      db "Patch: ",0
-str_colours:    db "Colours: ",0
 msg_usage:      db ".NEXCLASH ",34,"GAME.nxc",34,13
                 db "Rebuilds NexClash's game from a",13
                 db "patch and your own copy.",13
@@ -2230,6 +2542,12 @@ msg_usage:      db ".NEXCLASH ",34,"GAME.nxc",34,13
                 db "ZX0: Einar Saukas.",13 | $80
 msg_not_patch:  db "Not a .nxc fil", 'e' | $80
 msg_cancelled:  db "Cancelle", 'd' | $80
+msg_ram_menu:   db "Not enough free RAM for the men", 'u' | $80
+msg_rom:        db "Needs NEXT/enNextZX.rom: no fon", 't' | $80   ; the menu part's, here as it is unmapped first
+msg_big:        db "Too much for the men", 'u' | $80
+msg_no_patch:   db "Cannot open the .nx", 'c' | $80
+magic_nxc1:     db "NXC1"
+opt_size:       dd 3
 msg_ram_small:  db "Needs more RAM: turn fix of", 'f' | $80
 
 first_end:
@@ -2244,15 +2562,22 @@ ov_start:
 ; ------------------------------------------------------------ the routes
 
 chosen:
+        call    length_wanted               ; one length, one kind, so this says which
+        ld      a,(tagbuf+1)
+        ld      (game_kind),a
+        cp      KIND_TAP
+        ld      hl,z80_part_at
+        ld      bc,tape1_size
+        call    nc,load_part                ; a tape's first part over the snapshot's
         ld      a,(ver_original)
         or      a
-        jp      z,nexclash_chosen
+        jr      z,nexclash_chosen
         xor     a                           ; with the fix off, no set applies
         ld      (set_choices),a
         ld      (set_choices+1),a
         call    any_trainer_on
-        jp      nz,original_with_trainers
-        call    original_plain
+        jr      nz,original_with_trainers
+        call    part_plain
         ld      a,2
         jp      done
 
@@ -2273,126 +2598,13 @@ any_trainer_on:
         jr      nz,.t
         ret
 
-; Clash fix off, no trainer: the same bytes, under a fixed name.
-original_plain:
-        ld      hl,z80_out_name
-        call    create_out
-.chunk: ld      hl,smallbuf
-        ld      bc,SMALLBUF_SIZE
-        ld      a,(gh)
-        rst     $08
-        db      F_READ
-        ld      hl,msg_game_bad
-        jp      c,fail_hl
-        ld      a,b
-        or      c
-        jr      z,.end
-        ld      hl,smallbuf
-        call    write_out
-        jr      .chunk
-.end:   jp      close_out
-
-; Clash fix off with a trainer on: proved against the patch, then rebuilt.
+; Clash fix off with a trainer on, or any tape: proved against the patch, then rebuilt by the
+; part that reads the game.
 original_with_trainers:
         call    work_begin
         call    unlock
-        call    parse_game
-        ld      a,1
-        call    load_pokes
-        ld      hl,z80_out_name
-        call    create_out
-        call    write_z80_head
-        ld      a,(z80_128)
-        or      a
-        jr      nz,.k128
-        ld      hl,pages_48k
-        ld      b,3
-        jr      .pages
-.k128:  ld      hl,pages_128k
-        ld      b,8
-.pages: ld      a,(hl)
-        inc     hl
-        ld      e,(hl)                      ; the bank
-        inc     hl
-        push    bc
-        push    hl
-        ld      hl,HDR
-        ld      (hl),$ff
-        inc     hl
-        ld      (hl),$ff
-        inc     hl
-        ld      (hl),a
-        ld      a,e
-        ld      (cur_bank),a
-        ld      hl,HDR
-        ld      bc,3
-        call    write_out
-        call    decode_game_bank
-        call    apply_pokes
-        ld      hl,WORK
-        ld      bc,BANK_SIZE
-        call    write_out
-        pop     hl
-        pop     bc
-        djnz    .pages
-        call    close_out
-        ld      a,2
-        jp      done
-
-pages_48k:
-        db      8, 5, 4, 2, 5, 0
-pages_128k:
-        db      3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7
-
-; The .z80's header, made version 2 if it was version 1.
-write_z80_head:
-        ld      hl,head
-        ld      de,HDR
-        ld      bc,32
-        ldir
-        ld      a,(z80_v1)
-        or      a
-        jr      z,.keep
-        ld      a,(HDR+12)                  ; 255 means 1; no compression flag
-        cp      255
-        jr      nz,.f
-        ld      a,1
-.f:     and     $df
-        ld      (HDR+12),a
-        ld      hl,(HDR+6)
-        ld      (HDR+32),hl
-        ld      hl,0
-        ld      (HDR+6),hl
-        ld      hl,23
-        ld      (HDR+30),hl
-        ld      hl,HDR+34                   ; hardware mode and the rest 0
-        ld      de,HDR+35
-        ld      bc,20
-        ld      (hl),0
-        ldir
-        ld      hl,HDR
-        ld      bc,55
-        jp      write_out
-.keep:  ld      hl,head_pos
-        ld      a,(gh)
-        call    seek_file
-        ld      hl,(z80_head_len)
-        ld      bc,32
-        or      a
-        sbc     hl,bc
-        ld      b,h
-        ld      c,l
-        ld      a,b
-        or      c
-        jr      z,.write
-        ld      hl,HDR+32
-        call    read_game
-.write: ld      hl,HDR
-        ld      bc,(z80_head_len)
-        jp      write_out
-
-head_pos:
-        dd      32
+        call    part_parse
+        jp      part_fix_off
 
 ; NexClash: the checks, the header, the site table, then each bank.
 nexclash_chosen:
@@ -2400,7 +2612,7 @@ nexclash_chosen:
         call    unlock
         call    load_bank_index
         call    decode_nex_header
-        call    parse_game
+        call    part_parse
         call    decode_sites
         ld      a,$ff
         call    sites_walk                  ; check the whole table
@@ -2433,7 +2645,7 @@ nexclash_chosen:
         push    bc
         ld      a,b
         cp      3
-        call    c,decode_game_bank
+        call    c,part_bank
 .not_v1:
         ld      a,(cur_bank)
         call    header_has
@@ -2442,7 +2654,7 @@ nexclash_chosen:
         jr      nz,.patch
         ld      a,(z80_v1)
         or      a
-        call    z,decode_game_bank
+        call    z,part_bank
         ld      a,(cur_bank)
         call    sites_walk
         call    map_iopage
@@ -2463,6 +2675,9 @@ nexclash_chosen:
         cp      112
         jr      c,.order
 
+        ld      a,(menu_route)              ; the menu, its stub and data after them
+        or      a
+        call    nz,menu_nex
         call    close_out                   ; length and CRC, or no file
         ld      hl,crc
         ld      de,want
@@ -2470,6 +2685,18 @@ nexclash_chosen:
         ld      a,1
         ld      (oh_done),a
         jp      done
+
+; The part that writes the menu banks, read in over the game's part, which is done with.
+menu_nex:
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_mnx_at
+        call    seek_file
+        ld      hl,z80_part_at
+        ld      bc,mnx_size
+        call    load_part
+        jp      z80_part_at
+file_mnx_at:    dd FILE_MNX_AT
 
 ; The running CRC at HL and out_len against the CRC and length at DE.
 check_result:
@@ -2524,7 +2751,7 @@ screen_size:
         ret     z
         ld      c,a
         and     $60
-        ld      hl,msg_screen
+        ld      hl,msg_level                ; the same words as the resident message
         jp      nz,fail_hl
         ld      a,c
         and     $9a
@@ -2757,7 +2984,7 @@ all_banks_available:
         pop     af
         jr      nz,.ok
         ld      a,(cur_bank)
-        call    game_has
+        call    part_has
         jp      nc,bad_patch
 .ok:    pop     bc
         inc     c
@@ -2837,9 +3064,15 @@ work_begin:
 .second:
         ld      a,(set_choices+1)
         or      a
-        jr      z,.alloc
+        jr      z,.tape
         ld      a,b
         add     a,SET_PAGES
+        ld      b,a
+.tape:  ld      a,(game_kind)               ; a tape's table, after all the others
+        cp      KIND_TAP
+        jr      c,.alloc
+        ld      a,b
+        add     a,TAPE_PAGES
         ld      b,a
 .alloc: ld      a,b
         ld      (page_goal),a
@@ -2857,7 +3090,7 @@ work_begin:
         ld      e,(hl)
         inc     (hl)
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      (hl),a
         djnz    .more
@@ -2874,16 +3107,23 @@ work_begin:
         ld      (hl),0
         ldir
         jp      crc_make
-.none:  ld      a,b
-        ld      a,(page_goal)
-        ld      hl,msg_ram
-        cp      PAGES
-        jp      z,fail_hl
-        ld      hl,msg_ram_set
-        cp      PAGES + SET_PAGES
-        jp      z,fail_hl
-        ld      hl,msg_ram_two
+.none:  ld      a,(page_goal)               ; 6, 9, 12 or 15 pages: the message for that many
+        add     a,low (ram_msgs - PAGES)
+        ld      l,a
+        ld      h,high ram_msgs
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        ex      de,hl
         jp      fail_hl
+ram_msgs:       dw msg_ram                  ; 3 bytes apart, as the pages go up in threes
+                db 0
+                dw msg_ram_set
+                db 0
+                dw msg_ram_two
+                db 0
+                dw msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
+        assert  high ram_msgs == high (ram_msgs + 10), "the RAM messages' table crosses a page"
 
 ; ---- page_list: W0, W1, IO, sites x 3, set x 3.
 
@@ -2947,7 +3187,7 @@ unlock:
         ld      bc,TARGET_FIXED
         call    read_patch
         ld      a,(tgt_buf+1)
-        cp      KIND_Z80
+        call    kind_readable
         jr      nz,.next
         ld      hl,tgt_buf+2
         ld      de,gsize
@@ -3034,6 +3274,7 @@ absorb_game:
         ld      hl,zero32
         ld      de,gsize
         call    absorb_range
+        call    part_more                   ; a set's further files, in order
         ld      hl,nonce
         ld      bc,16
         call    rc4_absorb
@@ -3187,7 +3428,7 @@ stream_start:
         ld      (s_j),a
         ld      hl,tmp5
         ld      bc,5
-        jp      rc4_absorb
+        jr      rc4_absorb
 
 ; XOR BC bytes at HL with the stream.
 rc4_xor:
@@ -3343,7 +3584,7 @@ crc_update:
         ld      c,a
         inc     h
         ld      b,(hl)
-        jp      .byte
+        jr      .byte
 .end:   exx
         ld      (crc),de
         ld      (crc+2),bc
@@ -3516,7 +3757,7 @@ zx0_decode:
         ld      de,(zx_last)
         add     hl,de
         pop     de
-        jp      nc,.bad
+        jr      nc,.bad
         ld      hl,(zx_last)
         add     hl,de
         ldir
@@ -4114,7 +4355,7 @@ load_bank_index:
         pop     de
         ld      bc,8
         ldir
-        jp      .next
+        jr      .next
 
 ; Bank (cur_bank) from the patch into WORK, zeros to its end.
 decode_patch_bank:
@@ -4158,6 +4399,432 @@ fill_zeros:
         ret     z
         ldir
         ret
+
+; ------------------------------------------------------------- site table
+
+; Map the table's byte t_off at 0xA000-0xBFFF; HL its address.
+t_seek: ld      hl,(t_off)
+        ld      a,h
+        rlca
+        rlca
+        rlca
+        and     7
+        ld      (t_page),a
+        call    t_map
+        ld      hl,(t_off)
+        ld      a,h
+        and     $1f
+        or      $a0
+        ld      h,a
+        ret
+
+; Page A of the table at 0xA000.
+t_map:  ld      e,a
+        ld      d,0
+        ld      hl,(t_base)
+        add     hl,de
+        ld      a,(hl)
+        jp      map_slot5
+
+; A = the table's next byte at HL, into the next page if need be. Keeps BC, DE.
+t_get:  ld      a,(hl)
+.inc:   inc     hl
+        bit     6,h
+        ret     z
+        push    af
+        push    bc
+        push    de
+        ld      a,(t_page)
+        cp      2
+        jr      nc,.last                    ; past the table: nothing more is read
+        inc     a
+        ld      (t_page),a
+        call    t_map
+.last:  ld      hl,$a000
+        pop     de
+        pop     bc
+        pop     af
+        ret
+
+; Walk the sites. A=$FF: check every entry. Otherwise apply the entries of bank A
+; to WORK. Leaves a table page mapped; the caller maps the I/O page again.
+sites_walk:
+        ld      (cur_site),a
+        ld      hl,(sit_len)
+        ld      (t_len),hl
+        ld      hl,page_list+3
+        ld      (t_base),hl
+        ld      hl,(t_len)
+        ld      a,h
+        or      l
+        ret     z
+        ld      hl,0
+        ld      (t_off),hl
+        call    t_seek
+        call    t_get
+        ld      (t_count),a
+        call    t_get
+        ld      (t_count+1),a
+        ld      hl,2
+table_walk:
+        ld      (t_off),hl
+.site:  ld      hl,(t_count)
+        ld      a,h
+        or      l
+        jp      z,.end
+        dec     hl
+        ld      (t_count),hl
+        ld      hl,(t_len)                  ; five bytes, at least
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        ld      de,5
+        or      a
+        sbc     hl,de
+        jp      c,bad_patch
+        ld      (t_room),hl
+        call    t_seek
+        call    t_get
+        ld      (site_bank),a
+        call    t_get
+        ld      (site_off),a
+        call    t_get
+        ld      (site_off+1),a
+        call    t_get
+        ld      (site_len),a
+        call    t_get
+        ld      (site_len+1),a
+        push    hl
+        ld      a,(cur_site)                ; its bank, in the checking walk
+        inc     a
+        jr      nz,.bank_done
+        call    map_iopage
+        ld      a,(site_bank)
+        call    part_has
+        jp      nc,bad_patch
+        ld      a,(site_bank)               ; a site is in a bank the build takes from the game
+        call    header_has
+        jp      z,bad_patch
+        ld      a,(site_bank)
+        ld      (cur_bank),a
+        call    bank_index_entry
+        jp      nz,bad_patch
+.remap: ld      a,(t_page)
+        call    t_map
+.bank_done:
+        ld      hl,(t_room)                 ; its data must be there
+        ld      de,(site_len)
+        or      a
+        sbc     hl,de
+        jp      c,bad_patch
+        ld      hl,(site_off)               ; and within a bank
+        add     hl,de
+        jp      c,bad_patch
+        ld      bc,BANK_SIZE+1
+        or      a
+        sbc     hl,bc
+        jp      nc,bad_patch
+        pop     hl
+        ld      a,(cur_site)
+        ld      c,a
+        ld      a,(site_bank)
+        cp      c
+        jr      nz,.skip
+        ld      de,(site_off)
+        ld      a,d
+        add     a,high WORK
+        ld      d,a
+        ld      bc,(site_len)
+.byte:  ld      a,b
+        or      c
+        jr      z,.skip
+        call    t_get
+        ld      (de),a
+        inc     de
+        dec     bc
+        jr      .byte
+.skip:  ld      hl,(t_off)
+        ld      de,5
+        add     hl,de
+        ld      de,(site_len)
+        add     hl,de
+        ld      (t_off),hl
+        jp      .site
+.end:   ld      a,(cur_site)                ; nothing may be left over
+        inc     a
+        ret     nz
+        ld      hl,(t_len)
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        ret     z
+        jp      bad_patch
+
+; -------------------------------------------------------------- the POKEs
+
+; The chosen trainers' POKEs into POKES, in the file's order. A=0: each must be
+; in a bank the header lists (a .nex); A=1: in a bank the game has (a .z80).
+load_pokes:
+        ld      (poke_mode),a
+        xor     a
+        ld      (poke_count),a
+        ld      a,(trainer_count)
+        or      a
+        ret     z
+        ld      b,a
+        ld      c,0
+.t:     push    bc
+        ld      a,c
+        call    trainer_entry
+        ld      a,(ix+0)
+        or      a
+        jr      z,.next
+        ld      a,(poke_count)              ; room?
+        ld      e,a
+        ld      a,(ix+2)
+        add     a,e
+        ld      hl,msg_too_many
+        jp      c,fail_hl
+        cp      POKES_HELD + 1
+        jp      nc,fail_hl
+        ld      (poke_count),a
+        ld      l,e                         ; to POKES + 4 x old count
+        ld      h,0
+        add     hl,hl
+        add     hl,hl
+        ld      de,POKES
+        add     hl,de
+        push    hl
+        push    ix
+        pop     hl
+        ld      de,3
+        add     hl,de
+        call    seek_patch
+        pop     hl
+        ld      c,(ix+2)
+        ld      b,0
+        sla     c
+        rl      b
+        sla     c
+        rl      b
+        call    read_patch
+.next:  pop     bc
+        inc     c
+        djnz    .t
+        ld      a,(poke_count)              ; check them all
+        or      a
+        ret     z
+        ld      b,a
+        ld      hl,POKES
+.check: ld      a,(hl)
+        cp      112
+        jp      nc,bad_patch
+        inc     hl
+        inc     hl
+        ld      a,(hl)                      ; offset below 16384
+        cp      $40
+        jp      nc,bad_patch
+        dec     hl
+        dec     hl
+        push    bc
+        push    hl
+        ld      a,(poke_mode)
+        or      a
+        ld      a,(hl)
+        jr      nz,.game
+        call    header_has
+        jp      z,bad_patch
+        jr      .fine
+.game:  call    part_has
+        jp      nc,bad_patch
+.fine:  pop     hl
+        pop     bc
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .check
+        ret
+
+; The POKEs of bank (cur_bank) into WORK, over any sets.
+apply_pokes:
+        ld      a,(poke_count)
+        or      a
+        ret     z
+        ld      b,a
+        ld      hl,POKES
+.p:     ld      a,(cur_bank)
+        cp      (hl)
+        jr      nz,.no
+        inc     hl
+        ld      e,(hl)
+        inc     hl
+        ld      a,(hl)
+        add     a,high WORK
+        ld      d,a
+        inc     hl
+        ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        djnz    .p
+        ret
+.no:    inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .p
+        ret
+
+magic_bnk1:     db "BNK1"
+magic_scr1:     db "SCR1"
+magic_chk1:     db "CHK1"
+wrap_check:     db "NXC1-KEY"
+zero32:         dd 0
+three:          dd 3
+four:           dd 4
+check_at:       dd 22
+file_header:    dd FILE_HEADER
+msg_ram:        db "Not enough free RAM: needs 48", 'K' | $80
+msg_ram_set:    db "Needs 72K free RA", 'M' | $80
+msg_ram_two:    db "Needs 96K free RA", 'M' | $80
+msg_write:      db "Cannot write to /tm", 'p' | $80
+msg_bad_result: db "Rebuild failed: patch damage", 'd' | $80
+msg_too_many:   db "Too many trainers o", 'n' | $80
+nex_magic:      db "Next"
+
+; ============================================== the game's own part, at the end
+
+; What reads the game: the snapshot's, here, or for a tape one of the tape's two parts, read
+; in over it from this file. Each starts with these four entries in this order.
+z80_part_at:
+part_parse:     jp      parse_game          ; after unlock: where the game's banks are
+part_bank:      jp      decode_game_bank    ; bank (cur_bank) of the game into WORK
+part_has:       jp      game_has            ; carry when the game has bank A; keeps BC
+part_plain:     jp      original_plain      ; the clash fix off with no trainer
+part_fix_off:   jp      z80_fix_off         ; and with one, from after unlock and part_parse
+part_more:      ret                         ; nothing more to key: one file
+
+; The clash fix off's .z80: the POKEs checked, the header, then each page, the POKEs in place.
+z80_fix_off:
+        ld      a,1
+        call    load_pokes
+        ld      hl,z80_out_name
+        call    create_out
+        call    write_z80_head
+        ld      a,(z80_128)
+        or      a
+        jr      nz,.k128
+        ld      hl,pages_48k
+        ld      b,3
+        jr      .pages
+.k128:  ld      hl,pages_128k
+        ld      b,8
+.pages: ld      a,(hl)
+        inc     hl
+        ld      e,(hl)                      ; the bank
+        inc     hl
+        push    bc
+        push    hl
+        ld      hl,HDR
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),a
+        ld      a,e
+        ld      (cur_bank),a
+        ld      hl,HDR
+        ld      bc,3
+        call    write_out
+        call    decode_game_bank
+        call    apply_pokes
+        ld      hl,WORK
+        ld      bc,BANK_SIZE
+        call    write_out
+        pop     hl
+        pop     bc
+        djnz    .pages
+        call    close_out
+        ld      a,2
+        jp      done
+
+pages_48k:
+        db      8, 5, 4, 2, 5, 0
+pages_128k:
+        db      3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7
+
+bad_game:
+        ld      hl,msg_game_bad
+        jp      fail_hl
+
+; Clash fix off, no trainer: the same bytes, under a fixed name.
+original_plain:
+        ld      hl,z80_out_name
+        call    create_out
+.chunk: ld      hl,smallbuf
+        ld      bc,SMALLBUF_SIZE
+        ld      a,(gh)
+        rst     $08
+        db      F_READ
+        ld      hl,msg_game_bad
+        jp      c,fail_hl
+        ld      a,b
+        or      c
+        jr      z,.end
+        ld      hl,smallbuf
+        call    write_out
+        jr      .chunk
+.end:   jp      close_out
+
+; The .z80's header, made version 2 if it was version 1.
+write_z80_head:
+        ld      hl,head
+        ld      de,HDR
+        ld      bc,32
+        ldir
+        ld      a,(z80_v1)
+        or      a
+        jr      z,.keep
+        ld      a,(HDR+12)                  ; 255 means 1; no compression flag
+        cp      255
+        jr      nz,.f
+        ld      a,1
+.f:     and     $df
+        ld      (HDR+12),a
+        ld      hl,(HDR+6)
+        ld      (HDR+32),hl
+        ld      hl,0
+        ld      (HDR+6),hl
+        ld      hl,23
+        ld      (HDR+30),hl
+        ld      hl,HDR+34                   ; hardware mode and the rest 0
+        ld      de,HDR+35
+        ld      bc,20
+        ld      (hl),0
+        ldir
+        ld      hl,HDR
+        ld      bc,55
+        jp      write_out
+.keep:  ld      hl,head_pos
+        ld      a,(gh)
+        call    seek_file
+        ld      hl,(z80_head_len)
+        ld      bc,32
+        or      a
+        sbc     hl,bc
+        ld      b,h
+        ld      c,l
+        ld      a,b
+        or      c
+        jr      z,.write
+        ld      hl,HDR+32
+        call    read_game
+.write: ld      hl,HDR
+        ld      bc,(z80_head_len)
+        jp      write_out
+
+head_pos:
+        dd      32
 
 ; ------------------------------------------------------------- the snapshot
 
@@ -4332,7 +4999,7 @@ parse_game:
         push    hl
         call    game_has
         pop     hl
-        jr      nc,bad_game
+        jp      nc,bad_game
         inc     hl
         inc     hl
         djnz    .need
@@ -4405,9 +5072,6 @@ game_has:
         scf
         ret
 
-bad_game:
-        ld      hl,msg_game_bad
-        jp      fail_hl
 
 ; Bank (cur_bank) of the game into WORK.
 decode_game_bank:
@@ -4443,7 +5107,7 @@ decode_game_bank:
         or      a
         sbc     hl,de
         ret     z
-        jr      bad_game
+        jp      bad_game
 .raw:   ld      hl,BANK_SIZE
         ld      (src_left),hl
         ld      hl,0
@@ -4596,306 +5260,2426 @@ unpack_go:
         ld      (run_n),a
         jr      .next
 
-; ------------------------------------------------------------- site table
+z80_marker:     db 0, $ed, $ed, 0
+ov_tag:         db "NXQ1"
+ov_end:
+        ent
+ov_size         equ ov_end - ov_start
+        assert  ov_start_at + ov_size <= patch_path, "the code runs into the fixed memory"
+        display "resident: ", /d, ov_start_at - $2000, ", up to the menu: ", /d, first_end - ov_start_at, ", overlay: ", /d, ov_size, ", code room: ", /d, vars - $2000
 
-; Map the table's byte t_off at 0xA000-0xBFFF; HL its address.
-t_seek: ld      hl,(t_off)
+; ============================================== a tape's two parts, read in after the menu
+
+; Neither is read for a snapshot. For a tape, the first is read over the snapshot's part once the
+; menu is done, and the second over the first once the table is ready. Their variables are the
+; snapshot part's, and scratch the snapshot route never has in use at the same time.
+tap_len         equ v1_pos                  ; the table's length
+tap_sites       equ v1_pos + 2              ; where its sites start
+tap_count       equ run_n                   ; its copies (run_n, run_v: two bytes)
+unresolved      equ scr_left                ; copies not yet given a place in the file
+blk_index       equ scr_left + 2            ; the data block being walked
+last_ord        equ cur_n                   ; the place in .nex order of the bank before
+last_end        equ a_off                   ; and where the entry before ended
+tape_banks      equ nonce                   ; a bit for each bank the table writes, once unlocked
+tzx_head        equ tmp5                    ; a TZX block's head and count
+tzx_count       equ tmp5 + 1
+tape_mode       equ tmp5 + 4                ; the start state's hardware mode
+headbuf         equ smallbuf + 16           ; a block's head
+ebuf            equ smallbuf                ; a copy, as the table has it
+
+        disp    z80_part_at
+tape1_start:
+        jp      tape_parse
+        jp      bad_patch
+        jp      bad_patch
+        jp      original_with_trainers      ; with the fix off a tape is always rebuilt and checked
+        jp      bad_patch
+        jp      absorb_more                 ; part_more: a set's further files keyed
+
+; The TAP1 that serves this target into its pages, and the whole of it checked; the tape walked as
+; far as the highest block a copy names, and each copy given its place in the file. Then the
+; second part, over this one, goes on from its first entry.
+tape_parse:
+        call    tape_base1
+        call    walk_begin
+.find:  call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_tap1
+        call    tag_is
+        jr      nz,.find
+        ld      hl,smallbuf
+        ld      bc,TAPE_FIXED
+        call    read_patch
+        ld      a,(smallbuf+1)              ; 1 to 32, as checked before the menu
+        ld      c,a
+        ld      b,0
+        push    bc
+        ld      hl,smallbuf+TAPE_FIXED
+        call    read_patch
+        pop     bc
+        ld      a,(tgt_buf)                 ; the target that unlocked it
+        ld      hl,smallbuf+TAPE_FIXED
+        push    bc
+        cpir
+        pop     bc
+        jr      nz,.find
+        ld      a,c                         ; its stream, past the head
+        add     a,TAPE_FIXED
+        ld      hl,work32
+        ld      (hl),a
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,blk_pos
+        ld      de,work32
+        call    add32
+        ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+        ld      a,(smallbuf)
+        ld      c,a
+        ld      de,magic_tap1
+        ld      hl,blk_pos
+        call    decode_table
+        ld      (tap_len),hl
+        call    map_std
+        ld      hl,(tap_len)                ; a header, a CRC and two counts at least
+        ld      de,COPIES_AT + 2
+        or      a
+        sbc     hl,de
+        jp      c,bad_patch
+
+        ld      hl,0                        ; the header: no PC, version 2, 48K or 128K
+        ld      (t_off),hl
+        call    t_seek
+        ld      de,6
+        add     hl,de
+        ld      a,(hl)
+        inc     hl
+        or      (hl)
+        jp      nz,bad_patch
+        ld      de,30 - 7
+        add     hl,de
+        ld      a,(hl)
+        cp      23
+        jp      nz,bad_patch
+        inc     hl
+        ld      a,(hl)
+        or      a
+        jp      nz,bad_patch
+        inc     hl
+        inc     hl
+        inc     hl
+        ld      a,(hl)
+        ld      (tape_mode),a
+        or      a
+        jr      z,.mode
+        cp      3
+        jp      nz,bad_patch
+.mode:  ld      de,COPIES_AT - 2 - 34
+        add     hl,de
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        ld      (tap_count),de
+        ld      (unresolved),de
+        ld      (t_count),de
+        ld      hl,COPIES_AT
+        ld      (t_off),hl
+        ld      hl,tape_banks               ; the machine's banks, and no other yet
+        ld      de,tape_banks+1
+        ld      bc,13
+        ld      (hl),0
+        ldir
+        ld      a,(tape_mode)
+        or      a
+        ld      a,%00100101                 ; 48K: 0, 2, 5
+        jr      z,.m48
+        ld      a,$ff
+.m48:   ld      (tape_banks),a
+        call    order_reset
+.copy:  ld      hl,(t_count)                ; each copy: a block of the first 1,024, a length of
+        ld      a,h                         ; 1 to 16,384, in a bank, in order
+        or      l
+        jr      z,.sites
+        dec     hl
+        ld      (t_count),hl
+        ld      b,COPY_SIZE
+        call    entry_get
+        ld      a,(ebuf+1)              ; bits 10, 11 and 15 clear; the file one the target has
+        ld      c,a
+        and     $8c
+        jp      nz,bad_patch
+        ld      a,c
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        ld      hl,set_n
+        cp      (hl)
+        jr      c,.fi
+        or      a
+        jp      nz,bad_patch
+.fi:
+        ld      bc,(ebuf+5)
+        ld      a,b
+        or      c
+        jp      z,bad_patch
+        ld      a,(ebuf+7)
+        ld      hl,(ebuf+8)
+        call    place
+        jr      .copy
+.sites: ld      hl,(t_off)
+        ld      (tap_sites),hl
+        call    order_reset
+        ld      b,2
+        call    entry_get
+        ld      hl,(ebuf)
+        ld      (t_count),hl
+.site:  ld      hl,(t_count)                ; each site: in a bank, in order, its bytes in the table
         ld      a,h
+        or      l
+        jr      z,.checked
+        dec     hl
+        ld      (t_count),hl
+        ld      b,5
+        call    entry_get
+        ld      bc,(ebuf+3)
+        ld      a,b
+        or      c
+        jp      z,bad_patch
+        ld      hl,(tap_len)
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        sbc     hl,bc
+        jp      c,bad_patch
+        ld      hl,(t_off)
+        add     hl,bc
+        ld      (t_off),hl
+        ld      a,(ebuf)
+        ld      hl,(ebuf+1)
+        call    place
+        jr      .site
+.checked:
+        ld      hl,(tap_len)                ; and nothing after them
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        jp      nz,bad_patch
+        call    map_iopage
+        ld      a,(tape_mode)
+        or      a
+        jr      z,.walk_start
+        ld      a,1
+        ld      (z80_128),a
+.walk_start:
+        call    extra_listed
+        ld      hl,z80_part_at              ; the second part, then on into it
+        ld      bc,tape2_size
+        ld      de,z80_part_at
+        push    de
+        jp      load_part
+
+; B bytes of the table at t_off into ebuf, which must be there; t_off past them.
+entry_get:
+        ld      hl,(tap_len)
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        ld      e,b
+        ld      d,0
+        sbc     hl,de
+        jp      c,bad_patch
+        push    bc                          ; t_seek does not keep BC
+        call    t_seek
+        ld      de,ebuf
+.g:     call    t_get
+        ld      (de),a
+        inc     de
+        djnz    .g
+        pop     bc
+        ld      hl,(t_off)
+        ld      e,b
+        ld      d,0
+        add     hl,de
+        ld      (t_off),hl
+        ret
+
+; A bank (A), offset (HL) and length (BC) of a copy or site: within the bank, and after the one
+; before it in .nex order. Its bank is marked as one the table writes.
+place:  cp      112
+        jp      nc,bad_patch
+        push    af
+        push    hl
+        add     hl,bc
+        jp      c,bad_patch
+        ld      de,BANK_SIZE + 1
+        or      a
+        sbc     hl,de
+        jp      nc,bad_patch
+        add     hl,de
+        ex      de,hl                       ; DE = its end
+        pop     hl
+        pop     af
+        push    af
+        push    de
+        cp      8
+        jr      nc,.ord
+        ld      e,a
+        ld      d,0
+        push    hl
+        ld      hl,ord_of
+        add     hl,de
+        ld      a,(hl)
+        pop     hl
+.ord:   ld      c,a
+        ld      a,(last_ord)
+        cp      c
+        jr      c,.later
+        jp      nz,bad_patch
+        ld      de,(last_end)
+        or      a
+        sbc     hl,de
+        jp      c,bad_patch
+.later: ld      a,c
+        ld      (last_ord),a
+        pop     de
+        ld      (last_end),de
+        pop     af
+        ld      c,a
+        rrca
+        rrca
+        rrca
+        and     15
+        ld      e,a
+        ld      d,0
+        ld      hl,tape_banks
+        add     hl,de
+        ld      a,c
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,$80
+.bit:   rlca
+        djnz    .bit
+        or      (hl)
+        ld      (hl),a
+        ret
+
+; Building the .nex, each extra bank the table writes one its header lists.
+extra_listed:
+        ld      a,(ver_original)            ; the .nex's header is there only for the .nex
+        or      a
+        ret     nz
+        ld      c,0
+.x:     ld      a,c
+        call    tape_has1
+        jr      nc,.next
+        ld      a,(z80_128)                 ; the machine's own banks are always there
+        or      a
+        ld      a,c
+        jr      z,.k48
+        cp      8
+        jr      c,.next
+        jr      .listed
+.k48:   or      a
+        jr      z,.next
+        cp      2
+        jr      z,.next
+        cp      5
+        jr      z,.next
+.listed:
+        call    header_has
+        jp      z,bad_patch
+.next:  inc     c
+        ld      a,c
+        cp      112
+        jr      c,.x
+        ret
+
+; Carry when the table writes bank A. Keeps BC.
+tape_has1:
+        push    bc
+        ld      c,a
+        rrca
+        rrca
+        rrca
+        and     15
+        ld      e,a
+        ld      d,0
+        ld      hl,tape_banks
+        add     hl,de
+        ld      a,c
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,(hl)
+.r:     rrca
+        djnz    .r
+        pop     bc
+        ret
+
+order_reset:
+        xor     a
+        ld      (last_ord),a
+        ld      h,a
+        ld      l,a
+        ld      (last_end),hl
+        ret
+
+tape_base1:
+        ld      a,(page_count)
+        sub     TAPE_PAGES
+        ld      e,a
+        ld      d,0
+        ld      hl,all_pages
+        add     hl,de
+        ld      (t_base),hl
+        ret
+
+; The place in .nex order of banks 0 to 7.
+ord_of:         db 2, 3, 1, 4, 5, 0, 6, 7
+magic_tap1:     db "TAP1"
+
+; A set's files after the first, keyed in order after it (from absorb_game, before the last nonce);
+; then the first open again. The key is finished here, the last nonce and all, and a set whose
+; files unlock no target of theirs is refused as the wrong game: unlock's search for another file
+; is for one file. Otherwise back to unlock, past the rest of absorb_game, to find the key again.
+absorb_more:
+        ld      a,(set_n)
+        or      a
+        ret     z
+        ld      a,1
+.f:     ld      hl,set_n
+        cp      (hl)
+        jr      nc,.done
+        push    af
+        call    open_fi_1
+        call    src_game
+        ld      a,(gh)
+        ld      hl,zero32
+        ld      de,gsize
+        call    absorb_range
+        pop     af
+        inc     a
+        jr      .f
+.done:  xor     a
+        call    open_fi_1
+        ld      hl,nonce
+        ld      bc,16
+        call    rc4_absorb
+        call    state_keep
+        call    walk_begin
+.next:  call    walk_next
+        jr      z,.wrong
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.next
+        ld      hl,tgt_buf
+        ld      bc,TARGET_FIXED
+        call    read_patch
+        ld      a,(tgt_buf+1)
+        call    kind_readable
+        jr      nz,.next
+        ld      hl,tgt_buf+2
+        ld      de,gsize
+        call    same_tag
+        jr      nz,.next
+        ld      de,magic_tgt1
+        ld      a,(tgt_buf)
+        ld      c,a
+        call    stream_open
+        ld      hl,tgt_buf+6
+        ld      bc,24
+        call    rc4_xor
+        ld      hl,tgt_buf+6
+        ld      de,wrap_check
+        ld      b,8
+.chk:   ld      a,(de)
+        cp      (hl)
+        jr      nz,.next
+        inc     hl
+        inc     de
+        djnz    .chk
+        pop     hl                          ; past absorb_game's last nonce: done here
+        ret
+.wrong: ld      hl,gh
+        call    close_at
+        ld      hl,msg_wrong_game
+        jp      fail_hl
+
+        OPEN_FI open_fi_1
+msg_ram_tape2:  db "Needs 120K free RA", 'M' | $80
+        db      "NXQ1"
+tape1_end:
+        ent
+tape1_size      equ tape1_end - tape1_start
+
+; ---------------------------------------------------------------- the second
+
+        disp    z80_part_at
+tape2_start:
+        jp      tape_walk
+        jp      bad_patch
+        jp      bad_patch
+        jp      bad_patch
+        jp      bad_patch
+
+; The tape, from its start, walked as far as the highest block a copy names: each copy given its
+; place in the file. Then the CRC.
+tape_walk:
+        ld      a,(set_n)                   ; a set: from its first file
+        or      a
+        ld      a,0
+        call    nz,open_fi_2
+        ld      hl,0
+        ld      (pos),hl
+        ld      (pos+2),hl
+        ld      (blk_index),hl
+.start: ld      a,(game_kind)
+        cp      KIND_TZX
+        jr      nz,.walk
+        ld      b,10                        ; ZXTape!, 0x1A, major version 1
+        call    tape_read
+        ld      hl,headbuf
+        ld      de,tzx_magic
+        call    same_tag
+        jp      nz,tape_bad_w
+        ld      de,tzx_magic+4
+        call    same_tag
+        jp      nz,tape_bad_w
+        ld      a,(headbuf+8)
+        dec     a
+        jp      nz,tape_bad_w
+.walk:  ld      hl,(unresolved)             ; until every copy has its place
+        ld      a,h
+        or      l
+        jp      z,.walked
+        ld      a,(blk_index+1)             ; past a file's 1,024th, or the end, one is missing
+        and     $0c                         ; (the file's index is above them, in bits 12 to 14)
+        jp      nz,bad_patch
+        ld      hl,gsize
+        ld      de,left
+        call    copy4
+        ld      hl,left
+        ld      de,pos
+        call    sub32
+        ld      hl,left
+        call    is_zero32
+        jp      z,next_file
+        ld      a,(game_kind)
+        cp      KIND_TZX
+        jr      z,.tzx
+        ld      b,2                         ; a .tap block: its length, then it
+        call    tape_read
+        ld      hl,(headbuf)
+        ld      (blk_len),hl
+        ld      hl,0
+        ld      (blk_len+2),hl
+        ld      a,$80
+        ld      (tzx_head),a
+        jp      .body
+.tzx:   ld      b,1                         ; a .tzx block: its ID, its head, its count
+        call    tape_read
+        ld      a,(headbuf)
+        ld      hl,tzx_ids
+.id:    ld      c,(hl)
+        inc     hl
+        inc     c
+        dec     c
+        jp      z,tape_bad_w
+        cp      c
+        jr      z,.known
+        inc     hl
+        inc     hl
+        jr      .id
+.known: ld      a,(hl)
+        ld      (tzx_head),a
+        inc     hl
+        ld      a,(hl)
+        ld      (tzx_count),a
+        ld      a,(tzx_head)
+        and     31
+        ld      b,a
+        call    tape_read
+        ld      hl,0
+        ld      (blk_len),hl
+        ld      (blk_len+2),hl
+        ld      a,(tzx_count)
+        ld      c,a
+        and     31
+        ld      e,a
+        ld      d,0
+        ld      hl,headbuf
+        add     hl,de
+        ld      a,c
         rlca
         rlca
         rlca
         and     7
-        ld      (t_page),a
-        call    t_map
-        ld      hl,(t_off)
-        ld      a,h
-        and     $1f
-        or      $a0
-        ld      h,a
-        ret
-
-; Page A of the table at 0xA000.
-t_map:  ld      e,a
-        ld      d,0
-        ld      hl,(t_base)
-        add     hl,de
-        ld      a,(hl)
-        jp      map_slot5
-
-; A = the table's next byte at HL, into the next page if need be. Keeps BC, DE.
-t_get:  ld      a,(hl)
+        jr      z,.body
+        ld      b,a
+        ld      de,blk_len
+.n:     ld      a,(hl)
+        ld      (de),a
         inc     hl
-        bit     6,h
-        ret     z
-        push    af
-        push    bc
-        push    de
-        ld      a,(t_page)
+        inc     de
+        djnz    .n
+        ld      a,(tzx_head)                ; bytes for each of the count
+        rlca
+        rlca
+        rlca
+        and     3
         cp      2
-        jr      nc,.last                    ; past the table: nothing more is read
-        inc     a
-        ld      (t_page),a
-        call    t_map
-.last:  ld      hl,$a000
-        pop     de
-        pop     bc
+        jr      c,.body
+        push    af
+        ld      hl,blk_len
+        ld      de,work32
+        call    copy4
+        ld      hl,blk_len
+        ld      de,work32
+        call    add32
         pop     af
-        ret
+        cp      3
+        jr      nz,.body
+        ld      hl,blk_len
+        ld      de,work32
+        call    add32
+.body:  ld      hl,gsize                    ; what follows must be in the file
+        ld      de,left
+        call    copy4
+        ld      hl,left
+        ld      de,pos
+        call    sub32
+        ld      hl,left
+        ld      de,blk_len
+        call    sub32
+        jp      c,tape_bad_w
+        ld      hl,pos
+        ld      de,blk_pos
+        call    copy4
+        ld      hl,pos
+        ld      de,blk_len
+        call    add32
+        ld      a,(tzx_head)
+        rla
+        jp      nc,.walk                    ; not a data block
+        call    resolve
+        ld      hl,(blk_index)
+        inc     hl
+        ld      (blk_index),hl
+        jp      .walk
+.walked:                                    ; the third part, over this one, from its first entry
+        ld      hl,z80_part_at
+        ld      bc,tape3_size
+        ld      de,z80_part_at
+        push    de
+        jp      load_part
 
-; Walk the sites. A=$FF: check every entry. Otherwise apply the entries of bank A
-; to WORK. Leaves a table page mapped; the caller maps the I/O page again.
-sites_walk:
-        ld      (cur_site),a
-        ld      hl,(sit_len)
-        ld      (t_len),hl
-        ld      hl,page_list+3
-        ld      (t_base),hl
-        ld      hl,(t_len)
+; The end of a file with copies still to place: a set's next file, walked from its start; its
+; blocks are named with its index in bits 12 to 14. For one file, or past a set's last, damage.
+next_file:
+        ld      a,(set_n)
+        or      a
+        jp      z,bad_patch
+        ld      a,(blk_index+1)
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        inc     a
+        ld      hl,set_n
+        cp      (hl)
+        jp      nc,bad_patch
+        push    af
+        call    open_fi_2
+        pop     af
+        rlca
+        rlca
+        rlca
+        rlca
+        ld      h,a
+        ld      l,0
+        ld      (blk_index),hl
+        ld      hl,0
+        ld      (pos),hl
+        ld      (pos+2),hl
+        jp      tape_walk.start
+
+; Each copy not yet placed that names this block: within it, and then its place in the file.
+resolve:
+        ld      hl,(tap_count)
+        ld      (t_count),hl
+        ld      hl,COPIES_AT
+        ld      (t_off),hl
+.r:     ld      hl,(t_count)
         ld      a,h
         or      l
         ret     z
+        dec     hl
+        ld      (t_count),hl
+        ld      b,COPY_SIZE
+        call    entry_get2
+        ld      a,(ebuf+6)                  ; placed already
+        rla
+        jr      c,.r
+        ld      hl,(ebuf)
+        ld      de,(blk_index)
+        or      a
+        sbc     hl,de
+        jr      nz,.r
+        ld      hl,(ebuf+2)                 ; its offset and length within the block
+        ld      (work32),hl
+        ld      a,(ebuf+4)
+        ld      (work32+2),a
+        xor     a
+        ld      (work32+3),a
+        ld      hl,(ebuf+5)
+        ld      (left),hl
         ld      hl,0
+        ld      (left+2),hl
+        ld      hl,work32
+        ld      de,left
+        call    add32
+        ld      de,(work32)
+        ld      bc,(work32+2)
+        ld      hl,blk_len
+        call    below32
+        jp      c,bad_patch
+        ld      hl,(ebuf+2)                 ; where that is in the file
+        ld      (work32),hl
+        ld      a,(ebuf+4)
+        ld      (work32+2),a
+        xor     a
+        ld      (work32+3),a
+        ld      hl,work32
+        ld      de,blk_pos
+        call    add32
+        ld      hl,work32
+        ld      de,ebuf
+        call    copy4
+        ld      a,(blk_index+1)             ; and which file: kept in the place's top byte
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        ld      (ebuf+3),a
+        ld      hl,ebuf+6
+        set     7,(hl)
+        ld      hl,(t_off)
+        ld      de,-COPY_SIZE
+        add     hl,de
+        ld      (t_off),hl
+        call    t_seek
+        ld      de,ebuf
+        ld      b,COPY_SIZE
+.w:     ld      a,(de)
+        ld      (hl),a
+        call    t_get.inc
+        inc     de
+        djnz    .w
+        ld      hl,(t_off)
+        ld      de,COPY_SIZE
+        add     hl,de
+        ld      (t_off),hl
+        ld      hl,(unresolved)
+        dec     hl
+        ld      (unresolved),hl
+        jp      .r
+
+; As the first part's entry_get.
+entry_get2:
+        ld      hl,(tap_len)
+        ld      de,(t_off)
+        or      a
+        sbc     hl,de
+        ld      e,b
+        ld      d,0
+        sbc     hl,de
+        jp      c,bad_patch
+        push    bc                          ; t_seek does not keep BC
+        call    t_seek
+        ld      de,ebuf
+.g:     call    t_get
+        ld      (de),a
+        inc     de
+        djnz    .g
+        pop     bc
+        ld      hl,(t_off)
+        ld      e,b
+        ld      d,0
+        add     hl,de
+        ld      (t_off),hl
+        ret
+
+; B bytes of the tape at pos into headbuf, which must be in the file; pos past them.
+tape_read:
+        ld      a,b
+        or      a
+        ret     z
+        push    bc
+        ld      hl,gsize
+        ld      de,left
+        call    copy4
+        ld      hl,left
+        ld      de,pos
+        call    sub32
+        pop     bc
+        push    bc
+        ld      e,b
+        ld      d,0
+        ld      bc,0
+        ld      hl,left
+        call    below32
+        jr      c,tape_bad_w
+        ld      hl,pos
+        ld      a,(gh)
+        call    seek_file
+        pop     bc
+        push    bc
+        ld      c,b
+        ld      b,0
+        ld      hl,headbuf
+        call    read_game
+        pop     bc
+        ld      hl,work32
+        ld      (hl),b
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,pos
+        ld      de,work32
+        jp      add32
+
+tzx_magic:      db "ZXTape!", $1a
+; The TZX blocks a tape target may hold: the ID; its head's length, with bytes for each of the count
+; in bits 5 and 6, and bit 7 for a data block; where the count is in the head, and in bits 5 to 7
+; how many bytes it has. The spec's tables, and nothing else.
+tzx_ids:
+        db      $10, 4 | 1 << 5 | $80, 2 | 2 << 5
+        db      $11, 18 | 1 << 5 | $80, 15 | 3 << 5
+        db      $14, 10 | 1 << 5 | $80, 7 | 3 << 5
+        db      $12, 4, 0
+        db      $13, 1 | 2 << 5, 1 << 5
+        db      $15, 8 | 1 << 5, 5 | 3 << 5
+        db      $18, 4 | 1 << 5, 4 << 5
+        db      $19, 4 | 1 << 5, 4 << 5
+        db      $20, 2, 0
+        db      $21, 1 | 1 << 5, 1 << 5
+        db      $22, 0, 0
+        db      $23, 2, 0
+        db      $24, 2, 0
+        db      $25, 0, 0
+        db      $26, 2 | 2 << 5, 2 << 5
+        db      $27, 0, 0
+        db      $28, 2 | 1 << 5, 2 << 5
+        db      $2a, 4 | 1 << 5, 4 << 5
+        db      $2b, 4 | 1 << 5, 4 << 5
+        db      $30, 1 | 1 << 5, 1 << 5
+        db      $31, 2 | 1 << 5, 1 | 1 << 5
+        db      $32, 2 | 1 << 5, 2 << 5
+        db      $33, 1 | 3 << 5, 1 << 5
+        db      $35, 20 | 1 << 5, 16 | 4 << 5
+        db      $5a, 9, 0
+        db      0
+tape_bad_w:
+        ld      hl,msg_game_bad
+        jp      fail_hl
+
+        OPEN_FI open_fi_2
+        db      "NXQ1"
+tape2_end:
+        ent
+tape2_size      equ tape2_end - tape2_start
+
+; ---------------------------------------------------------------- the third
+
+        disp    z80_part_at
+tape3_start:
+        jp      tape_check
+        jp      tape_bank
+        jp      tape_has
+        jp      bad_patch
+        jp      tape_fix_off
+
+; The start state's CRC, from the banks the table makes, before any is used; and building the
+; .nex, each extra bank one its header lists.
+tape_check:
+        ld      hl,$ffff
+        ld      (crc),hl
+        ld      (crc+2),hl
+        call    tape_head
+        ld      hl,smallbuf+START_SIZE
+        ld      de,blk_pos
+        call    copy4
+        ld      hl,smallbuf
+        ld      bc,START_SIZE
+        call    crc_update
+        call    tape_pages
+.p:     push    bc
+        ld      a,(hl)
+        inc     hl
+        ld      e,(hl)
+        inc     hl
+        push    hl
+        push    af
+        ld      a,e
+        ld      (cur_bank),a
+        call    tape_bank
+        pop     af
+        call    page_head
+        ld      hl,smallbuf
+        ld      bc,3
+        call    crc_update
+        ld      hl,WORK
+        ld      bc,BANK_SIZE
+        call    crc_update
+        pop     hl
+        pop     bc
+        djnz    .p
+        ld      hl,crc
+        ld      de,blk_pos
+        ld      b,4
+.c:     ld      a,(de)
+        cpl
+        cp      (hl)
+        jp      nz,bad_patch
+        inc     hl
+        inc     de
+        djnz    .c
+        ret
+
+; Bank (cur_bank) as the table makes it: zeros, its copies from the tape, then its sites.
+tape_bank:
+        ld      de,WORK
+        call    fill_zeros
+        call    tape_base2
+        ld      hl,(tap_count)
+        ld      (t_count),hl
+        ld      hl,COPIES_AT
+        ld      (t_off),hl
+.c:     ld      hl,(t_count)
+        ld      a,h
+        or      l
+        jr      z,.sites
+        dec     hl
+        ld      (t_count),hl
+        call    t_seek
+        ld      de,ebuf
+        ld      b,COPY_SIZE
+.g:     call    t_get
+        ld      (de),a
+        inc     de
+        djnz    .g
+        ld      hl,(t_off)
+        ld      de,COPY_SIZE
+        add     hl,de
+        ld      (t_off),hl
+        ld      a,(cur_bank)
+        ld      hl,ebuf+7
+        cp      (hl)
+        jr      nz,.c
+        ld      a,(set_n)                   ; a set: the copy's file open
+        or      a
+        call    nz,bank_switch
+        ld      hl,ebuf                     ; its place in the file, found by the first part
+        ld      a,(gh)
+        call    seek_file
+        ld      bc,(ebuf+5)
+        res     7,b
+        ld      hl,(ebuf+8)
+        ld      a,h
+        add     a,high WORK
+        ld      h,a
+        call    read_game
+        jr      .c
+.sites: ld      a,(cur_bank)
+        ld      (cur_site),a
+        ld      hl,(tap_len)
+        ld      (t_len),hl
+        ld      hl,(tap_sites)
         ld      (t_off),hl
         call    t_seek
         call    t_get
         ld      (t_count),a
         call    t_get
         ld      (t_count+1),a
-        ld      hl,2
-table_walk:
+        ld      hl,(tap_sites)
+        inc     hl
+        inc     hl
+        call    table_walk
+        jp      map_iopage
+
+; Carry when the table writes bank A. Keeps BC.
+tape_has:
+        cp      112
+        ret     nc
+        push    bc
+        push    hl
+        ld      c,a
+        rrca
+        rrca
+        rrca
+        and     15
+        ld      e,a
+        ld      d,0
+        ld      hl,tape_banks
+        add     hl,de
+        ld      a,c
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,(hl)
+.r:     rrca
+        djnz    .r
+        pop     hl
+        pop     bc
+        ret
+
+; The clash fix off: the POKEs checked, the start state's header, then each page, the POKEs in place.
+tape_fix_off:
+        ld      a,1
+        call    load_pokes
+        ld      hl,z80_out_name
+        call    create_out
+        call    tape_head
+        ld      hl,smallbuf
+        ld      bc,START_SIZE
+        call    write_out
+        call    tape_pages
+.p:     push    bc
+        ld      a,(hl)
+        inc     hl
+        ld      e,(hl)
+        inc     hl
+        push    hl
+        push    af
+        ld      a,e
+        ld      (cur_bank),a
+        call    tape_bank
+        pop     af
+        call    page_head
+        ld      hl,smallbuf
+        ld      bc,3
+        call    write_out
+        call    apply_pokes
+        ld      hl,WORK
+        ld      bc,BANK_SIZE
+        call    write_out
+        pop     hl
+        pop     bc
+        djnz    .p
+        call    close_out
+        ld      a,2
+        jp      done
+
+; 0xFFFF and page A, a page's head, in smallbuf.
+page_head:
+        ld      hl,smallbuf
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),a
+        ret
+
+; HL at the pages the start state has, B how many.
+tape_pages:
+        ld      a,(z80_128)
+        or      a
+        ld      hl,tpages_48k
+        ld      b,3
+        ret     z
+        ld      hl,tpages_128k
+        ld      b,8
+        ret
+
+; The start state's header and the CRC after it, into smallbuf. The I/O page is mapped after.
+tape_head:
+        call    tape_base2
+        ld      hl,0
         ld      (t_off),hl
-.site:  ld      hl,(t_count)
+        call    t_seek
+        ld      de,smallbuf
+        ld      bc,START_SIZE + 4
+        ldir
+        jp      map_iopage
+
+tape_base2:
+        ld      a,(page_count)
+        sub     TAPE_PAGES
+        ld      e,a
+        ld      d,0
+        ld      hl,all_pages
+        add     hl,de
+        ld      (t_base),hl
+        ret
+
+tape_bad:
+        ld      hl,msg_game_bad
+        jp      fail_hl
+
+tpages_48k:
+        db      8, 5, 4, 2, 5, 0
+tpages_128k:
+        db      3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7
+
+; The file a copy is in (the top byte of its place) open, the copy kept on the stack: opening a
+; file uses smallbuf, where the copy is.
+bank_switch:
+        ld      hl,(ebuf)
+        push    hl
+        ld      a,(ebuf+2)
+        push    af
+        ld      hl,(ebuf+5)
+        push    hl
+        ld      hl,(ebuf+8)
+        push    hl
+        ld      a,(ebuf+3)
+        call    open_fi_3
+        pop     hl
+        ld      (ebuf+8),hl
+        pop     hl
+        ld      (ebuf+5),hl
+        pop     af
+        ld      (ebuf+2),a
+        pop     hl
+        ld      (ebuf),hl
+        xor     a
+        ld      (ebuf+3),a
+        ret
+
+        OPEN_FI open_fi_3
+        db      "NXQ1"
+tape3_end:
+        ent
+tape3_size      equ tape3_end - tape3_start
+        assert  z80_part_at + tape1_size <= patch_path, "a tape's first part runs into the fixed memory"
+        assert  z80_part_at + tape2_size <= patch_path, "a tape's second part runs into the fixed memory"
+        assert  z80_part_at + tape3_size <= patch_path, "a tape's third part runs into the fixed memory"
+        display "snapshot part: ", /d, ov_end - z80_part_at, ", tape parts: ", /d, tape1_size, ", ", /d, tape2_size, " and ", /d, tape3_size, ", room for a part: ", /d, patch_path - z80_part_at
+
+; ============================================== the menu's part, read into a page of its own
+; firmware/menu.asm and what builds its description from the patch, as the spec's "The
+; description" has it, so that it is the same as a .nex's (tools/nxc.py menu_description); and
+; the stub, for the .nex writer. Run at 0xA000 with interrupts off, before the menu, from menu.
+
+FIRST_PART      equ 8192
+MP_AT           equ $A000
+HELP_READ       equ 1024
+MENU_TITLE      equ 54                      ; two bar rows of 27
+MENU_TEXT       equ 32                      ; a publisher, a name in the credits
+HELP_MAX        equ 64
+NAME_MAX        equ 25
+
+        disp    MP_AT
+mp_start:
+        jp      mp_main
+mp_desc_len:    dw 0                        ; for the .nex writer: the description's length,
+mp_ptrs_off:    dw 0                        ; and where its lines' data offsets go in it
+mp_tg:          ds 2 + 2 * TOGGLES_MAX      ; and the toggles (count, on, kinds, ranks), kept here, as the key state takes their memory
+mp_rom_name:    db "C:/MACHINES/NEXT/ENNEXTZX.ROM",0
+mp_rom_at:      dd $FD00                    ; its ROM 3's font
+mp_hlp1:        db "HLP1"
+mp_k_trainer:   db "trainer_",0
+mp_k_toggle:    db "toggle_",0
+mp_k_fix:       db "fix=",0
+mp_k_colours:   db "colours=",0
+mp_k_language:  db "language=",0
+
+mp_main:
+        ld      a,'*'                       ; the font, from the card's ROM file
+        ld      hl,mp_rom_name
+        ld      b,FA_READ
+        rst     $08
+        db      F_OPEN
+        ld      hl,msg_rom
+        jp      c,fail_hl
+        push    af
+        ld      hl,mp_rom_at
+        call    seek_file
+        pop     af
+        push    af
+        ld      hl,MP_FONT
+        ld      bc,768
+        ld      de,msg_rom
+        call    read_exact
+        pop     af
+        rst     $08
+        db      F_CLOSE
+        ld      hl,0                        ; HLP1, its first 1,024 bytes, if there is one
+        ld      (mp_help_len),hl
+        call    walk_begin
+.h:     call    walk_next
+        jr      z,.hd
+        ld      de,mp_hlp1
+        call    tag_is
+        jr      nz,.h
+        ld      bc,HELP_READ
+        ld      hl,(blk_len+2)
         ld      a,h
         or      l
-        jp      z,.end
-        dec     hl
-        ld      (t_count),hl
-        ld      hl,(t_len)                  ; five bytes, at least
-        ld      de,(t_off)
-        or      a
-        sbc     hl,de
-        ld      de,5
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-        ld      (t_room),hl
-        call    t_seek
-        call    t_get
-        ld      (site_bank),a
-        call    t_get
-        ld      (site_off),a
-        call    t_get
-        ld      (site_off+1),a
-        call    t_get
-        ld      (site_len),a
-        call    t_get
-        ld      (site_len+1),a
-        push    hl
-        ld      a,(cur_site)                ; its bank, in the checking walk
-        inc     a
-        jr      nz,.bank_done
-        call    map_iopage
-        ld      a,(site_bank)
-        ld      c,a
-        cp      8
-        jp      nc,bad_patch
-        call    game_has
-        jp      nc,bad_patch
-        ld      a,(site_bank)               ; a site is in a bank the build takes from the game
-        call    header_has
-        jp      z,bad_patch
-        ld      a,(site_bank)
-        ld      (cur_bank),a
-        call    bank_index_entry
-        jp      nz,bad_patch
-.remap: ld      a,(t_page)
-        call    t_map
-.bank_done:
-        ld      hl,(t_room)                 ; its data must be there
-        ld      de,(site_len)
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-        ld      hl,(site_off)               ; and within a bank
-        add     hl,de
-        jp      c,bad_patch
-        ld      bc,BANK_SIZE+1
+        jr      nz,.hc
+        ld      hl,(blk_len)
         or      a
         sbc     hl,bc
-        jp      nc,bad_patch
-        pop     hl
-        ld      a,(cur_site)
-        ld      c,a
-        ld      a,(site_bank)
-        cp      c
-        jr      nz,.skip
-        ld      de,(site_off)
-        ld      a,d
-        add     a,high WORK
-        ld      d,a
-        ld      bc,(site_len)
-.byte:  ld      a,b
+        jr      nc,.hc
+        ld      bc,(blk_len)
+.hc:    ld      (mp_help_len),bc
+        ld      a,b
         or      c
-        jr      z,.skip
-        call    t_get
+        jr      z,.hd
+        ld      hl,MP_HELP
+        call    read_patch
+.hd:
+; The description: flags, N, the number of lines, then the strings.
+        ld      de,MP_DESC
+        xor     a
         ld      (de),a
         inc     de
-        dec     bc
-        jr      .byte
-.skip:  ld      hl,(t_off)
-        ld      de,5
-        add     hl,de
-        ld      de,(site_len)
-        add     hl,de
-        ld      (t_off),hl
-        jp      .site
-.end:   ld      a,(cur_site)                ; nothing may be left over
+        ld      a,KINDS
+        ld      (de),a
+        inc     de
+        call    mp_lines
+        ld      (de),a
+        inc     de
+        push    de                          ; the title: of the first target that has one
+        call    walk_begin
+.t:     call    walk_next
+        jr      z,.not
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.t
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        bit     7,a
+        jr      z,.text
+        ld      hl,smallbuf                 ; a set of tapes: past its head, n then 5 each after the first
+        ld      bc,1
+        call    read_patch
+        ld      a,(smallbuf)
+        dec     a
+        ld      c,a
+        add     a,a
+        add     a,a
+        add     a,c
+        ld      c,a
+        ld      b,0
         inc     a
-        ret     nz
-        ld      hl,(t_len)
-        ld      de,(t_off)
+        ld      l,a
+        ld      h,b
+        ld      (work32),hl
+        ld      (work32+2),bc
+        ld      a,c
         or      a
-        sbc     hl,de
-        ret     z
-        jp      bad_patch
-
-; -------------------------------------------------------------- the POKEs
-
-; The chosen trainers' POKEs into POKES, in the file's order. A=0: each must be
-; in a bank the header lists (a .nex); A=1: in a bank the game has (a .z80).
-load_pokes:
-        ld      (poke_mode),a
+        jr      z,.past
+        ld      hl,smallbuf
+        call    read_patch
+.past:  ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+.text:  call    read_text
+        ld      de,key_title
+        call    text_find
+        jr      c,.t
+        pop     de
+        push    de
+        ld      a,MENU_TITLE
+        call    copy_text
+        pop     hl                          ; in capitals
+.up:    ld      a,(hl)
+        or      a
+        jr      z,.upd
+        cp      'a'
+        jr      c,.un
+        cp      'z' + 1
+        jr      nc,.un
+        sub     'a' - 'A'
+        ld      (hl),a
+.un:    inc     hl
+        jr      .up
+.not:   pop     hl
+        ld      (hl),0
+.upd:   inc     hl
+        push    hl                          ; INF1: the publisher, colours_by with a colour set, patch_by
+        call    walk_begin
+.i:     call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_inf1
+        call    tag_is
+        jr      nz,.i
+        call    read_text
+        pop     de
+        ld      hl,key_publisher
+        call    mp_inf
+        ld      a,(set_counts)
+        or      a
+        jr      nz,.col
+        ld      (de),a
+        inc     de
+        jr      .pby
+.col:   ld      hl,key_colours_by
+        call    mp_inf
+.pby:   ld      hl,key_patch_by
+        call    mp_inf
+; Each line: kind, state, sets, name, help, the sets' names.
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.fix
+        ld      b,a
+        ld      c,0
+.tr:    push    bc
         xor     a
-        ld      (poke_count),a
+        call    mp_head
+        pop     bc
+        push    bc
+        push    de
+        ld      a,c
+        call    trainer_entry
+        push    ix                          ; the name lies before the count and the POKEs
+        pop     hl
+        ld      de,3
+        add     hl,de
+        ld      de,work32
+        call    copy4
+        ld      a,(ix+1)
+        inc     a
+        neg
+        ld      e,a
+        ld      d,$ff
+        ld      (left),de
+        ld      hl,$ffff
+        ld      (left+2),hl
+        ld      hl,work32
+        ld      de,left
+        call    add32
+        ld      hl,work32
+        call    seek_patch
+        ld      c,(ix+1)
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        pop     de
+        ld      c,(ix+1)
+        ld      b,0
+        ld      hl,smallbuf
+        call    mp_name
+        pop     bc
+        push    bc
+        ld      a,c
+        inc     a
+        ld      hl,mp_k_trainer
+        call    mp_numbered
+        pop     bc
+        inc     c
+        djnz    .tr
+.fix:   ld      a,1                         ; the main line: on, as the menu starts
+        call    mp_head
+        ld      hl,fix_label
+        ld      a,(hl)
+        or      a
+        jr      nz,.fl
+        ld      hl,str_fix
+.fl:    call    mp_copyz
+        ld      hl,mp_k_fix
+        call    mp_help
+        xor     a                           ; each kind of set offered
+.kd:    ld      (cur_kind),a
+        ld      c,a
+        ld      b,0
+        ld      hl,set_counts
+        add     hl,bc
+        ld      a,(hl)
+        or      a
+        jr      z,.kn
+        push    af
+        ld      a,2
+        call    mp_head
+        dec     de
+        pop     af
+        ld      (de),a
+        inc     de
+        ld      a,(cur_kind)
+        or      a
+        ld      hl,str_enhanced
+        jr      z,.kl
+        ld      hl,str_language
+.kl:    call    mp_copyz
+        ld      a,(cur_kind)
+        or      a
+        ld      hl,mp_k_colours
+        jr      z,.kh
+        ld      hl,mp_k_language
+.kh:    call    mp_help
+        ld      a,(cur_kind)
+        ld      c,a
+        ld      b,0
+        ld      hl,set_counts
+        add     hl,bc
+        ld      b,(hl)
+        ld      c,1
+.sn:    push    bc
+        ld      a,c
+        ld      (cur_n),a
+        push    de
+        call    find_set
+        call    mp_setname
+        pop     bc
+        inc     c
+        djnz    .sn
+.kn:    ld      a,(cur_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.kd
+        ld      a,(tg_count)                ; each toggle
+        or      a
+        jr      z,.ptrs
+        ld      b,a
+        ld      c,0
+.tg:    push    bc
+        ld      a,3
+        call    mp_head
+        pop     bc
+        push    bc
+        ld      a,c
+        push    de
+        call    toggle_find
+        call    mp_setname
+        pop     bc
+        push    bc
+        ld      a,c
+        inc     a
+        ld      hl,mp_k_toggle
+        call    mp_numbered
+        pop     bc
+        inc     c
+        djnz    .tg
+.ptrs:  ld      hl,-MP_DESC                 ; then 3 bytes for each line, filled in by the writer
+        add     hl,de
+        ld      (mp_ptrs_off),hl
+        call    mp_lines
+        ld      b,a
+        add     a,a
+        add     a,b
+        ld      b,a
+        xor     a
+.z:     ld      (de),a
+        inc     de
+        djnz    .z
+        ld      hl,-MP_DESC
+        add     hl,de
+        ld      (mp_desc_len),hl
+        ld      bc,MP_DESC_ROOM
+        or      a
+        sbc     hl,bc
+        ld      hl,msg_big
+        jp      nc,fail_hl
+        ld      hl,tg_count                 ; the toggles for the writer: count, on, kinds, ranks
+        ld      de,mp_tg
+        ld      bc,2 + 2 * TOGGLES_MAX
+        ldir
+; The menu, then what it chose, in the command's own terms.
+        ld      hl,MP_DESC
+        ld      de,MP_FONT
+        call    menu_run
+mp_chosen:
+        ret     c                           ; BREAK
+        ld      (mp_key),a                  ; 0 for ENTER
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.af
+        ld      b,a
+        ld      c,0
+.at:    push    bc
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     bc
+        push    bc
+        push    af
+        ld      a,c
+        call    trainer_entry
+        pop     af
+        ld      (ix+0),a
+        pop     bc
+        inc     c
+        djnz    .at
+.af:    ld      a,(trainer_count)
+        ld      c,a
+        push    bc
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        xor     1
+        ld      (ver_original),a
+        pop     bc
+        inc     c
+        xor     a
+.ak:    ld      (cur_kind),a
+        ld      e,a
+        ld      d,0
+        ld      hl,set_counts
+        add     hl,de
+        ld      a,(hl)
+        or      a
+        jr      z,.akn
+        push    bc
+        push    de
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     de
+        ld      hl,set_choices
+        add     hl,de
+        ld      (hl),a
+        pop     bc
+        inc     c
+.akn:   ld      a,(cur_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.ak
+        xor     a
+        ld      (tg_on),a
+        ld      a,(tg_count)
+        or      a
+        jr      z,.route
+        ld      b,a
+        ld      e,1
+.atg:   push    bc
+        push    de
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     de
+        or      a
+        jr      z,.atn
+        ld      a,(tg_on)
+        or      e
+        ld      (tg_on),a
+.atn:   sla     e
+        pop     bc
+        inc     c
+        djnz    .atg
+; ENTER, or the fix off: the choices fixed in what is written, so the game starts straight after
+; its title, with no second menu. SPACE with the clash fix on: the .nex that carries its menu,
+; starting with these choices, over a build with none (a file to keep, not to play from here).
+.route: ld      a,(mp_key)
+        or      a
+        ret     z
+        ld      a,(ver_original)
+        or      a
+        ret     nz
+        inc     a
+        ld      (menu_route),a
+        xor     a
+        ld      (set_choices),a
+        ld      (set_choices+1),a
+        ld      (tg_on),a
         ld      a,(trainer_count)
         or      a
         ret     z
         ld      b,a
+.off:   ld      a,b
+        dec     a
+        push    bc
+        call    trainer_entry
+        ld      (ix+0),0
+        pop     bc
+        djnz    .off
+        or      a
+        ret
+
+; A: how many lines the menu has.
+mp_lines:
+        ld      a,(trainer_count)
+        inc     a
+        ld      hl,set_counts
+        ld      b,KINDS
+.k:     inc     (hl)
+        dec     (hl)
+        jr      z,.n
+        inc     a
+.n:     inc     hl
+        djnz    .k
+        ld      hl,tg_count
+        add     a,(hl)
+        ret
+
+; A line's head at DE: kind A, its state (1 for the main line), 0 sets.
+mp_head:
+        ld      (de),a
+        inc     de
+        cp      1
+        ld      a,1
+        jr      z,.s
+        xor     a
+.s:     ld      (de),a
+        inc     de
+        xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+; INF1's value for the key at HL, at most MENU_TEXT characters, at DE, then a zero; DE past it.
+mp_inf: ex      de,hl
+        push    hl
+        call    text_find
+        pop     de
+        jr      c,.none
+        ld      a,MENU_TEXT
+        call    copy_text
+        inc     de
+        ret
+.none:  xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+; BC bytes at HL as a name, at most NAME_MAX, at DE; DE past its zero.
+mp_name:
+        ld      a,NAME_MAX
+        call    copy_text
+        inc     de
+        ret
+
+; The zero-terminated string at HL as a name.
+mp_copyz:
+        push    hl
+        ld      bc,0
+.l:     ld      a,(hl)
+        or      a
+        jr      z,.e
+        inc     hl
+        inc     bc
+        jr      .l
+.e:     pop     hl
+        jr      mp_name
+
+; A set's name, the patch at it (tagbuf+4 its length), at the DE on the stack; DE past it.
+mp_setname:
+        ld      a,(tagbuf+4)
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        pop     hl                          ; the return address
+        pop     de
+        push    hl
+        ld      a,(tagbuf+4)
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        jr      mp_name
+
+; The key at HL, then the digit A, then '=', as the help key.
+mp_numbered:
+        push    de
+        ld      de,mp_keybuf
+.c:     ld      c,a
+        ld      a,(hl)
+        or      a
+        jr      z,.d
+        ld      (de),a
+        inc     hl
+        inc     de
+        ld      a,c
+        jr      .c
+.d:     ld      a,c
+        add     a,'0'
+        ld      (de),a
+        inc     de
+        ld      a,'='
+        ld      (de),a
+        inc     de
+        xor     a
+        ld      (de),a
+        pop     de
+        ld      hl,mp_keybuf
+; The help for the key at HL (with its '='), from HLP1's whole lines, the first with a value, at
+; most HELP_MAX, at DE, then a zero; DE past it.
+mp_help:
+        ld      (mp_keyp),hl
+        push    de
+        ld      hl,MP_HELP
+        ld      bc,(mp_help_len)
+.line:  ld      a,b
+        or      c
+        jr      z,.none
+        push    hl
+        push    bc
+        ld      a,10
+        cpir
+        jr      nz,.cut                     ; no line end: a line cut off counts as absent
+        ld      (mp_next),hl
+        ld      (mp_left),bc
+        pop     bc
+        pop     hl
+        ld      de,(mp_keyp)
+.cmp:   ld      a,(de)
+        or      a
+        jr      z,.match
+        cp      (hl)
+        jr      nz,.next
+        inc     hl
+        inc     de
+        jr      .cmp
+.match: ld      de,(mp_next)
+        dec     de
+        ex      de,hl
+        or      a
+        sbc     hl,de
+        ld      b,h
+        ld      c,l
+        ex      de,hl
+        ld      a,b
+        or      c
+        jr      z,.next
+        pop     de
+        ld      a,HELP_MAX
+        call    copy_text
+        inc     de
+        ret
+.next:  ld      hl,(mp_next)
+        ld      bc,(mp_left)
+        jr      .line
+.cut:   pop     bc
+        pop     hl
+.none:  pop     de
+        xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+        include "menu.asm"
+
+; After ENTER or SPACE, while the menu is still up: its keys' row, found by its green ENTER (the only
+; row whose first cell is A_ON), says the rebuild has started, flashing, as some take a few seconds.
+; The ULA's own FLASH keeps it going while the command is busy with interrupts off.
+A_BUSY          equ $c6                     ; FLASH, BRIGHT, paper black, ink yellow
+menu_busy:
+        ld      hl,$5800
+        ld      de,32
+        ld      b,0
+.find:  ld      a,(hl)
+        cp      A_ON
+        jr      z,.got
+        add     hl,de
+        inc     b
+        ld      a,b
+        cp      24
+        jr      c,.find
+        ret
+.got:   ld      a,b
         ld      c,0
-.t:     push    bc
+        call    at
+        ld      a,A_BUSY
+        ld      (MV_ATTR),a
+        ld      hl,s_patching
+        ld      a,(ver_original)
+        or      a
+        jr      z,.say
+        ld      hl,s_loading
+.say:   ld      b,23
+        jp      puts_max
+s_patching:     db "Patching...            ",0
+s_loading:      db "Loading...             ",0
+
+mp_stub:        incbin "nxcstub.bin"
+MP_STUB_LEN     equ $ - mp_stub
+        db      "NXQ1"
+mp_end:
+mp_size         equ mp_end - mp_start
+; Not read from the file: the page's memory after the part.
+mp_help_len     equ mp_end                  ; 2
+mp_next         equ mp_end + 2
+mp_left         equ mp_end + 4
+mp_keyp         equ mp_end + 6
+mp_key          equ mp_end + 8
+mp_keybuf       equ mp_end + 9              ; 12
+MENU_RAM        equ mp_end + 21             ; 13
+MP_FONT         equ mp_end + 34             ; 768
+MP_HELP         equ MP_FONT + 768           ; HELP_READ
+MP_DESC         equ MP_HELP + HELP_READ
+MP_DESC_ROOM    equ $C000 - MP_DESC
+        assert  MP_DESC_ROOM >= 1024, "the menu's page has too little room for its description"
+        display "menu part: ", /d, mp_size, ", room for the description: ", /d, MP_DESC_ROOM
+        ent
+
+; ============================================== the menu .nex's writer, read in after the bare banks
+; Over the game's part, which is done with by then. See the spec's "A .nex that carries its menu":
+; the bare file is written; this writes M0 (the stub, its parameters, the description, the shadow
+; below the build's stack) and the data (each line's trainer POKEs or decoded set chunks), then
+; puts the header, the stub's count of banks and the lines' offsets in place, as tools/nxc.py
+; apply_menu writes them, byte for byte.
+
+STUB_BLOCK      equ 57
+STUB_DESC_END   equ $1D00
+
+        disp    z80_part_at
+mnx_start:
+        ld      hl,HDR+4                    ; what a build must be to carry its menu
+        ld      de,mnx_v12
+        call    same_tag
+        jp      nz,mnx_refuse
+        ld      hl,(HDR+140)                ; no file handle passed on
+        ld      a,h
+        or      l
+        jp      nz,mnx_refuse
+        ld      hl,(HDR+14)                 ; a start the last 57 bytes can reach
+        ld      (mnx_pc),hl
+        ld      de,$4000 + STUB_BLOCK
+        or      a
+        sbc     hl,de
+        jp      c,mnx_refuse
+        ld      a,(mnx_pc+1)
+        and     $1f
+        jr      nz,.pc
+        ld      a,(mnx_pc)
+        or      a
+        jr      z,.pc
+        cp      5
+        jp      c,mnx_refuse
+.pc:    ld      hl,(HDR+12)
+        ld      (mnx_sp),hl
+        ld      a,(HDR+139)
+        ld      (mnx_entry),a
+        ld      a,(ram_bank)                ; M0: above all the build needs
+        inc     a
+        ld      (mnx_m0),a
+        ld      hl,out_len                  ; M0's place: just after the bare file
+        ld      de,mnx_m0pos
+        call    copy4
+        ld      a,(all_pages)               ; the description's size, from the menu's page
+        call    map_slot5
+        ld      hl,(mp_desc_len)
+        ld      (mnx_desc_len),hl
+        ld      hl,(mp_ptrs_off)
+        ld      (mnx_ptrs_off),hl
+        ld      hl,mp_tg
+        ld      de,mnx_tg
+        ld      bc,2 + 2 * TOGGLES_MAX
+        ldir
+        call    map_iopage
+        ld      hl,MP_STUB_LEN
+        ld      de,(mnx_desc_len)
+        add     hl,de
+        ld      (mnx_desc_end),hl
+        ld      de,STUB_DESC_END + 1
+        or      a
+        sbc     hl,de
+        jr      nc,mnx_refuse
+        xor     a
+        ld      (mnx_shadow),a
+        ld      (mnx_line),a
+        ld      (mnx_paged),a
+        ld      hl,(mnx_sp)                 ; the shadow: 16 below SP, if that is in the entry bank
+        ld      de,-16
+        add     hl,de
+        ld      a,h
+        cp      $c0
+        jr      c,.ns
+        sub     $c0
+        ld      h,a
+        ld      (mnx_lo),hl
+        call    mnx_room
+        jr      c,mnx_refuse
+        ld      a,1
+        ld      (mnx_shadow),a
+        call    mnx_shadow_read
+.ns:    call    mnx_write_m0
+        call    mnx_data
+        jp      mnx_fix
+
+mnx_refuse:
+        ld      hl,msg_no_menu
+        jp      fail_hl
+
+; NC when the shadow's 16 bytes lie in M0's free room.
+mnx_room:
+        ld      hl,(mnx_lo)
+        ld      de,$3f80
+        or      a
+        sbc     hl,de
+        ret     nc
+        ld      hl,(mnx_lo)
+        ld      de,$1d40
+        or      a
+        sbc     hl,de
+        jr      c,.low
+        ld      hl,(mnx_lo)
+        ld      de,$2000 - 16 + 1
+        or      a
+        sbc     hl,de
+        ccf
+        ret
+.low:   ld      hl,(mnx_lo)                 ; or after the stub and description, to 0x1D00
+        ld      de,STUB_DESC_END - 16 + 1
+        or      a
+        sbc     hl,de
+        ccf
+        ret     c
+        ld      hl,(mnx_lo)
+        ld      de,(mnx_desc_end)
+        or      a
+        sbc     hl,de
+        ret
+
+; The entry bank's 16 bytes below SP as the bare file holds them, read back from it.
+mnx_shadow_read:
+        ld      hl,0
+        ld      (work32),hl
+        ld      (work32+2),hl
+        ld      b,0                         ; its place among the listed banks, x 16K
+.o:     push    bc
+        call    order_bank
+        call    header_has
+        jr      z,.n
+        ld      a,(cur_bank)
+        ld      hl,mnx_entry
+        cp      (hl)
+        jr      z,.got
+        ld      hl,work32+1
+        ld      a,(hl)
+        add     a,$40
+        ld      (hl),a
+        jr      nc,.n
+        inc     hl
+        inc     (hl)
+.n:     pop     bc
+        inc     b
+        ld      a,b
+        cp      112
+        jr      c,.o
+        jp      bad_patch
+.got:   pop     bc
+        ld      hl,(mnx_lo)                 ; + lo + 512 + the screen
+        ld      de,512
+        add     hl,de
+        ld      (left),hl
+        ld      hl,0
+        ld      (left+2),hl
+        ld      hl,work32
+        ld      de,left
+        call    add32
+        call    screen_size
+        ld      hl,work32
+        ld      de,scr_left
+        call    add32
+        ld      a,(oh)
+        ld      hl,work32
+        call    seek_file
+        ld      a,(oh)
+        ld      hl,mnx_sh
+        ld      bc,16
+        ld      de,msg_write
+        call    read_exact
+        ld      a,(oh)                      ; back to the end
+        ld      hl,mnx_m0pos
+        jp      seek_file
+
+; M0: the stub with its parameters, the description from the menu's page, the shadow.
+mnx_write_m0:
+        ld      de,WORK
+        call    fill_zeros
+        ld      a,(all_pages)
+        call    map_slot5
+        ld      hl,mp_stub
+        ld      de,WORK
+        ld      bc,MP_STUB_LEN
+        ldir
+        ld      hl,MP_DESC
+        ld      bc,(mnx_desc_len)
+        ldir
+        call    map_iopage
+        ld      ix,WORK + MP_STUB_LEN - 8   ; the parameters
+        ld      a,(mnx_m0)
+        add     a,a
+        ld      (ix+0),a
+        ld      hl,(mnx_pc)
+        ld      (ix+1),l
+        ld      (ix+2),h
+        ld      hl,(mnx_sp)
+        ld      (ix+3),l
+        ld      (ix+4),h
+        ld      a,(mnx_entry)
+        add     a,a
+        ld      (ix+5),a
+        ld      a,(mnx_shadow)
+        ld      (ix+7),a
+        ld      (ix+8),1                    ; the description's flags: the main line fixed on
+        or      a
+        jr      z,.w
+        ld      hl,(mnx_lo)
+        ld      de,WORK
+        add     hl,de
+        ex      de,hl
+        ld      hl,mnx_sh
+        ld      bc,16
+        ldir
+.w:     ld      hl,WORK
+        ld      bc,BANK_SIZE
+        jp      write_out
+
+; The data, from M0 + 1, in the lines' order, each line's offset kept.
+mnx_data:
+        ld      hl,out_len
+        ld      de,mnx_dstart
+        call    copy4
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.fix
+        ld      b,a
+        ld      c,0
+.tr:    push    bc
+        call    mnx_mark
+        pop     bc
+        push    bc
         ld      a,c
         call    trainer_entry
-        ld      a,(ix+0)
-        or      a
-        jr      z,.next
-        ld      a,(poke_count)              ; room?
-        ld      e,a
-        ld      a,(ix+2)
-        add     a,e
-        ld      hl,msg_too_many
-        jp      c,fail_hl
-        cp      POKES_HELD + 1
-        jp      nc,fail_hl
-        ld      (poke_count),a
-        ld      l,e                         ; to POKES + 4 x old count
-        ld      h,0
-        add     hl,hl
-        add     hl,hl
-        ld      de,POKES
-        add     hl,de
-        push    hl
+        ld      a,(ix+2)                    ; its count, then its POKEs as TRN1 has them
+        ld      (mnx_one),a
+        ld      hl,mnx_one
+        ld      bc,1
+        call    write_out
+        pop     bc
+        push    bc
+        ld      a,c
+        call    trainer_entry
         push    ix
         pop     hl
         ld      de,3
         add     hl,de
         call    seek_patch
-        pop     hl
-        ld      c,(ix+2)
-        ld      b,0
-        sla     c
-        rl      b
-        sla     c
-        rl      b
+        ld      a,(mnx_one)
+        ld      l,a
+        ld      h,0
+        add     hl,hl
+        add     hl,hl
+        ld      (mnx_n),hl
+        ld      b,h
+        ld      c,l
+        ld      hl,IOBUF
         call    read_patch
-.next:  pop     bc
-        inc     c
-        djnz    .t
-        ld      a,(poke_count)              ; check them all
+        ld      hl,IOBUF                    ; none may change the shadow
+        ld      a,(mnx_one)
+.pk:    push    af
+        ld      a,(mnx_shadow)
         or      a
-        ret     z
-        ld      b,a
-        ld      hl,POKES
-.check: ld      a,(hl)
-        cp      112
-        jp      nc,bad_patch
-        inc     hl
-        inc     hl
-        ld      a,(hl)                      ; offset below 16384
-        cp      $40
-        jp      nc,bad_patch
-        dec     hl
-        dec     hl
-        push    bc
-        push    hl
-        ld      a,(poke_mode)
-        or      a
-        ld      a,(hl)
-        jr      nz,.game
-        call    header_has
-        jp      z,bad_patch
-        jr      .fine
-.game:  call    game_has
-        jp      nc,bad_patch
-.fine:  pop     hl
-        pop     bc
-        inc     hl
-        inc     hl
-        inc     hl
-        inc     hl
-        djnz    .check
-        ret
-
-; The POKEs of bank (cur_bank) into WORK, over any sets.
-apply_pokes:
-        ld      a,(poke_count)
-        or      a
-        ret     z
-        ld      b,a
-        ld      hl,POKES
-.p:     ld      a,(cur_bank)
+        jr      z,.pn
+        ld      a,(mnx_entry)
         cp      (hl)
-        jr      nz,.no
+        jr      nz,.pn
         inc     hl
         ld      e,(hl)
         inc     hl
+        ld      d,(hl)
+        dec     hl
+        dec     hl
+        call    mnx_in_shadow
+        jp      nc,mnx_refuse
+.pn:    inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        pop     af
+        dec     a
+        jr      nz,.pk
+        ld      hl,IOBUF
+        ld      bc,(mnx_n)
+        call    write_out
+        pop     bc
+        inc     c
+        djnz    .tr
+.fix:   ld      hl,mnx_line                 ; the main line: no data
         ld      a,(hl)
-        add     a,high WORK
-        ld      d,a
+        inc     (hl)
+        call    mnx_ptr
+        ld      (hl),$ff
         inc     hl
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),$ff
+        xor     a
+.kd:    ld      (mnx_kind),a                ; each kind of set: all its sets, in turn
+        ld      e,a
+        ld      d,0
+        ld      hl,set_counts
+        add     hl,de
         ld      a,(hl)
-        ld      (de),a
-        inc     hl
-        djnz    .p
-        ret
-.no:    inc     hl
-        inc     hl
-        inc     hl
-        inc     hl
-        djnz    .p
+        or      a
+        jr      z,.kn
+        push    af
+        call    mnx_mark
+        pop     bc
+        ld      c,1
+.sn:    push    bc
+        ld      a,(mnx_kind)
+        inc     a
+        ld      b,c
+        call    mnx_set
+        pop     bc
+        inc     c
+        djnz    .sn
+.kn:    ld      a,(mnx_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.kd
+        ld      a,(mnx_tg)                  ; each toggle
+        or      a
+        ret     z
+        ld      b,a
+        ld      c,0
+.tg:    push    bc
+        call    mnx_mark
+        pop     bc
+        push    bc
+        ld      b,0
+        ld      hl,mnx_tg + 2
+        add     hl,bc
+        ld      a,(hl)
+        ld      de,TOGGLES_MAX
+        add     hl,de
+        ld      b,(hl)
+        call    mnx_set
+        pop     bc
+        inc     c
+        djnz    .tg
         ret
 
-magic_bnk1:     db "BNK1"
-magic_scr1:     db "SCR1"
-msg_screen:     db "Patch needs a newer .NEXCLAS", 'H' | $80
-magic_chk1:     db "CHK1"
-wrap_check:     db "NXC1-KEY"
-z80_marker:     db 0, $ed, $ed, 0
-zero32:         dd 0
-three:          dd 3
-four:           dd 4
-check_at:       dd 22
-file_header:    dd FILE_HEADER
-msg_ram:        db "Not enough free RAM: needs 48", 'K' | $80
-msg_ram_set:    db "Needs 72K free RA", 'M' | $80
-msg_ram_two:    db "Needs 96K free RA", 'M' | $80
-msg_write:      db "Cannot write to /tm", 'p' | $80
-msg_bad_result: db "Rebuild failed: patch damage", 'd' | $80
-msg_too_many:   db "Too many trainers o", 'n' | $80
-nex_magic:      db "Next"
-ov_tag:         db "NXQ1"
-ov_end:
+; NC when DE, an offset in the entry bank, is in the shadow.
+mnx_in_shadow:
+        push    hl
+        ld      hl,(mnx_lo)
+        ex      de,hl
+        or      a
+        sbc     hl,de                       ; offset - lo
+        jr      c,.r
+        ld      de,16
+        sbc     hl,de
+        ccf
+.r:     pop     hl
+        ret
+
+; Line (mnx_line)'s data offset: where the output has got to, from the data's start.
+mnx_mark:
+        ld      hl,out_len
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,mnx_dstart
+        call    sub32
+        ld      hl,mnx_line
+        ld      a,(hl)
+        inc     (hl)
+        call    mnx_ptr
+        ex      de,hl
+        ld      hl,work32
+        ld      bc,3
+        ldir
+        ret
+
+; HL at line A's 3 bytes in the offsets' table.
+mnx_ptr:
+        ld      l,a
+        ld      h,0
+        ld      e,l
+        ld      d,h
+        add     hl,hl
+        add     hl,de
+        ld      de,mnx_ptrs
+        add     hl,de
+        ret
+
+; The set of SET2 kind A and choice B, decoded a chunk at a time in its three pages, each written
+; as its bank, its length and the chunk; then 0xFF.
+mnx_set:
+        ld      (slot_kinds),a
+        ld      a,b
+        ld      (set_choices),a
+        xor     a
+        ld      (set_choices+1),a
+        ld      a,(mnx_paged)               ; three pages for it, once: a tape's, done with, or new ones
+        or      a
+        jr      nz,.open
+        inc     a
+        ld      (mnx_paged),a
+        ld      a,(page_count)
+        cp      1 + PAGES + SET_PAGES
+        jr      nc,.open
+        ld      b,SET_PAGES
+.al:    push    bc
+        ld      hl,BANK_ALLOC
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ld      a,e
+        pop     bc
+        ld      hl,msg_ram_set
+        jp      nc,fail_hl
+        ld      hl,page_count
+        ld      e,(hl)
+        inc     (hl)
+        ld      d,0
+        ld      hl,all_pages
+        add     hl,de
+        ld      (hl),a
+        djnz    .al
+.open:  xor     a
+        call    sets_open
+        ld      b,0
+.o:     push    bc
+        call    order_bank
+        call    header_has
+        jr      z,.n
+        call    bank_sets
+        ld      hl,(set_lens)
+        ld      a,h
+        or      l
+        jr      z,.n
+        ld      (mnx_head+1),hl
+        ld      a,(cur_bank)
+        ld      (mnx_head),a
+        ld      hl,mnx_head
+        ld      bc,3
+        call    write_out
+        ld      hl,(set_bases)
+        call    map3
+        ld      a,(mnx_shadow)
+        or      a
+        call    nz,mnx_chunk_shadow
+        ld      hl,WORK
+        ld      bc,(set_lens)
+        call    write_out
+        call    map_std
+.n:     pop     bc
+        inc     b
+        ld      a,b
+        cp      112
+        jr      c,.o
+        ld      hl,set_recs+4
+        call    is_zero32
+        jp      nz,bad_patch
+        ld      a,$ff
+        ld      (mnx_one),a
+        ld      hl,mnx_one
+        ld      bc,1
+        jp      write_out
+
+; With the chunk at WORK for the entry bank, no bit of the shadow may be set.
+mnx_chunk_shadow:
+        ld      a,(cur_bank)
+        ld      hl,mnx_entry
+        cp      (hl)
+        ret     nz
+        ld      de,(mnx_lo)
+        ld      b,16
+.b:     push    bc
+        push    de
+        ld      a,e                         ; the bit for offset DE
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,$01
+.r:     rrca
+        djnz    .r
+        ld      c,a
+        srl     d
+        rr      e
+        srl     d
+        rr      e
+        srl     d
+        rr      e
+        ld      hl,WORK
+        add     hl,de
+        ld      a,(hl)
+        and     c
+        jp      nz,mnx_refuse
+        pop     de
+        inc     de
+        pop     bc
+        djnz    .b
+        ret
+
+; The padding, then what goes back in place: the header, the stub's count of banks, the lines'
+; offsets. The output's expected length grows by the menu banks'.
+mnx_fix:
+        ld      hl,out_len                  ; the menu banks' length, so far
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,mnx_m0pos
+        call    sub32
+        ld      hl,(work32)
+        ld      a,h
+        and     $3f
+        ld      h,a
+        or      l
+        jr      z,.full
+        ex      de,hl
+        ld      hl,BANK_SIZE
+        or      a
+        sbc     hl,de
+        push    hl
+        ld      de,WORK
+        call    fill_zeros
+        pop     bc
+        ld      hl,WORK
+        call    write_out
+        jr      mnx_fix
+.full:  ld      a,(work32+1)                ; banks: the length / 16K
+        rlca
+        rlca
+        and     3
+        ld      b,a
+        ld      a,(work32+2)
+        add     a,a
+        add     a,a
+        or      b
+        ld      (mnx_count),a
+        ld      b,a
+        ld      a,(mnx_m0)
+        add     a,b
+        dec     a
+        cp      112
+        jp      nc,mnx_refuse
+        cp      48
+        jr      c,.mb
+        ld      a,1
+        ld      (HDR+8),a
+.mb:    ld      hl,HDR+18                   ; each menu bank listed
+        ld      a,(mnx_m0)
+        ld      e,a
+        ld      d,0
+        add     hl,de
+.f:     ld      (hl),1
+        inc     hl
+        djnz    .f
+        ld      hl,HDR+9
+        ld      a,(mnx_count)
+        add     a,(hl)
+        ld      (hl),a
+        ld      hl,$c000
+        ld      (HDR+14),hl
+        ld      a,(mnx_m0)
+        ld      (HDR+139),a
+        ld      hl,want+4                   ; the length the output must have
+        ld      de,work32
+        call    add32
+        ld      hl,out_len
+        ld      de,mnx_end
+        call    copy4
+        ld      hl,0
+        ld      (work32),hl
+        ld      (work32+2),hl
+        ld      hl,HDR
+        ld      bc,512
+        call    mnx_put
+        ld      hl,MP_STUB_LEN - 2          ; the stub's count of banks
+        ld      a,(mnx_count)
+        ld      (mnx_one),a
+        call    mnx_at_m0
+        ld      hl,mnx_one
+        ld      bc,1
+        call    mnx_put
+        ld      hl,(mnx_ptrs_off)           ; the lines' offsets
+        ld      de,MP_STUB_LEN
+        add     hl,de
+        call    mnx_at_m0
+        ld      a,(mnx_line)
+        ld      l,a
+        ld      h,0
+        ld      e,l
+        ld      d,h
+        add     hl,hl
+        add     hl,de
+        ld      b,h
+        ld      c,l
+        ld      hl,mnx_ptrs
+        call    mnx_put
+        ld      hl,mnx_end
+        ld      de,out_len
+        jp      copy4
+
+; work32 = M0's place + HL.
+mnx_at_m0:
+        ld      (left),hl
+        ld      hl,0
+        ld      (left+2),hl
+        ld      hl,mnx_m0pos
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,left
+        jp      add32
+
+; BC bytes from HL, at the output's place work32.
+mnx_put:
+        push    hl
+        push    bc
+        ld      a,(oh)
+        ld      hl,work32
+        call    seek_file
+        pop     bc
+        pop     hl
+        jp      write_out
+
+msg_no_menu:    db "No menu .nex: press ENTE", 'R' | $80
+mnx_v12:        db "V1.2"
+        db      "NXQ1"
+mnx_end_code:
+mnx_size        equ mnx_end_code - mnx_start
+; Not read from the file.
+mnx_pc          equ mnx_end_code
+mnx_sp          equ mnx_end_code + 2
+mnx_entry       equ mnx_end_code + 4
+mnx_m0          equ mnx_end_code + 5
+mnx_m0pos       equ mnx_end_code + 6        ; 4
+mnx_desc_len    equ mnx_end_code + 10
+mnx_ptrs_off    equ mnx_end_code + 12
+mnx_desc_end    equ mnx_end_code + 14
+mnx_shadow      equ mnx_end_code + 16
+mnx_lo          equ mnx_end_code + 17
+mnx_sh          equ mnx_end_code + 19       ; 16
+mnx_dstart      equ mnx_end_code + 35       ; 4
+mnx_line        equ mnx_end_code + 39
+mnx_one         equ mnx_end_code + 40
+mnx_n           equ mnx_end_code + 41
+mnx_kind        equ mnx_end_code + 43
+mnx_paged       equ mnx_end_code + 44
+mnx_head        equ mnx_end_code + 45       ; 3
+mnx_count       equ mnx_end_code + 48
+mnx_end         equ mnx_end_code + 49       ; 4
+mnx_ptrs        equ mnx_end_code + 53       ; 30
+mnx_tg          equ mnx_end_code + 83       ; 10
+mnx_vars_end    equ mnx_end_code + 93
+; It may run on over the paths, which nothing needs once the banks are written; not the trainers'.
+        assert  mnx_vars_end <= trainer_table, "the menu .nex's writer runs into the trainers' table"
+        display "menu .nex part: ", /d, mnx_size, ", with its variables: ", /d, mnx_vars_end - z80_part_at, " of ", /d, trainer_table - z80_part_at
         ent
-ov_size         equ ov_end - ov_start
+
+FILE_MENU_AT    equ FIRST_PART + ov_size + tape1_size + tape2_size + tape3_size
+FILE_MNX_AT     equ FILE_MENU_AT + mp_size
+
+; The highest the code reaches, whichever part is in.
+        if      z80_part_at + tape1_size > ov_start_at + ov_size
+code_end        equ z80_part_at + tape1_size
+        else
 code_end        equ ov_start_at + ov_size
-        assert  code_end <= patch_path, "the code runs into the fixed memory"
-        display "resident: ", /d, ov_start_at - $2000, ", up to the menu: ", /d, first_end - ov_start_at, ", overlay: ", /d, ov_size, ", code room: ", /d, vars - $2000
+        endif

@@ -1,5 +1,5 @@
-"""tools/nxc.py: its ZX0 decoder against the compressor, .pok import, TRN1. Needs NexClash's snapshot reader
-(NEXCLASH_REPO), and for the games NXC_EVIDENCE or build/inputs; skips without them."""
+"""tools/nxc.py: its ZX0 decoder against the compressor, .pok import, TRN1. Needs the zx0 compressor (NXC_ZX0_DIR),
+and for the games NXC_EVIDENCE or build/inputs; skips without them."""
 from __future__ import annotations
 
 import os
@@ -13,7 +13,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = Path(os.environ.get("NXC_EVIDENCE", str(Path(__file__).resolve().parents[1] / "build" / "evidence")))
-os.environ.setdefault("NEXCLASH_REPO", str(EVIDENCE / "format-study" / "nexclash-latest"))
 os.environ.setdefault("NXC_ZX0_DIR", str(EVIDENCE / "format-study" / "zx0bin"))
 sys.path.insert(0, str(ROOT / "tools"))
 try:
@@ -26,7 +25,7 @@ GAME = next((p for p in (ROOT / "build/inputs/cobra.z80", EVIDENCE / "pilot/runs
 PATCH = next((p for p in (ROOT / "build/v1/Cobra_plain.nxc",) if p.exists()), None)
 
 
-@unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")
+@unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")
 class Pok(unittest.TestCase):
     TEXT = "NInfinite Lives\nM 8 36515 183 0\nZ 8 34925 183 0\nNImmunity\nZ 8 37915 201 0\nNAsk\nZ 8 40000 256 0\nY\n"
 
@@ -83,7 +82,7 @@ class Pok(unittest.TestCase):
             nxc.trn1("x", [])
 
 
-@unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")
+@unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")
 class HandoffBas(unittest.TestCase):
     def test_a_well_formed_plus3dos_program(self) -> None:
         d = nxc.handoff_bas()
