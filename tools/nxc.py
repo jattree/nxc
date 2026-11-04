@@ -11,14 +11,12 @@ byte for byte. See spec/NXC-FORMAT.md.
     nxc.py credit PATCH GAME -o OUT [--patch-by NAME] [--colours-by NAME]
     nxc.py handoff-bas -o NXCHAND.BAS
 
-Set NEXCLASH_REPO to a NexClash checkout (its snapshot reader is imported), and NXC_ZX0_DIR to the folder
-holding the zx0 compressor if patches are to be made here; applying needs neither compressor nor decompressor.
+Applying, listing, adding a target, importing cheats and crediting need only Python 3's standard library. Making a
+patch, or anything else that compresses, needs the zx0 compressor: set NXC_ZX0_DIR to its folder.
 """
 import hashlib, os, re, struct, subprocess, sys, tempfile, zlib
 HERE = os.path.dirname(os.path.abspath(__file__))
 ZX0_DIR = os.environ.get('NXC_ZX0_DIR', os.path.join(HERE, 'zx0bin'))
-sys.path.insert(0, os.environ.get('NEXCLASH_REPO', os.path.join(HERE, 'nexclash-latest')))
-from nexclash.z80tonex import Z80Snapshot
 MAGIC = b'NXC1'; ORDER = [5, 2, 0, 1, 3, 4, 6, 7] + list(range(8, 112)); BANK = 16384; DROP = 256
 HEADER = 38; NONCE_AT = 6; CHECK_AT = 22; CHECK_SIZE = 16; MASTER_SIZE = 16
 WRAP_CHECK = b'NXC1-KEY'; WRAP_SIZE = 24; TARGET_FIXED = 30; KEY_ROUNDS = 16
@@ -172,8 +170,69 @@ def sna_places(data):
     for n, b in enumerate(rest): places[b] = [27 + 3 * BANK + 4 + n * BANK]
     return True, port, places
 
+def unpack_z80(src):
+    """A .z80's packing: ED ED n v is n copies of v (n may be 0); an ED with fewer than three bytes after it in the
+    stream, or not followed by ED, is itself."""
+    out = bytearray(); i = 0; n = len(src)
+    while i < n:
+        if src[i] == 0xED and i + 3 < n and src[i + 1] == 0xED:
+            out += bytes((src[i + 3],)) * src[i + 2]; i += 4
+        else:
+            out.append(src[i]); i += 1
+    return bytes(out)
+
+class Z80Snapshot:
+    """A .z80 snapshot, as the spec's "Snapshots" reads it: version 1 (48K, one stream from offset 30), version 2 (an
+    extended header of 23) or 3 (any other length), packed or not; banks 0 to 7 of a 128K game, or 5, 2 and 0 of a 48K
+    one. Gives the same banks, version, is128 and port7ffd as the reader in Dean Woodyatt's NexClash
+    (bleughb/nexclash, nexclash/z80tonex.py), which this replaces so that applying a patch needs no NexClash checkout;
+    tests/test_snapshot_reader.py compares the two where NexClash is at hand."""
+    def __init__(self, data):
+        if isinstance(data, (str, os.PathLike)):
+            with open(data, 'rb') as g: data = g.read()
+        data = bytes(data)
+        if len(data) < 30: raise ValueError('a .z80 is at least 30 bytes')
+        h = data[:30]
+        self.a, self.f, self.bc, self.hl = h[0], h[1], h[2] | h[3] << 8, h[4] | h[5] << 8
+        pc = h[6] | h[7] << 8; self.sp = h[8] | h[9] << 8; self.i = h[10]
+        flags12 = h[12] if h[12] != 255 else 1
+        self.r = (h[11] & 0x7F) | (flags12 & 1) << 7; self.border = flags12 >> 1 & 7
+        self.de, self.bc_, self.de_, self.hl_ = (h[13] | h[14] << 8, h[15] | h[16] << 8, h[17] | h[18] << 8, h[19] | h[20] << 8)
+        self.a_, self.f_, self.iy, self.ix = h[21], h[22], h[23] | h[24] << 8, h[25] | h[26] << 8
+        self.iff1, self.iff2, self.im = int(h[27] != 0), int(h[28] != 0), h[29] & 3
+        self.is128 = False; self.port7ffd = 0; self.port1ffd = 0; self.ay_regs = [0] * 16; self.ay_last = 0; self.banks = {}
+        if pc != 0:
+            self.version = 1; self.pc = pc; body = data[30:]
+            if flags12 & 0x20:
+                if body.endswith(b'\x00\xED\xED\x00'): body = body[:-4]
+                body = unpack_z80(body)
+            if len(body) < 3 * BANK: raise ValueError('48K block is too short (%d bytes)' % len(body))
+            self.banks = {5: body[:BANK], 2: body[BANK:2 * BANK], 0: body[2 * BANK:3 * BANK]}
+            return
+        if len(data) < 32: raise ValueError('the extended header is cut off')
+        ext_len = data[30] | data[31] << 8; ext = data[32:32 + ext_len]
+        if len(ext) < 23: raise ValueError('the extended header is cut off')
+        self.version = 2 if ext_len == 23 else 3; self.pc = ext[0] | ext[1] << 8; hw = ext[2]
+        self.is128 = hw in (3, 4) if self.version == 2 else hw in (4, 5, 6, 7, 9, 12, 13)
+        if self.version == 3 and hw in (7, 12, 13) and ext_len >= 55: self.port1ffd = ext[54]
+        if self.is128: self.port7ffd = ext[3]; self.ay_last = ext[6]; self.ay_regs = list(ext[7:23])
+        j = 32 + ext_len
+        while j < len(data):
+            if j + 3 > len(data): raise ValueError('a page header is cut off')
+            size = data[j] | data[j + 1] << 8; page = data[j + 2]; j += 3
+            if size == 0xFFFF: block = data[j:j + BANK]; j += BANK
+            else: block = unpack_z80(data[j:j + size]); j += size
+            if len(block) != BANK: raise ValueError('page %d decompressed to %d bytes' % (page, len(block)))
+            if self.is128:
+                if 3 <= page <= 10: self.banks[page - 3] = block
+            else:
+                bank = {8: 5, 4: 2, 5: 0}.get(page)
+                if bank is not None: self.banks[bank] = block
+        missing = [b for b in (range(8) if self.is128 else (5, 2, 0)) if b not in self.banks]
+        if missing: raise ValueError('snapshot is missing RAM banks %s' % missing)
+
 class SnaSnapshot:
-    """The banks of a .sna, as the same attributes NexClash's Z80Snapshot has."""
+    """The banks of a .sna, with the same attributes as Z80Snapshot."""
     version = 0
     def __init__(self, data):
         self.is128, self.port7ffd, places = sna_places(data)
@@ -206,9 +265,7 @@ def snapshot_of(game, kind):
     """The snapshot object for a dump's bytes, of the kind its target entry names."""
     try:
         if kind == KIND_SNA: return SnaSnapshot(game)
-        with tempfile.NamedTemporaryFile(suffix='.z80', dir=os.environ.get('TMPDIR')) as t:
-            t.write(game); t.flush()
-            return Z80Snapshot(t.name)
+        return Z80Snapshot(game)
     except (ValueError, IndexError) as e:
         raise Wrong('the game file is damaged: %s' % e)
 

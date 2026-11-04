@@ -61,7 +61,7 @@ HAVE_COBRA = bool(COBRA_GAME and COBRA_NEX and COBRA_PATCH and COBRA_POK)
 def needs_tools(cls):
     cls = unittest.skipUnless(shutil.which("sjasmplus"), "sjasmplus is not installed")(cls)
     cls = unittest.skipUnless(H.z80 is not None, "the z80 package is not installed (pip install z80)")(cls)
-    return unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")(cls)
+    return unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")(cls)
 
 
 def text_of(patch: bytes, tag: bytes) -> dict[str, str]:
