@@ -118,6 +118,7 @@ BITMAP          equ 2048                    ; a chunk's first part: one bit for 
 REC             equ 9                       ; a chosen set's cursor: position 4, left 4, stream 1
 BASE_SPRITE     equ 1                       ; the sprite build: the one base a set here may have
 CREDIT_NAME     equ 32                      ; of a name, as "Colours: " leaves 32
+FIX_LABEL_MAX   equ 25                      ; INF1's fix_label: a toggle's name's length, so [ON] keeps its column
 TRAINERS_SHOWN  equ 8
 TRAINER_SIZE    equ 7                       ; on, name's length, count, position
 POKES_HELD      equ 128
@@ -161,7 +162,7 @@ SMALLBUF_END_HI equ $3F
 SMALLBUF_SIZE   equ $0100
 TEXT_MAX        equ 252
 stack_top       equ $4000
-stack_floor     equ $3F4C                   ; 180 of stack (64 the most measured)
+stack_floor     equ $3F66                   ; 154 of stack (64 the most measured)
 rc4_s           equ $3D00                   ; aligned
 statbuf         equ smallbuf                ; read at once, and nothing else is there
 rc4_base        equ $AA00                   ; in the I/O page
@@ -359,6 +360,7 @@ var_at          =   $3F00
         VAR     slot_kinds, 3               ; the SET2 kind each set slot holds: 1, 2 or a toggle's; [2] for the menu
         VAR     set_len1, 4                 ; before the menu: a set's first file's length
         VAR     text_at, 4                  ; and where its text starts in the patch
+        VAR     fix_label, FIX_LABEL_MAX + 1 ; up to the menu: INF1's name for the main line; 0: "Colour clash fix"
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -1948,6 +1950,8 @@ first_out1:
         ldir
         ret
 first_inf1:
+        xor     a                           ; below the stack, so not cleared with the rest
+        ld      (fix_label),a
         call    read_text
         ld      de,key_publisher
         call    text_find
@@ -1958,6 +1962,11 @@ first_inf1:
         call    text_find
         ld      de,patch_by
         call    nc,copy_credit
+        ld      de,key_fix_label
+        call    text_find
+        ld      de,fix_label
+        ld      a,FIX_LABEL_MAX
+        call    nc,copy_text
         ld      de,key_colours_by
         call    text_find
         ld      de,colours_by
@@ -2579,8 +2588,12 @@ menu_draw:
         call    put_line
         ld      a,(trainer_count)
         call    digit_row
+        ld      hl,fix_label            ; the patch's name for the line, or the usual one
+        ld      a,(hl)
+        or      a
+        jr      nz,.label
         ld      hl,str_fix
-        call    put_z
+.label: call    put_z
         ld      a,(ver_original)
         xor     1
         call    put_on_off
@@ -3077,6 +3090,7 @@ magic_tap1_p:   db "TAP1"
 key_title:      db "title=",0
 key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
+key_fix_label:  db "fix_label=",0
 key_colours_by: db "colours_by=",0
 ext_z80:        db ".z80",0
 str_trainer:    db " TRAINER",0

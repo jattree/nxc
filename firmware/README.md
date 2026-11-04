@@ -96,7 +96,10 @@ and toggles can be on at once: with two on, a key that would turn on another doe
 set a patch has gets a line, "Enhanced colours" then "Language", whose key steps from `[OFF]` through its sets and back. One colour
 set is `[ON]` or `[OFF]`; otherwise the line names it, in up to 17 characters. With the fix off these read `[N/A]`, ignore their
 keys and are not applied; turning the fix on again brings the choices back. Only ten lines have keys, the tenth being key 0, so with
-two kinds of set the menu shows 7 trainers rather than 8. ENTER and SPACE both start with what is shown; BREAK cancels.
+two kinds of set the menu shows 7 trainers rather than 8. ENTER and SPACE both start with what is shown; BREAK cancels. A patch
+whose `INF1` has a `fix_label` names the clash fix's line with it, in up to 25 characters, such as `Colour` for a game that had
+no clash; without one the line reads `Colour clash fix`. The line does what it always did. The label is kept below the stack,
+and cleared before `INF1` is read, until the menu.
 
 The last line credits the patch's maker and colourist, from `patch_by` and `colours_by` in `INF1`, set by `nxc.py credit`.
 It shows only what is there, with colours only for a patch with a colour set, and no line if neither. It fits 41 columns from the
@@ -125,7 +128,7 @@ Copy the three files as above with the game and `Cobra.nxc` into one folder, sel
 
 ## Memory
 
-8K for the command, loaded in steps, then variables, buffers and a 192-byte stack. NextZXOS loads the file's first
+8K for the command, loaded in steps, then variables, buffers and a 154-byte stack. NextZXOS loads the file's first
 8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,589 bytes, with 2,704 bytes used only up
 to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the next 5,129 bytes are read in over what
 was only for the menu: the code every route shares, then, from 0x35A4, 1,178 bytes that read a snapshot, behind a table of five
