@@ -80,6 +80,9 @@ class NexMachine:
         for name, value in regs.items():
             setattr(m, name, value)
         m.iff1 = m.iff2 = int(iff)
+        # As JNext's .nex loader was seen to (2026-11-04): the start address pushed just below SP, then RET.
+        m.memory[(sp - 2) & 0xFFFF] = pc & 255
+        m.memory[(sp - 1) & 0xFFFF] = pc >> 8
         self.nextreg_at: set[int] = set()
 
     def page(self, n: int) -> bytearray:
@@ -203,6 +206,7 @@ class NexMachine:
 
     def state(self, banks) -> dict:
         """Everything compared at the game's first instruction."""
+        self.sync()
         m = self.m
         regs = {k: getattr(m, k) for k in ("af", "bc", "de", "hl", "ix", "iy", "sp", "pc", "alt_af", "alt_bc", "alt_de",
                                              "alt_hl", "i", "iff1", "iff2")}

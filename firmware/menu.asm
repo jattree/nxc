@@ -257,36 +257,39 @@ menu_draw:
         call    scr_clear
         xor     a
         call    bar
-        call    md_strings              ; the publisher, ending in column 26
-        call    md_skipz
+        call    md_strings              ; the title from column 1, cut to 20
         push    hl
-        ld      b,16
+        ld      b,20
         call    len_max
         pop     hl
+        push    af
         ld      b,a
+        xor     a
+        ld      c,1
+        call    at
+        call    puts_max
+        pop     af
+        neg                             ; the publisher's room: to column 26, a blank after the title
+        add     a,25
+        cp      17
+        jr      c,.room
+        ld      a,16
+.room:  ld      b,a
+        call    md_strings
+        call    md_skipz
+        push    hl
+        call    len_max
+        pop     hl
         or      a
         jr      z,.no_pub
+        ld      b,a
         neg
         add     a,27
         ld      c,a
         xor     a
         call    at
-        push    bc
         call    puts_max
-        pop     bc
 .no_pub:
-        ld      a,b                     ; the title: what is left, a blank before the publisher
-        or      a
-        ld      a,26
-        jr      z,.tmax
-        ld      a,25
-        sub     b
-.tmax:  ld      b,a
-        xor     a
-        ld      c,1
-        call    at
-        call    md_strings
-        call    puts_max
         ld      a,2                     ; the lines, in their sections
         ld      (MV_ROW),a
         ld      a,$ff
@@ -355,8 +358,8 @@ menu_draw:
         pop     hl
         or      a
         jr      z,.credits
-        ld      a,(MV_ROW)
-        inc     a
+        ld      a,(MV_ROW)                  ; still the keys' row: a blank after it
+        add     a,2
         ld      (MV_ROW),a
         ld      c,0
         call    at

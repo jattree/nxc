@@ -1,5 +1,5 @@
 """The vectors in tests/vectors, made only from synthetic bytes, against the tool and against the definition in the spec, which
-is run as it stands. Needs no game. The tool's part needs NexClash's snapshot reader, the spec's part nothing."""
+is run as it stands. Needs no game. Neither the tool's part nor the spec's needs anything outside this repository."""
 from __future__ import annotations
 
 import hashlib
@@ -366,7 +366,7 @@ class TapeSetSpecAgainstVectors(unittest.TestCase):
         self.assertEqual(self.patch[at:at + 3], bytes((1, 3, 20)))
 
 
-@unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")
+@unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")
 class TapeToolAgainstVectors(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -406,7 +406,7 @@ class TapeToolAgainstVectors(unittest.TestCase):
                     nxc.original_with_pokes(bytes(f), self.tzx, [])
 
 
-@unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")
+@unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")
 class ToolAgainstVectors(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:

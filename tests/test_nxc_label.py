@@ -1,6 +1,6 @@
 """INF1's fix_label through tools/nxc.py, on the made-up tape game: the menu's name for the main line, the default when it
 is absent, cut off or empty, where a writer puts it, what a writer refuses, that credit and import-pok keep it, the
-command line, and that it changes nothing but the name. Needs NexClash's snapshot reader (NEXCLASH_REPO) and the zx0
+command line, and that it changes nothing but the name. Needs the zx0
 compressor (NXC_ZX0_DIR)."""
 from __future__ import annotations
 

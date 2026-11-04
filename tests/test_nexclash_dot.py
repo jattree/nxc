@@ -1,7 +1,7 @@
 """The .NEXCLASH dot command, on a Z80 emulator with NextZXOS faked (nexclash_harness.py), must write what tools/nxc.py
 writes, byte for byte, and refuse everything else cleanly.
 
-Two kinds of test: synthetic ones need only sjasmplus, the z80 package, NexClash's snapshot reader (NEXCLASH_REPO) and
+Two kinds of test: synthetic ones need only sjasmplus, the z80 package, the zx0 compressor (NXC_ZX0_DIR) and
 the zx0 compressor (NXC_ZX0_DIR); those on real games also need the game files, which are not in this repository, and
 skip with a message without them (NXC_EVIDENCE, build/inputs). Nothing here holds game data or hashes of it: what a
 build must come to is read from the files at run time.
@@ -23,7 +23,6 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 EVIDENCE = Path(os.environ.get("NXC_EVIDENCE", str(Path(__file__).resolve().parents[1] / "build" / "evidence")))
 REFERENCE = Path(os.environ.get("NXC_REFERENCE", str(EVIDENCE / "reference")))
-os.environ.setdefault("NEXCLASH_REPO", str(EVIDENCE / "format-study" / "nexclash-latest"))
 os.environ.setdefault("NXC_ZX0_DIR", str(EVIDENCE / "format-study" / "zx0bin"))
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT / "tools"))

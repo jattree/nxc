@@ -1320,6 +1320,7 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
 HELP_TAG = b'HLP1'; HELP_MAX = 64; HELP_READ = 1024; MENU_ROW = 32; MENU_LINES = 10; MENU_HOLD = 2   # help: two rows of 32
 STUB = os.path.join(HERE, '..', 'firmware', 'nxcstub.bin')   # assembled from firmware/nxcstub.asm, with firmware/menu.asm
 STUB_PARAMS = 8; STUB_DESC_END = 0x1D00; STUB_BLOCK = 57; MENU_ENTRY = 0xC000; NO_DATA = 0xFFFFFF
+STUB_SHADOW = 16; SHADOW_ROOM = ((0x1D40, 0x2000), (0x3F80, 0x4000))   # M0's room for .nexload's bytes below a stack in the entry bank
 
 def help_texts(f):
     """HLP1's lines as a reader takes them: from its first HELP_READ bytes, each value's first HELP_MAX characters, anything
@@ -1425,6 +1426,15 @@ def menu_refusal(header, top):
     if top > 111: return 'it needs more banks than a Next has'
     return None
 
+def set_or_poke_touches(f, st, bank, lo, hi):
+    """Whether any trainer, set or toggle the menu offers changes bank's bytes lo to hi."""
+    for kind, _, _, payload in menu_lines(f):
+        if kind == 0 and any(b == bank and lo <= o < hi for b, o, _ in payload): return True
+        for e in (payload if kind == 2 else [payload] if kind == 3 else []):
+            for b, chunk in read_set(st, e)[1]:
+                if b == bank and any(lo <= o < hi for o in chunk_offsets(chunk)): return True
+    return False
+
 def apply_menu(f, game):
     """The .nex that carries its menu (spec, "A .nex that carries its menu"): the bare .nex with nothing chosen, its header
     changed to start the stub, then the menu banks: the stub, its parameters and the description, then the data."""
@@ -1438,13 +1448,26 @@ def apply_menu(f, game):
     count = 1 + -(-len(data) // BANK); top = m0 + count - 1
     why = menu_refusal(header, top)
     if why: raise Wrong('this build cannot carry its menu: %s; --bare writes it with the choices fixed' % why)
-    pc, sp = struct.unpack_from('<HH', header, 14)[0], struct.unpack_from('<H', header, 12)[0]
-    stub[-STUB_PARAMS:] = struct.pack('<BHHBBB', 2 * m0, pc, sp, 2 * header[139], count, 0)
+    pc, sp = struct.unpack_from('<H', header, 14)[0], struct.unpack_from('<H', header, 12)[0]
+    lo = ((sp - STUB_SHADOW) & 0xFFFF) - 0xC000; shadow = lo >= 0       # the bytes .nexload may write below a stack in the entry bank
+    m0_bank = bytearray(BANK)
+    if shadow:
+        hi = lo + STUB_SHADOW
+        if not any(a <= lo and hi <= b for a, b in SHADOW_ROOM + ((len(stub) + len(desc), STUB_DESC_END),)):
+            raise Wrong('this build cannot carry its menu: its stack, at %#06x, lies where the stub works; --bare writes it with the choices fixed' % sp)
+        at = 512 + screen_size(header[10])
+        for b in ORDER:
+            if header[18 + b]:
+                if b == header[139]: m0_bank[lo:hi] = bare[at + lo:at + hi]
+                at += BANK
+        if set_or_poke_touches(f, st, header[139], lo, hi): raise Wrong('this build cannot carry its menu: a choice changes the bytes below its stack')
+    stub[-STUB_PARAMS:] = struct.pack('<BHHBBB', 2 * m0, pc, sp, 2 * header[139], count, int(shadow))
     for b in range(m0, top + 1): header[18 + b] = 1
     header[9] += count
     struct.pack_into('<H', header, 14, MENU_ENTRY); header[139] = m0
     if top > 47: header[8] = 1
-    banks = [bytes(stub + desc).ljust(BANK, b'\0')] + [data[i:i + BANK].ljust(BANK, b'\0') for i in range(0, len(data), BANK)]
+    m0_bank[:len(stub) + len(desc)] = stub + desc
+    banks = [bytes(m0_bank)] + [data[i:i + BANK].ljust(BANK, b'\0') for i in range(0, len(data), BANK)]
     return bytes(header) + bare[512:] + b''.join(banks)
 
 def inf1_value(f, key):

@@ -1,6 +1,6 @@
 """Tape targets and TAP1 through tools/nxc.py, on the made-up game in tape_game.py: the data blocks of a .tap and a .tzx, the
 table and every rule a reader checks in it, the clash fix off, several releases, the structure checks and the keying, and
-that a patch holds none of the tape. Needs NexClash's snapshot reader (NEXCLASH_REPO) and the zx0 compressor (NXC_ZX0_DIR)."""
+that a patch holds none of the tape. Needs the zx0 compressor (NXC_ZX0_DIR)."""
 from __future__ import annotations
 
 import os
@@ -21,7 +21,7 @@ TMP = os.environ.get("TMPDIR")
 
 
 def needs(cls):
-    cls = unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")(cls)
+    cls = unittest.skipUnless(nxc is not None, "tools/nxc.py cannot be imported")(cls)
     return unittest.skipUnless(T.ZX0_TOOL.exists(), "the zx0 compressor is missing: set NXC_ZX0_DIR")(cls)
 
 
@@ -412,7 +412,7 @@ class Writer(unittest.TestCase):
             self.assertIn("388 bytes in", r.stdout)
             r = self.run_tool("add-target", str(tmp / "out.nxc"), str(tmp / "g.tap"), str(tmp / "g.tzx"), "-o", str(tmp / "two.nxc"))
             self.assertEqual(r.returncode, 0, r.stderr)
-            r = self.run_tool(str(tmp / "two.nxc"), str(tmp / "g.tzx"), "-o", str(tmp / "x.nex"))
+            r = self.run_tool(str(tmp / "two.nxc"), str(tmp / "g.tzx"), "--bare", "-o", str(tmp / "x.nex"))
             self.assertEqual((tmp / "x.nex").read_bytes(), nex)
             r = self.run_tool(str(tmp / "two.nxc"), str(tmp / "g.tzx"), "--original", "-o", str(tmp / "x.z80"))
             self.assertEqual(nxc.snapshot_of((tmp / "x.z80").read_bytes(), nxc.KIND_Z80).banks, banks)

@@ -1,6 +1,6 @@
 """Tape targets of several files (a release on two sides) through tools/nxc.py, on the made-up game in tape_game.py split
 across two tapes: the target entry, the keying over every file in order, copies with a file index, the clash fix off,
-another release as a full set, the refusals, and the command line. Needs NexClash's snapshot reader (NEXCLASH_REPO) and
+another release as a full set, the refusals, and the command line. Needs the zx0 compressor (NXC_ZX0_DIR) and
 the zx0 compressor (NXC_ZX0_DIR)."""
 from __future__ import annotations
 
@@ -186,7 +186,7 @@ class TapeSet(unittest.TestCase):
                                    "--start", str(self.tmp / "start.z80"), "--tape-bank", "20", "-o", str(out), "--title", "Tape Game"],
                            capture_output=True, text=True)
         self.assertIn("rebuilds it exactly", r.stdout + r.stderr)
-        r = subprocess.run(tool + [str(out), str(self.tmp / "side a.tap"), "--also", str(self.tmp / "side b.tzx"), "-o", str(self.tmp / "cli.nex")],
+        r = subprocess.run(tool + [str(out), str(self.tmp / "side a.tap"), "--also", str(self.tmp / "side b.tzx"), "--bare", "-o", str(self.tmp / "cli.nex")],
                            capture_output=True, text=True)
         self.assertEqual((self.tmp / "cli.nex").read_bytes(), self.nex, r.stdout + r.stderr)
         self.assertIn("accepts side a.tap, tap, %d bytes + side b.tzx, tzx, %d bytes" % (len(self.a), len(self.b)), r.stdout)

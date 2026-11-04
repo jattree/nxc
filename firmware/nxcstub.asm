@@ -24,8 +24,9 @@
 
 DESC_END        equ $1d00
 BLOCK           equ $1d00               ; the last 57 bytes, built here
-STACK_TOP       equ $2000
+STACK_TOP       equ $3f80               ; in the second page, clear of the build's stack
 REGS            equ STACK_TOP - 20      ; IY IX HL' DE' BC' AF' HL DE BC AF, as pushed
+SHADOW          equ 16                  ; .nexload's bytes below the stack, when it is in the entry bank
 SCRSAVE         equ $2000
 FONT            equ $3b00
 VARS            equ $3e00
@@ -101,6 +102,7 @@ main:   ld      hl,-C
         ld      de,$4000
         ld      bc,6912
         ldir
+        call    shadow                  ; .nexload's bytes below the stack, then
         ld      a,KIND_SETS
         call    apply_kind              ; sets and toggles, then trainers
         ld      a,KIND_TRAINERS
@@ -113,6 +115,25 @@ reset:  ld      a,1                     ; BREAK: nothing to go back to
         jr      $
 
 ; ---------------------------------------------------------------- the choices
+
+; With the build's stack in the entry bank, what .nexload wrote just below it
+; went into M0, which the writer filled there with the entry bank's own bytes:
+; they go to the entry bank, so it holds what .nexload would have left.
+shadow: ld      a,(P_SHADOW)
+        or      a
+        ret     z
+        ld      a,(P_ENTRY)
+        rrca
+        call    map_bank
+        ld      hl,(KEEP_SP)
+        ld      de,-SHADOW
+        add     hl,de
+        ex      de,hl                   ; DE: in the entry bank, at 0xC000
+        ld      hl,-C
+        add     hl,de                   ; HL: the same in M0, at 0x0000
+        ld      bc,SHADOW
+        ldir
+        ret
 
 KIND_SETS       equ 2
 KIND_TRAINERS   equ 0
@@ -510,7 +531,7 @@ P_PC:   dw      0                       ; the build's start address
 P_SP:   dw      0                       ; and stack pointer
 P_ENTRY: db     0                       ; its entry bank's first 8K page
 P_BANKS: db     0                       ; how many menu banks
-        db      0
+P_SHADOW: db    0                       ; 1: the build's stack is in its entry bank
 desc:
         assert  desc <= DESC_END
         display "stub: ", /d, desc, " bytes"

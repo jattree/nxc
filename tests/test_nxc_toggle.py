@@ -1,6 +1,6 @@
 """Toggles (SET2 kinds 3 and 4) through tools/nxc.py, on the made-up tape game: each alone, together, with a colour set and
 with a trainer; the refusals a writer and a reader make; the proof line a logic toggle needs; the limit; and that a patch
-without toggles is unchanged. Needs NexClash's snapshot reader (NEXCLASH_REPO) and the zx0 compressor (NXC_ZX0_DIR)."""
+without toggles is unchanged. Needs the zx0 compressor (NXC_ZX0_DIR)."""
 from __future__ import annotations
 
 import os
@@ -122,7 +122,7 @@ class Toggles(unittest.TestCase):
                                        "--tape-bank", ",".join(map(str, extra)), "--toggle", "Smooth scrolling=" + str(tmp / "s.nex"),
                                        "-o", str(tmp / "p.nxc")], capture_output=True, text=True)
             self.assertIn("rebuilds it exactly", r.stdout + r.stderr)
-            r = subprocess.run(tool + [str(tmp / "p.nxc"), str(tmp / "game.tap"), "--toggle", "Smooth scrolling", "-o", str(tmp / "out.nex")],
+            r = subprocess.run(tool + [str(tmp / "p.nxc"), str(tmp / "game.tap"), "--bare", "--toggle", "Smooth scrolling", "-o", str(tmp / "out.nex")],
                                capture_output=True, text=True)
             self.assertIn("toggles: Smooth scrolling", r.stdout)
             self.assertEqual((tmp / "out.nex").read_bytes(), variant(nex, [(0x2100, 9)]))

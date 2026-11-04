@@ -74,6 +74,21 @@ A patch or game with the name of either output is refused, however the path is w
 folder in one form on NextZXOS, tried in JNext for `/tmp/x`, `c:/tmp/x`, `C:\TMP\x`, `tmp/x` from the root, `x` from
 `/tmp`, and paths through `..`. A failure to create an output deletes nothing.
 
+## The stub of a .nex that carries its menu
+
+`nxcstub.asm` is the start of a `.nex` that carries its menu, which `tools/nxc.py` writes by default (the spec's "A .nex
+that carries its menu" has every rule). It includes `menu.asm`, the menu's one source, which draws the new menu on the ULA
+screen from a description and runs its keys. `nxcstub.bin` is its assembled form, kept in the repository so that applying a
+patch needs no assembler; `tests/test_menu_nex.py` checks it is what the source assembles to:
+
+```
+cd firmware && sjasmplus --nologo --raw=nxcstub.bin nxcstub.asm
+```
+
+**This dot command does not use `menu.asm` yet,** and still shows the older menu below and writes the bare `.nex`. Its part
+before the menu has 1,235 bytes free, and `menu.asm` is about 1,300, with the description to build and the font to copy from
+the ROM besides: it needs the menu read in as a part of its own, into a page of its own, before it can share the code.
+
 ## The menu
 
 ```
@@ -162,6 +177,6 @@ every type at once, takes 1.8 s from the screen's start to the end on a 98K buil
 python -m unittest discover -s tests
 ```
 
-Set `NEXCLASH_REPO` to a NexClash checkout, `NXC_ZX0_DIR` to the folder with the `zx0` compressor, and `NXC_EVIDENCE` or
+Set `NXC_ZX0_DIR` to the folder with the `zx0` compressor, and `NXC_EVIDENCE` or
 `build/inputs` for the games, and `build/v1` for patches made from them, none of which are in this repository; what is
 missing is skipped with a message. Needs `sjasmplus` and the `z80` package.
