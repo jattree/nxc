@@ -88,6 +88,45 @@ def main() -> None:
                    plaintext=plain, expected=expected, refused=bad)
     (HERE / "vectors_tape.json").write_text(json.dumps(vectors, indent=1) + "\n")
     print("patch", len(patch), "bytes; vectors", (HERE / "vectors_tape.json").stat().st_size, "bytes")
+    tape_set(blocks, banks, nex, extra, z80)
+
+
+def tzx10(blocks) -> bytes:
+    out = bytearray(nxc.TZX_MAGIC + bytes((1, 20))) + b"\x30\x06side b"
+    for d in blocks:
+        out += b"\x10" + (1000).to_bytes(2, "little") + len(d).to_bytes(2, "little") + d
+    return bytes(out)
+
+
+def tape_set(blocks, banks, nex, extra, z80) -> None:
+    """The same game as a set of two files: side A a .tap of its first five blocks, side B a .tzx of the rest."""
+    a, b = G.tap(blocks[:5]), tzx10(blocks[5:])
+    (HERE / "tapeset_a.tap").write_bytes(a)
+    (HERE / "tapeset_b.tzx").write_bytes(b)
+    game = nxc.FileSet([a, b], [nxc.KIND_TAP, nxc.KIND_TZX])
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        for n, data in (("tapeset_a.tap", a), ("tapeset_b.tzx", b), ("tape_start.z80", z80), ("o.nex", nex)): (tmp / n).write_bytes(data)
+        patch, _ = nxc.make([str(tmp / "tapeset_a.tap"), str(tmp / "tapeset_b.tzx")], str(tmp / "o.nex"),
+                            dict(title="Tape Set Vector", file=["tapeset_a.tap", "tapeset_b.tzx"]),
+                            dict(publisher="Nobody, 2026", patch_by="Vector", build="synthetic"), nonce=NONCE, master=MASTER, rom=1,
+                            proof=dict(replay="none: synthetic", hardware="none"), start=str(tmp / "tape_start.z80"), tape_banks=extra)
+    (HERE / "vector_tapeset.nxc").write_bytes(patch)
+    k = nxc.key_state(NONCE, MASTER)
+    e = nxc.parse_tap1(dict(nxc.blocks(patch)[1])[b"TAP1"])
+    table = nxc.unzx0(k.block(b"TAP1", e["stream"])(e["data"]), nxc.TAPE_TABLE_MAX)
+    parts = nxc.parse_tape_table(table, (game, nxc.KIND_TAP))
+    vectors = dict(comment="Made by make_tape_vectors.py from synthetic bytes: one target of two tape files. Nothing here comes from any game.",
+                   nonce=NONCE.hex(), master_key=MASTER.hex(), patch_md5=hashlib.md5(patch).hexdigest(),
+                   files={n: dict(md5=hashlib.md5(x).hexdigest(), length=len(x)) for n, x in (("tapeset_a.tap", a), ("tapeset_b.tzx", b))},
+                   target_head=dict(nxc.blocks(patch)[1])[b"TGT1"][:36].hex(),
+                   dump_base=state_hex(nxc.dump_state(NONCE, a + b).base),
+                   data_blocks={"tapeset_a.tap": [list(x) for x in nxc.tape_blocks(a, nxc.KIND_TAP)],
+                                "tapeset_b.tzx": [list(x) for x in nxc.tape_blocks(b, nxc.KIND_TZX)]},
+                   copies=[list(c) for c in parts["copies"]], table=table.hex(),
+                   expected={"base": digest(nxc.apply(patch, game=game)), "fix off": digest(nxc.original_with_pokes(patch, game, []))})
+    (HERE / "vectors_tapeset.json").write_text(json.dumps(vectors, indent=1) + "\n")
+    print("set patch", len(patch), "bytes")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,8 @@ KIND_Z80 = 1; KIND_SNA = 2; KIND_TAP = 3; KIND_TZX = 4
 KIND_NAMES = {KIND_Z80: 'z80', KIND_SNA: 'sna', KIND_TAP: 'tap', KIND_TZX: 'tzx'}
 SNAPSHOT_KINDS = (KIND_Z80, KIND_SNA); TAPE_KINDS = (KIND_TAP, KIND_TZX)
 LOADER_LEVEL = 3                                   # this tool does all there is; the Z80 loader is level 2
-OPT_TAPE = 1; LOADER_FLAGS = OPT_TAPE              # OPT1 byte 1: what a patch needs besides its level; this tool reads tapes
+OPT_TAPE = 1; OPT_TAPE_SET = 2; LOADER_FLAGS = OPT_TAPE | OPT_TAPE_SET   # OPT1 byte 1: what a patch needs besides its level; this tool reads tapes and sets of them
+KIND_SET = 0x80; SET_FILES_MAX = 8; FILE_SHIFT = 12; BLOCK_MASK = 0x03FF   # a target of several tape files; a copy's file index, above its block
 TAPE_TAG = b'TAP1'; TAPE_TABLE_MAX = 24576; RESIDUAL_MAX = 8192; TAPE_BLOCKS_MAX = 1024   # a tape table, and the data blocks it may name
 START_SIZE = 55; COPY_SIZE = 10; TAPE_FIXED = 2; MIN_RUN = 16        # a .z80 v2 header; one copy; a TAP1's clear head
 SCREEN_SIZES = ((1, 49152), (2, 6912), (4, 12288), (8, 12288), (16, 12288)); SCREEN_MAX = 92928; SCREEN_CHUNK = BANK
@@ -84,8 +85,8 @@ def fresh_state():
     return [list(range(256)), 0, 0]
 
 def dump_state(nonce, game):
-    """Keyed by one whole dump: nonce, the file, nonce."""
-    st = fresh_state(); absorb(st, nonce + game + nonce)
+    """Keyed by one whole dump: nonce, the file (a set's files in order), nonce."""
+    st = fresh_state(); absorb(st, nonce + keyed_bytes(game) + nonce)
     return Stream(st)
 
 def key_state(nonce, master):
@@ -174,6 +175,23 @@ class SnaSnapshot:
     def __init__(self, data):
         self.is128, self.port7ffd, places = sna_places(data)
         self.banks = {b: data[at[0]:at[0] + BANK] for b, at in places.items()}
+
+class FileSet(tuple):
+    """A tape target of several files, in order: their bytes, with .kinds (each KIND_TAP or KIND_TZX). A single file is bytes."""
+    def __new__(cls, files, kinds):
+        self = super().__new__(cls, [bytes(x) for x in files]); self.kinds = tuple(kinds)
+        if not 2 <= len(self) <= SET_FILES_MAX or len(self.kinds) != len(self) or any(k not in TAPE_KINDS for k in self.kinds):
+            raise Wrong('a set of files is 2 to %d tapes, .tap or .tzx' % SET_FILES_MAX)
+        return self
+
+def files_of(game, kind=None):
+    """[(bytes, kind)] of a game: one file, or each of a FileSet."""
+    if isinstance(game, FileSet): return list(zip(game, game.kinds))
+    return [(game, kind)]
+
+def keyed_bytes(game):
+    """What dump_base absorbs between the nonces: the file, or a set's files one after another, in order."""
+    return b''.join(game) if isinstance(game, FileSet) else game
 
 def kind_of_name(name):
     ext = os.path.splitext(name)[1].lower()
@@ -288,9 +306,15 @@ def parse_tape_table(table, blocks):
     header = table[:START_SIZE]
     if header[6:8] != b'\0\0' or header[30:32] != b'\x17\0' or header[34] not in (0, 3): raise Wrong('a tape table is damaged')
     crc, count = struct.unpack_from('<IH', table, START_SIZE); i = START_SIZE + 6; copies = []; last = (-1, 0)
-    if isinstance(blocks, tuple):
+    if isinstance(blocks, tuple):                     # (tape, kind) or (FileSet, kind): walk each file as far as needed
+        files = files_of(*blocks)
         named = [struct.unpack_from('<H', table, i + COPY_SIZE * n)[0] for n in range(count) if i + COPY_SIZE * (n + 1) <= len(table)]
-        blocks = tape_blocks(blocks[0], blocks[1], min(max(named, default=-1), TAPE_BLOCKS_MAX - 1) + 1)
+        blocks = []
+        for fi, (tape, kind) in enumerate(files):
+            mine = [k & BLOCK_MASK for k in named if k >> FILE_SHIFT == fi]
+            blocks.append(tape_blocks(tape, kind, min(max(mine, default=-1), TAPE_BLOCKS_MAX - 1) + 1))
+    elif blocks and not isinstance(blocks[0], list):
+        blocks = [blocks]                             # one file's blocks
     def ordered(b, o, n):
         nonlocal last
         if b >= 112 or n < 1 or o + n > BANK: raise Wrong('a tape table is out of range')
@@ -301,7 +325,9 @@ def parse_tape_table(table, blocks):
         if i + COPY_SIZE > len(table): raise Wrong('a tape table is damaged')
         k = struct.unpack_from('<H', table, i)[0]; s = int.from_bytes(table[i + 2:i + 5], 'little')
         n, b, o = struct.unpack_from('<HBH', table, i + 5); i += COPY_SIZE
-        if k >= len(blocks) or k >= TAPE_BLOCKS_MAX or s + n > blocks[k][1]: raise Wrong('a tape table names bytes the tape does not have')
+        fi, kb = k >> FILE_SHIFT, k & BLOCK_MASK
+        if k & ~(BLOCK_MASK | 7 << FILE_SHIFT) or fi >= len(blocks): raise Wrong('a tape table names a file the target does not have')
+        if kb >= len(blocks[fi]) or kb >= TAPE_BLOCKS_MAX or s + n > blocks[fi][kb][1]: raise Wrong('a tape table names bytes the tape does not have')
         ordered(b, o, n); copies.append((k, s, n, b, o))
     if i + 2 > len(table): raise Wrong('a tape table is damaged')
     count = struct.unpack_from('<H', table, i)[0]; i += 2; sites = []; last = (-1, 0)
@@ -318,42 +344,47 @@ class TapeSnapshot:
     banks as the start state has them, and any other bank the table writes. Every byte nothing writes is 0."""
     version = 2
     def __init__(self, tape, kind, table):
-        t = parse_tape_table(table, (tape, kind)); blocks = tape_blocks(tape, kind, max([c[0] for c in t['copies']], default=-1) + 1)
+        t = parse_tape_table(table, (tape, kind)); files = files_of(tape, kind)
+        blocks = [tape_blocks(x, xk, max([c[0] & BLOCK_MASK for c in t['copies'] if c[0] >> FILE_SHIFT == fi], default=-1) + 1)
+                  for fi, (x, xk) in enumerate(files)]
         self.header, self.crc, self.is128 = t['header'], t['crc'], t['is128']
         self.port7ffd = self.header[35] if self.is128 else 0
         banks = {b: bytearray(BANK) for b in machine_banks(self.is128)}
         for k, s, n, b, o in t['copies']:
-            at = blocks[k][0] + s
-            banks.setdefault(b, bytearray(BANK))[o:o + n] = tape[at:at + n]
+            fi = k >> FILE_SHIFT; at = blocks[fi][k & BLOCK_MASK][0] + s; data = files[fi][0]
+            banks.setdefault(b, bytearray(BANK))[o:o + n] = data[at:at + n]
         for b, o, d in t['sites']:
             banks.setdefault(b, bytearray(BANK))[o:o + len(d)] = d
         self.banks = {b: bytes(v) for b, v in banks.items()}
         self.extra = sorted(set(self.banks) - set(machine_banks(self.is128)))
         if zlib.crc32(start_snapshot(self.header, self.banks)) != self.crc: raise Wrong('the game rebuilt from the tape fails its checksum')
 
-def tape_index(tape, blocks):
-    """{MIN_RUN bytes: [(block, offset)]} over the tape's data blocks, at most 16 places for each."""
-    index = {}
+def tape_index(tape, blocks, fi=0, index=None):
+    """{MIN_RUN bytes: [(block, offset)]} over the tape's data blocks, at most 16 places for each. A block is named with its
+    file's index above FILE_SHIFT: file 0's are the block numbers themselves."""
+    index = {} if index is None else index
     for k, (at, n) in enumerate(blocks[:TAPE_BLOCKS_MAX]):
         for o in range(n - MIN_RUN + 1):
             places = index.setdefault(tape[at + o:at + o + MIN_RUN], [])
-            if len(places) < 16: places.append((k, o))
+            if len(places) < 16: places.append((fi << FILE_SHIFT | k, o))
     return index
 
 def tape_copies(want, bank, tape, blocks, index, built):
     """Copies taking from the tape every run of MIN_RUN bytes or more of want, a bank's bytes, longest first from each place,
-    grown back over bytes not yet taken. Runs of zeros are not looked for: a bank starts as zeros. built gets them."""
+    grown back over bytes not yet taken. Runs of zeros are not looked for: a bank starts as zeros. built gets them.
+    tape and blocks: one file's, or lists of them for a set, indexed by the file index in a copy's block field."""
+    if not isinstance(tape, list): tape, blocks = [tape], [blocks]
     out = []; i = 0; taken = 0; zero = bytes(MIN_RUN)
     while i <= BANK - MIN_RUN:
         key = bytes(want[i:i + MIN_RUN])
         if key == zero or key not in index: i += 1; continue
         best = None
         for k, o in index[key]:
-            at, n = blocks[k]; m = MIN_RUN
-            while i + m < BANK and o + m < n and tape[at + o + m] == want[i + m]: m += 1
+            t = tape[k >> FILE_SHIFT]; at, n = blocks[k >> FILE_SHIFT][k & BLOCK_MASK]; m = MIN_RUN
+            while i + m < BANK and o + m < n and t[at + o + m] == want[i + m]: m += 1
             if best is None or m > best[2]: best = (k, o, m)
-        k, o, m = best; at = blocks[k][0]
-        while i > taken and o > 0 and tape[at + o - 1] == want[i - 1]: i -= 1; o -= 1; m += 1
+        k, o, m = best; t = tape[k >> FILE_SHIFT]; at = blocks[k >> FILE_SHIFT][k & BLOCK_MASK][0]
+        while i > taken and o > 0 and t[at + o - 1] == want[i - 1]: i -= 1; o -= 1; m += 1
         out.append((k, o, m, bank, i)); built[i:i + m] = want[i:i + m]; i += m; taken = i
     return out
 
@@ -378,7 +409,8 @@ def make_tape_table(tape, kind, start, extra=None):
 
 def build_tape_table(tape, kind, header, banks, extra=None):
     """make_tape_table, from the start header and the machine's banks as the state the build starts from has them."""
-    blocks = tape_blocks(tape, kind); index = tape_index(tape, blocks)
+    files = files_of(tape, kind); tapes = [x for x, _ in files]; blocks = [tape_blocks(x, xk) for x, xk in files]; index = {}
+    for fi, (x, b_) in enumerate(zip(tapes, blocks)): tape_index(x, b_, fi, index)
     copies = []; sites = []; extra = extra or {}; machine = machine_banks(header[34] == 3)
     for b in extra:
         if b in machine or not 0 <= b < 112: raise Wrong('bank %d cannot be an extra bank of a %s game' % (b, '128K' if header[34] == 3 else '48K'))
@@ -387,13 +419,14 @@ def build_tape_table(tape, kind, header, banks, extra=None):
         elif b in extra: want = extra[b]
         else: continue
         built = bytearray(BANK)
-        copies += tape_copies(want, b, tape, blocks, index, built)
+        copies += tape_copies(want, b, tapes, blocks, index, built)
         if b in machine: sites += residual_sites(want, built, b)
     crc = zlib.crc32(start_snapshot(header, banks))
     table = tape_table(header, crc, copies, sites)
     held = sum(len(d) for _, _, d in sites)
     return table, dict(copies=len(copies), sites=len(sites), residual=held, table=len(table),
-                       from_tape=sum(c[2] for c in copies if c[3] in machine), blocks=len(blocks))
+                       from_tape=sum(c[2] for c in copies if c[3] in machine), blocks=sum(len(x) for x in blocks),
+                       from_files=[sum(c[2] for c in copies if c[0] >> FILE_SHIFT == fi) for fi in range(len(files))])
 
 # ---------------------------------------------------------------- trainers
 
@@ -537,8 +570,8 @@ def original_with_pokes(f, game, chosen, path=None):
     version 2 or 3 with its pages stored whole, under its own header (a version 1 file becomes version 2, 48K; pages other
     than the RAM banks are not kept), and a .sna keeps its layout. A tape, trainer or not, must unlock the patch, and
     becomes the start state's .z80, as its TAP1 has it."""
-    if not chosen and not any(t['kind'] in TAPE_KINDS and t['length'] == len(game) for t in targets(f)): return game
-    opened = check_key(f, game); kind = opened.target['kind']
+    if not chosen and not isinstance(game, FileSet) and not any(is_tape(t) and matches(t, game) for t in targets(f)): return game
+    opened = check_key(f, game); kind = opened.target['kind'] & ~KIND_SET
     if kind in TAPE_KINDS:
         snap = game_snapshot(opened, game)
         return start_snapshot(snap.header, snap.banks, chosen_pokes(f, chosen))
@@ -611,33 +644,69 @@ def check_file_name(name):
         raise Wrong('a game file name must be a bare name, not %r' % name)
 
 def target_block(index, kind, game, nonce, master, fields):
-    """One TGT1 block's data for one accepted dump."""
+    """One TGT1 block's data for one accepted dump, or for a FileSet, one accepted set of tape files: fields['file'] is then
+    a list of their names, in order."""
     if kind not in KIND_NAMES: raise ValueError('unknown container kind')
-    name = str(fields.get('file') or '')
-    check_file_name(name.encode('latin-1', 'replace'))
-    lines = {k: fields.get(k) for k in ('file', 'title', 'zxdb_entry')}
-    lines['md5'] = hashlib.md5(game).hexdigest()
+    names = fields.get('file'); names = list(names) if isinstance(names, (list, tuple)) else [str(names or '')]
+    files = files_of(game, kind)
+    if len(names) != len(files): raise Wrong('a set of files needs a name for each')
+    for n in names: check_file_name(n.encode('latin-1', 'replace'))
+    if len({n.lower() for n in names}) != len(names): raise Wrong('two files of a set have one name')
+    lines = dict(file=names[0])
+    for k, n in enumerate(names[1:], 2): lines['file_%d' % k] = n
+    lines.update(title=fields.get('title'), zxdb_entry=fields.get('zxdb_entry'), md5=hashlib.md5(files[0][0]).hexdigest())
+    for k, (x, _) in enumerate(files[1:], 2): lines['md5_%d' % k] = hashlib.md5(x).hexdigest()
     body = text(lines)
-    if not parse_target_text(body)[0]: raise Wrong('the file name must end within the first %d bytes' % TEXT_READ)
+    found = parse_target_text(body, len(files))
+    if not found[0] or any(n is None for n in found[2]): raise Wrong('the file names must end within the first %d bytes' % TEXT_READ)
     wrap = dump_state(nonce, game).block(b'TGT1', index)(WRAP_CHECK + master)
-    return struct.pack('<BBI', index, kind, len(game)) + wrap + body
+    if len(files) == 1: return struct.pack('<BBI', index, kind, len(game)) + wrap + body
+    rest = b''.join(struct.pack('<BI', k_, len(x)) for x, k_ in files[1:])
+    return struct.pack('<BBI', index, files[0][1] | KIND_SET, len(files[0][0])) + wrap + bytes((len(files),)) + rest + body
 
-def parse_target_text(body):
-    """(file, title) from a TGT1 block's text as a reader takes them: within TEXT_READ bytes, ended by a newline."""
+def parse_target_text(body, files=1):
+    """(file, title, [file_2 .. file_n]) from a TGT1 block's text as a reader takes them: within TEXT_READ bytes, ended by a
+    newline. files: how many the entry names."""
     window = body[:TEXT_READ]; found = {}
     for line in window.split(b'\n')[:-1]:
         k, _, v = line.partition(b'=')
         found.setdefault(k, v)
-    return found.get(b'file'), found.get(b'title')
+    more = [found.get(b'file_%d' % k) for k in range(2, files + 1)]
+    return found.get(b'file'), found.get(b'title'), more
 
 def parse_target(d):
-    """A TGT1 block's fields, or Wrong: index, kind, length, wrap, file, title and its text."""
+    """A TGT1 block's fields, or Wrong: index, kind, length, wrap, file, title and its text; and files, [(name, kind, length)]
+    of every file it names, the first being file, kind and length. A set's kind is its first file's with KIND_SET."""
     if len(d) < TARGET_FIXED: raise Wrong('a target block is too short')
-    index, kind, length = struct.unpack_from('<BBI', d)
-    body = d[TARGET_FIXED:]; name, title = parse_target_text(body)
-    if name is None: raise Wrong('a target block has no file name')
-    check_file_name(name)
-    return dict(index=index, kind=kind, length=length, wrap=d[6:TARGET_FIXED], file=name.decode('ascii'), title=title, text=body)
+    index, kind, length = struct.unpack_from('<BBI', d); head = TARGET_FIXED; more = []
+    if kind & KIND_SET:
+        if len(d) < head + 1 or not 2 <= d[head] <= SET_FILES_MAX or len(d) < head + 1 + 5 * (d[head] - 1):
+            raise Wrong('a target block is damaged')
+        n = d[head]
+        more = [struct.unpack_from('<BI', d, head + 1 + 5 * k) for k in range(n - 1)]
+        if kind & ~KIND_SET not in TAPE_KINDS or any(k_ not in TAPE_KINDS for k_, _ in more): raise Wrong('a set of files may hold only tapes')
+        head += 1 + 5 * (n - 1)
+    body = d[head:]; name, title, others = parse_target_text(body, 1 + len(more))
+    if name is None or None in others: raise Wrong('a target block has no file name')
+    for x in [name] + others: check_file_name(x)
+    names = [x.decode('ascii') for x in [name] + others]
+    if len({x.lower() for x in names}) != len(names): raise Wrong('a target block names one file twice')
+    files = [(names[0], kind & ~KIND_SET if more else kind, length)] + [(nm, k_, n_) for nm, (k_, n_) in zip(names[1:], more)]
+    return dict(index=index, kind=kind, length=length, wrap=d[6:TARGET_FIXED], file=names[0], title=title, text=body, files=files)
+
+def readable(e):
+    """Whether this tool reads a target entry of that kind: a single game file, or a set of tapes."""
+    return e['kind'] in KIND_NAMES or (e['kind'] & KIND_SET and e['kind'] & ~KIND_SET in TAPE_KINDS)
+
+def is_tape(e):
+    return (e['kind'] & ~KIND_SET) in TAPE_KINDS
+
+def matches(e, game):
+    """Whether a game's file, or set of files, has the kinds' count and lengths a target entry names."""
+    if not readable(e): return False
+    if isinstance(game, FileSet):
+        return len(e['files']) == len(game) and all(n == len(x) and k == xk for (_, k, n), x, xk in zip(e['files'], game, game.kinds))
+    return len(e['files']) == 1 and e['length'] == len(game)
 
 def targets(f):
     """Every target entry, readable without the game."""
@@ -683,10 +752,12 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     the game's own that hold blocks of the tape, such as a multiload's, taken from the tape wherever they match it. Refused
     if more than residual_max bytes (RESIDUAL_MAX by default) of the start state are not on the tape. tape_summary, a dict,
     gets what the tape table holds."""
-    with open(z80, 'rb') as g: game = g.read()
+    paths = list(z80) if isinstance(z80, (list, tuple)) else [z80]
+    datas = [read_file(x) for x in paths]
     with open(nex, 'rb') as g: out = g.read()
     check_nex(out)
-    want = nex_banks(out); game_kind = kind_of_name(z80); tape = None
+    want = nex_banks(out); game_kind = kind_of_name(paths[0]); tape = None
+    game = datas[0] if len(paths) == 1 else FileSet(datas, [kind_of_name(x) for x in paths])
     if game_kind in TAPE_KINDS:
         if start is None: raise Wrong('a tape target needs --start, the .z80 of the state the build starts from')
         with open(start, 'rb') as g: first = g.read()
@@ -766,7 +837,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     for k in range(0, len(screen), SCREEN_CHUNK):
         part = screen[k:k + SCREEN_CHUNK]; index = k // SCREEN_CHUNK; plain = part.rstrip(b'\0')
         bl.append([b'SCR1', struct.pack('<BH', index, len(plain)) + (st.block(b'SCR1', index)(zx0(plain)) if plain else b'')])
-    wanted, flags = options_for([game_kind], bool(screen))
+    wanted, flags = options_for([game_kind | (KIND_SET if isinstance(game, FileSet) else 0)], bool(screen))
     if level is not None: wanted = level
     least = lowest_memory(out)
     if highest_bank is None: highest_bank = least
@@ -775,7 +846,8 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     f = seal(MAGIC + bytes((1, 0)) + nonce, bl, st)
     if apply(f, game=game) != out: raise Wrong('the patch does not rebuild the build it was made from')
     for path, fields in more_dumps:
-        with open(path, 'rb') as g: f = add_target(f, game, g.read(), kind_of_name(path), fields)
+        if isinstance(path, (list, tuple)): f = add_target(f, game, FileSet([read_file(x) for x in path], [kind_of_name(x) for x in path]), kind_of_name(path[0]), fields)
+        else: f = add_target(f, game, read_file(path), kind_of_name(path), fields)
     return f, dict(sites=count, site_bytes=len(sites), whole=[b for b, _ in whole], whole_bytes=sum(len(d) for _, d in whole), sets=sizes)
 
 def lowest_memory(nex):
@@ -792,9 +864,11 @@ def level_for(kinds, screen=False):
     return options_for(kinds, screen)[0]
 
 def options_for(kinds, screen=False):
-    """OPT1's level and flags. The level is worked out from the snapshot targets alone; with none, the tape flag is set."""
+    """OPT1's level and flags. The level is worked out from the snapshot targets alone; with none, the tape flag is set, and
+    with only sets of tape files (a kind with KIND_SET), the sets' flag too."""
     snaps = [k for k in kinds if k in SNAPSHOT_KINDS]
-    return (3 if snaps and KIND_Z80 not in snaps else 2 if screen else 1), (0 if snaps else OPT_TAPE)
+    flags = (0 if snaps else OPT_TAPE) | (OPT_TAPE_SET if all(k & KIND_SET for k in kinds) else 0)
+    return (3 if snaps and KIND_Z80 not in snaps else 2 if screen else 1), flags
 
 def add_target(f, known_game, new_game, kind, fields, residual_max=None):
     """The patch accepting one more dump. known_game unlocks it. Refused unless the new dump rebuilds the same .nex, byte
@@ -805,11 +879,24 @@ def add_target(f, known_game, new_game, kind, fields, residual_max=None):
     opened = check_key(f, known_game); st, bl = opened[:2]
     have = targets(f)
     if len(have) >= TARGETS_MAX: raise Wrong('a patch can accept at most %d dumps' % TARGETS_MAX)
-    digest = hashlib.md5(new_game).hexdigest().encode()
-    if any(b'md5=' + digest + b'\n' in t['text'] for t in have): raise Wrong('this patch already accepts that dump')
-    name = str(fields.get('file') or '').encode('latin-1', 'replace')
-    if any(t['file'].lower().encode() == name.lower() for t in have): raise Wrong('this patch already has a target with that file name')
-    if any(t['length'] == len(new_game) and t['kind'] != kind for t in have): raise Wrong('this patch has a target of another kind with that length')
+    new_files = files_of(new_game, kind)
+    names = fields.get('file'); names = list(names) if isinstance(names, (list, tuple)) else [str(names or '')]
+    if len(names) != len(new_files): raise Wrong('a set of files needs a name for each')
+    digests = [hashlib.md5(x).hexdigest() for x, _ in new_files]
+    def set_digests(t):
+        found = dict(l.partition(b'=')[::2] for l in t['text'].split(b'\n') if b'=' in l)
+        return [found.get(b'md5', b'').decode()] + [found.get(b'md5_%d' % k, b'').decode() for k in range(2, len(t['files']) + 1)]
+    if any(set_digests(t) == digests for t in have): raise Wrong('this patch already accepts that dump')
+    known_files = {}                                   # a name names one file: the same length and MD5 wherever it is used
+    for t in have:
+        for (nm, k_, n_), dg in zip(t['files'], set_digests(t)): known_files[nm.lower()] = (n_, dg)
+    for nm, (x, _), dg in zip(names, new_files, digests):
+        if nm.lower() in known_files and known_files[nm.lower()] != (len(x), dg):
+            raise Wrong('this patch already has a target with that file name' if len(new_files) == 1 else 'this patch already names %s as another file' % nm)
+    if len(new_files) == 1 and any(nm.lower() == names[0].lower() for t in have for nm, _, _ in t['files']):
+        raise Wrong('this patch already has a target with that file name')
+    first = len(new_files[0][0])
+    if any(t['length'] == first and (t['kind'] & ~KIND_SET) != kind for t in have): raise Wrong('this patch has a target of another kind with that length')
     if not fields.get('title') and have and have[0]['title']: fields = dict(fields, title=have[0]['title'].decode('ascii', 'replace'))
     nonce = f[NONCE_AT:CHECK_AT]
     entry = target_block(len(have), kind, new_game, nonce, opened.master, fields)
@@ -818,7 +905,7 @@ def add_target(f, known_game, new_game, kind, fields, residual_max=None):
         out.append([t, d])
         if i == last: out.append([b'TGT1', entry])
     if kind in TAPE_KINDS: out = add_tape_table(out, st, opened, known_game, new_game, kind, len(have), residual_max)
-    kinds = [t['kind'] for t in have] + [kind]
+    kinds = [t['kind'] for t in have] + [kind | (KIND_SET if isinstance(new_game, FileSet) else 0)]
     for e in out:
         if e[0] == b'OPT1': e[1] = bytes(options_for(kinds, any(t == b'SCR1' for t, _ in bl))) + e[1][2:3]
     made = seal(f[:CHECK_AT], out, st)
@@ -871,7 +958,7 @@ def tape_table_of(st, e):
 
 def game_snapshot(opened, game):
     """The banks and paging of the game opened, as a snapshot object: from its TAP1 for a tape."""
-    kind = opened.target['kind']
+    kind = opened.target['kind'] & ~KIND_SET
     if kind not in TAPE_KINDS: return snapshot_of(game, kind)
     for t, d in opened[1]:
         if t == TAPE_TAG:
@@ -980,13 +1067,13 @@ def check_structure(bl):
     if opt[2] > 111: raise Wrong('the options block names a bank that cannot be')
     if opt[0] > LOADER_LEVEL or opt[1] & ~LOADER_FLAGS: raise Wrong('this patch needs a newer loader')
     if len(d[b'OUT1']) != 8: raise Wrong('the output block has the wrong length')
-    count = kinds = snaps = 0; tapes = set(); served = []; streams = set()
+    count = kinds = snaps = singles = 0; tapes = set(); served = []; streams = set()
     for t, data in bl:
         if t == b'TGT1':
             e = parse_target(data)
             if e['index'] != count or count >= TARGETS_MAX: raise Wrong('a target block is out of place')
-            count += 1; kinds += e['kind'] in KIND_NAMES; snaps += e['kind'] in SNAPSHOT_KINDS
-            if e['kind'] in TAPE_KINDS: tapes.add(e['index'])
+            count += 1; kinds += readable(e); snaps += e['kind'] in SNAPSHOT_KINDS; singles += e['kind'] in KIND_NAMES
+            if is_tape(e) and readable(e): tapes.add(e['index'])
         elif t == b'TRN1': parse_trn1(data)
         elif t == SET_TAG:
             index = parse_set(data)['stream']
@@ -1000,6 +1087,7 @@ def check_structure(bl):
     if b'SCR1' in tags and opt[0] < 2: raise Wrong('a patch with a loading screen must say level 2 or above')
     if len(served) != len(set(served)) or set(served) != tapes: raise Wrong('a tape block does not match the tape targets')
     if tapes and not snaps and not opt[1] & OPT_TAPE: raise Wrong('a patch with only tape targets must say so in its options block')
+    if kinds and not singles and not opt[1] & OPT_TAPE_SET: raise Wrong('a patch with only sets of tape files must say so in its options block')
 
 class Opened(tuple):
     """What check_key found: (stream, blocks, .nex CRC, .nex length), with .master and .target."""
@@ -1014,13 +1102,15 @@ def check_key(f, game):
     for t, d in bl:
         if t != b'TGT1': continue
         e = parse_target(d)
-        if e['kind'] not in KIND_NAMES or e['length'] != len(game): continue
+        if not matches(e, game): continue
         if base is None: base = dump_state(nonce, game)
         plain = base.block(b'TGT1', e['index'])(e['wrap'])
         if plain[:8] == WRAP_CHECK:
             found, master = e, plain[8:]
             break
-    if found is None: raise Wrong('this is not the game file this patch was made for')
+    if found is None:
+        if isinstance(game, FileSet): raise Wrong('these are not the files this patch was made for')
+        raise Wrong('this is not the game file this patch was made for')
     st = key_state(nonce, master)
     if check_value(f, st) != f[CHECK_AT:HEADER]: raise Wrong('this patch file is damaged')
     crc, size = struct.unpack('<II', st.block(b'OUT1')(dict(bl)[b'OUT1']))
@@ -1179,6 +1269,12 @@ def refuse_same(output, *inputs):
 def read_file(path):
     with open(path, 'rb') as g: return g.read()
 
+def game_arg(path, also=()):
+    """A game from the command line: one file, or with --also a set of tapes in that order."""
+    if not also: return read_file(path)
+    paths = [path] + list(also)
+    return FileSet([read_file(x) for x in paths], [kind_of_name(x) for x in paths])
+
 def main(argv):
     try:
         run(argv)
@@ -1226,6 +1322,7 @@ def run(argv):
     if argv[:1] == ['make']:
         ap = argparse.ArgumentParser(prog='nxc.py make', description="Package a finished .nex and the game it was built from as a patch.")
         ap.add_argument('nex'); ap.add_argument('game', help='the .z80, .sna, .tap or .tzx the .nex was built from'); ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='for a tape: a further file of the release, such as its side B; repeatable, in order')
         ap.add_argument('--start', help='for a tape: the .z80 of the state the build starts from, taken from that tape')
         ap.add_argument('--tape-bank', action='append', default=[], metavar='N', help='for a tape: a bank the .nex lists beyond the game\'s own that holds blocks of the tape, such as a multiload\'s; repeatable, or N,N')
         ap.add_argument('--residual-max', type=int, help='for a tape: the most bytes of the start state not on the tape that the patch may carry (%d)' % RESIDUAL_MAX)
@@ -1243,7 +1340,7 @@ def run(argv):
         ap.add_argument('--language-code', action='append', default=[], metavar='NAME=CODE', help="a language set's ISO 639 code; repeatable")
         ap.add_argument('--text-by', help='who translated the text; kept in INF1, not on the menu')
         a = ap.parse_args(argv[1:])
-        refuse_same(a.output, a.nex, a.game)
+        refuse_same(a.output, a.nex, a.game, *a.also)
         def named(items):
             out = {}
             for item in items:
@@ -1261,6 +1358,7 @@ def run(argv):
             k, v = line.split('=', 1)
             proof[k.strip()] = v.strip()
         target = dict(file=a.file or os.path.basename(a.game), title=a.title, zxdb_entry=a.zxdb)
+        if a.also: target['file'] = [target['file']] + [os.path.basename(x) for x in a.also]
         with open(a.nex, 'rb') as g: built = g.read()
         info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by,
                     build=a.build or os.path.splitext(os.path.basename(a.nex))[0], nex_md5=hashlib.md5(built).hexdigest())
@@ -1268,7 +1366,7 @@ def run(argv):
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))
         tape_banks = [int(x, 0) for item in a.tape_bank for x in item.split(',') if x.strip()]; summary = {}
         if a.start: refuse_same(a.output, a.start)
-        f, made = make(a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank,
+        f, made = make([a.game] + a.also if a.also else a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank,
                        start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary)
         if summary:
             print('tape: %d data blocks; %d copies take %d bytes of the start state from it; %d bytes in %d sites are not on it; table %d bytes'
@@ -1287,10 +1385,13 @@ def run(argv):
         ap.add_argument('--file', help='the name a player has it under; the new file\'s own name by default')
         ap.add_argument('--zxdb', help='its ZXDB entry'); ap.add_argument('--title')
         ap.add_argument('--residual-max', type=int, help='for a tape: as for make')
+        ap.add_argument('--known-also', action='append', default=[], metavar='TAPE', help='a further file of the known release; repeatable, in order')
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the new release; repeatable, in order')
         a = ap.parse_args(argv[1:])
-        refuse_same(a.output, a.known, a.new)
+        refuse_same(a.output, a.known, a.new, *a.known_also, *a.also)
         fields = dict(file=a.file or os.path.basename(a.new), zxdb_entry=a.zxdb, title=a.title)
-        f = add_target(read_file(a.patch), read_file(a.known), read_file(a.new), kind_of_name(a.new), fields, a.residual_max)
+        if a.also: fields['file'] = [fields['file']] + [os.path.basename(x) for x in a.also]
+        f = add_target(read_file(a.patch), game_arg(a.known, a.known_also), game_arg(a.new, a.also), kind_of_name(a.new), fields, a.residual_max)
         with open(a.output, 'wb') as g: g.write(f)
         print('accepts', len(targets(f)), 'dumps; wrote', a.output, len(f), 'bytes')
         return
@@ -1300,20 +1401,22 @@ def run(argv):
     ap.add_argument('--language', help='a language set by name; has no effect with --original')
     ap.add_argument('--trainer', action='append', help='a trainer by number from 1 or by name; repeatable')
     ap.add_argument('--original', action='store_true', help='no patch: write the game itself, or with trainers a snapshot of it with them in; for a tape, the start state as a .z80')
+    ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a patch that wants a set of tapes; repeatable, in order')
     a = ap.parse_args(argv); f = read_file(a.patch)
     print('colour sets:', ', '.join(['(default)'] + colour_sets(f)))
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
     print('needs', memory_text(dict(blocks(f)[1]).get(b'OPT1', bytes(3))[2:3][0] if len(dict(blocks(f)[1]).get(b'OPT1', b'')) == 3 else 0))
     for t in targets(f):
-        print('accepts %s, %s, %d bytes' % (t['file'], KIND_NAMES.get(t['kind'], 'unknown kind'), t['length']))
+        print('accepts ' + ' + '.join('%s, %s, %d bytes' % (nm, KIND_NAMES.get(k_, 'unknown kind'), n_) for nm, k_, n_ in t['files']))
     for t, d in blocks(f)[1]:
         if t in (b'INF1', b'PRF1'): print(d.decode(errors='replace'), end='')
     if a.game:
         output = a.output or 'out.nex'
-        refuse_same(output, a.patch, a.game)
-        if a.original: d = original_with_pokes(f, read_file(a.game), a.trainer)
-        else: d = apply(f, a.game, colours=a.colours, chosen=a.trainer, language=a.language)
+        refuse_same(output, a.patch, a.game, *a.also)
+        game = game_arg(a.game, a.also)
+        if a.original: d = original_with_pokes(f, game, a.trainer)
+        else: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language)
         with open(output, 'wb') as g: g.write(d)
         print('wrote', output, hashlib.md5(d).hexdigest())
 

@@ -130,7 +130,8 @@ class SpecAgainstVectors(unittest.TestCase):
                 self.assertLess(path.stat().st_size, 200_000, path.name)
         self.assertEqual(sorted(p.name for p in VECTORS.iterdir() if p.is_file()),
                          ["game_v1.z80", "game_v3.z80", "make_tape_vectors.py", "make_vectors.py", "tape.tap", "tape.tzx", "tape_start.z80",
-                          "vector.nxc", "vector_tape.nxc", "vectors.json", "vectors_tape.json"])
+                          "tapeset_a.tap", "tapeset_b.tzx", "vector.nxc", "vector_tape.nxc", "vector_tapeset.nxc", "vectors.json", "vectors_tape.json",
+                          "vectors_tapeset.json"])
 
 
 # A tape walker and bank builder written from the spec's words and tables alone, with nothing from the tool.
@@ -255,6 +256,75 @@ class TapeSpecAgainstVectors(unittest.TestCase):
     def test_options(self) -> None:
         e = next(e for e in self.v["layout"] if e["tag"] == "OPT1")
         self.assertEqual(self.patch[e["data_offset"]:e["data_offset"] + 3], bytes((1, 1, 20)))
+
+
+def spec_set_start_snapshot(tapes: list, table: bytes) -> bytes:
+    """The clash fix off's .z80 for a target of several files: a copy's block field is the file's index (bits 12 to 14) above
+    the data block's number in that file (bits 0 to 9), as the spec says."""
+    blocks = [spec_data_blocks(t, z) for t, z in tapes]
+    header, i = table[:55], 59
+    is128 = header[34] == 3
+    banks = {b: bytearray(16384) for b in (range(8) if is128 else (5, 2, 0))}
+    count, i = int.from_bytes(table[i:i + 2], "little"), i + 2
+    for _ in range(count):
+        k, s, n = int.from_bytes(table[i:i + 2], "little"), int.from_bytes(table[i + 2:i + 5], "little"), int.from_bytes(table[i + 5:i + 7], "little")
+        assert not k & 0x8C00
+        b, o, f = table[i + 7], int.from_bytes(table[i + 8:i + 10], "little"), k >> 12
+        start = blocks[f][k & 0x3FF][0] + s
+        banks.setdefault(b, bytearray(16384))[o:o + n] = tapes[f][0][start:start + n]
+        i += 10
+    count, i = int.from_bytes(table[i:i + 2], "little"), i + 2
+    for _ in range(count):
+        b, o, n = table[i], int.from_bytes(table[i + 1:i + 3], "little"), int.from_bytes(table[i + 3:i + 5], "little")
+        banks.setdefault(b, bytearray(16384))[o:o + n] = table[i + 5:i + 5 + n]
+        i += 5 + n
+    assert i == len(table)
+    pages = [(3 + b, b) for b in range(8)] if is128 else [(8, 5), (4, 2), (5, 0)]
+    return header + b"".join(b"\xff\xff" + bytes((p,)) + bytes(banks[b]) for p, b in pages)
+
+
+class TapeSetSpecAgainstVectors(unittest.TestCase):
+    """The vector of one target of two tape files, as an implementer reading only the spec would get it."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.spec = spec_code()
+        cls.v = json.loads((VECTORS / "vectors_tapeset.json").read_text())
+        cls.patch = (VECTORS / "vector_tapeset.nxc").read_bytes()
+        cls.a, cls.b = ((VECTORS / n).read_bytes() for n in ("tapeset_a.tap", "tapeset_b.tzx"))
+        cls.nonce = bytes.fromhex(cls.v["nonce"])
+        cls.master = bytes.fromhex(cls.v["master_key"])
+
+    def test_the_files_and_the_entry(self) -> None:
+        self.assertEqual(hashlib.md5(self.patch).hexdigest(), self.v["patch_md5"])
+        at = self.patch.index(b"TGT1") + 8
+        head = self.patch[at:at + 36]
+        self.assertEqual(head.hex(), self.v["target_head"])
+        self.assertEqual(head[:2], bytes((0, 0x83)))                                  # index 0; a set, its first file a .tap
+        self.assertEqual(int.from_bytes(head[2:6], "little"), len(self.a))
+        self.assertEqual((head[30], head[31], int.from_bytes(head[32:36], "little")), (2, 4, len(self.b)))
+        text = self.patch[at + 36:at + 36 + 252]
+        self.assertTrue(text.startswith(b"file=tapeset_a.tap\nfile_2=tapeset_b.tzx\n"))
+
+    def test_the_key_wrap_over_both_files_in_order(self) -> None:
+        s = self.spec
+        at = self.patch.index(b"TGT1") + 8
+        base = s["dump_base"](self.nonce, self.a + self.b)
+        self.assertEqual(hexstate(base), self.v["dump_base"])
+        plain = bytes(x ^ y for x, y in zip(self.patch[at + 6:at + 30], s["output"](s["stream"](base, b"TGT1", 0), 24)))
+        self.assertEqual(plain, b"NXC1-KEY" + self.master)
+
+    def test_the_table_from_both_files(self) -> None:
+        self.assertEqual([list(x) for x in spec_data_blocks(self.a, False)], self.v["data_blocks"]["tapeset_a.tap"])
+        self.assertEqual([list(x) for x in spec_data_blocks(self.b, True)], self.v["data_blocks"]["tapeset_b.tzx"])
+        table = bytes.fromhex(self.v["table"])
+        made = spec_set_start_snapshot([(self.a, False), (self.b, True)], table)
+        self.assertEqual(hashlib.md5(made).hexdigest(), self.v["expected"]["fix off"]["md5"])
+        self.assertEqual(sorted({c[0] >> 12 for c in self.v["copies"]}), [0, 1])
+
+    def test_options(self) -> None:
+        at = self.patch.index(b"OPT1") + 8
+        self.assertEqual(self.patch[at:at + 3], bytes((1, 3, 20)))
 
 
 @unittest.skipUnless(nxc is not None, "NexClash's snapshot reader is missing: set NEXCLASH_REPO")

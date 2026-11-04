@@ -167,7 +167,7 @@ class TapeLoader(T.Base):
         cases = {"a target missing": (heads(b"\0\x01\0"), DAMAGED), "a target twice": (heads(b"\0\x03\0\x01\x01"), DAMAGED),
                  "a target that is not there": (heads(b"\0\x03\0\x01\x02"), DAMAGED), "no targets": (heads(b"\0\0"), DAMAGED),
                  "no table": (drop, DAMAGED), "a stream twice": (split, DAMAGED), "no tape flag": (opt(b"\x01\x00\x14"), DAMAGED),
-                 "an unknown flag": (opt(b"\x01\x03\x14"), LEVEL)}
+                 "an unknown flag": (opt(b"\x01\x05\x14"), LEVEL)}
         for name, (edit, said) in cases.items():
             with self.subTest(name):
                 patch = T.rekey(self.patch, self.tap, edit)
