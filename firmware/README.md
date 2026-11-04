@@ -3,7 +3,7 @@
 `nexclash.asm` is a NextZXOS dot command. Given a `.nxc` patch and the player's own copy of the game, it shows a menu and
 rebuilds the NexClash `.nex`, with enhanced colours if chosen, or hands over the game itself, with any trainers chosen. The patch format is in
 `../spec/NXC-FORMAT.md`; `../tools/nxc.py` is the reference it matches byte for byte. It is level 2 in `OPT1`'s terms:
-`.z80` games and loading screens. Inspired by Bleugh.biz's
+`.z80` games and loading screens; and it reads `.tap` and `.tzx` games through `TAP1`, so takes `OPT1`'s tape flag. Inspired by Bleugh.biz's
 nexclash (Dean Woodyatt, `bleughb/nexclash`, GPL-3.0-or-later); this command is GPL-3.0-or-later too. Its ZX0 decoder is
 derived from dzx0_standard by Einar Saukas and Urusergi (BSD-3-Clause).
 
@@ -19,11 +19,29 @@ sjasmplus --nologo --raw=NEXCLASH firmware/nexclash.asm
 python tools/nxc.py handoff-bas -o NXCHAND.BAS
 ```
 
+## Tapes
+
+A `.tap` or `.tzx` target is read through its `TAP1` table, as the spec says, with the same checks as `tools/nxc.py` and the same
+refusals. In order, after the game unlocks the patch: the table is decoded into its three pages and checked whole (the start
+state's header; every copy's block, length, bank and order; every site; nothing left over); then the tape is walked from its
+start, a block's head at a time, as far as the highest data block a copy names, and each copy is given its place in the file,
+in the table itself; then every bank the start state has is built once and its CRC compared with the table's; building the
+`.nex`, an extra bank the header does not list is refused. A bank is then built when it is needed: zeros, each copy read from
+the tape straight into it, then the table's sites. A tape is never handed over as it is: with the clash fix off, trainer or not,
+the start state is written as a `.z80` of whole pages to `/tmp/NEXCLASH.Z80`, and `%x` is 2 as for a snapshot.
+
+Measured on the Z80 harness at 28 MHz, with no file I/O: The New Zealand Story (a 178,176-byte `.tap`, a 147,968-byte `.nex`)
+takes 2.75 s from Enter to the output being made, nearly all of it the tape absorbed for the key, then 0.90 s to write the `.nex`,
+or 0.19 s for the `.z80`, in 9 pages. In JNext on NextZXOS v2.09, through the Browser, its `.nex` from the `.tap` and from the
+`.tzx`, and its `.z80` with the fix off, were each byte for byte what `nxc.py` writes, and the game reached play. None of this has
+run on a Next.
+
 ## Card setup
 
 - `NEXCLASH` goes in `C:/DOT/`, `NXCHAND.BAS` in `C:/NEXTZXOS/`. `C:/TMP/` must exist, as it does on the standard card.
 - The patch goes beside the player's game, named `NAME.nxc`. The game is looked for under each name in the patch's `TGT1`
-  blocks, then as `NAME.z80`, and must have the length of one that the patch lists. **Keep the extension to three letters:** the Browser goes by the 8.3 short name, so an old
+  blocks, then as `NAME.z80`, and must have the length of one that the patch lists. A tape keeps its archive name, such as
+  `New Zealand Story, The (1989)(Ocean)(48K-128K).tap`: the long name is opened as it is, as for a `.z80`. **Keep the extension to three letters:** the Browser goes by the 8.3 short name, so an old
   `Cobra.nexclash` is `COBRA~1.NEX` to it. It went to `.nexload`, which took it for a `.nex` and asked for a core update.
   The command itself reads any name.
 - Add to `C:/NEXTZXOS/BROWSER.CFG`, before the `Z80,SNA` lines (CRLF line endings; `<7F>` is the single byte 0x7F, which
@@ -106,14 +124,18 @@ Copy the three files as above with the game and `Cobra.nxc` into one folder, sel
 
 ## Memory
 
-8K for the command, loaded in two steps, then variables, buffers and a 192-byte stack. NextZXOS loads the file's first
-8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,581 bytes, with 2,490 bytes used only up
-to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the rest of the file, 5,112 bytes, is read in over what
-was only for the menu. A short or mismatched file gets a message and does nothing. Resident and second part end at
-0x3A25, and the variables start at 0x3A4F, so 42 bytes are left: more code means a second overlay, or a shorter path buffer. Plus six 8K pages
+8K for the command, loaded in steps, then variables, buffers and a 192-byte stack. NextZXOS loads the file's first
+8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,589 bytes, with 2,704 bytes used only up
+to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the next 5,129 bytes are read in over what
+was only for the menu: the code every route shares, then, from 0x35A4, 1,178 bytes that read a snapshot, behind a table of five
+jumps. For a tape, two parts that follow in the file are read in their turn over those 1,178 bytes: the first, 659 bytes, finds and
+checks the table; the second, 1,171 bytes, walks the tape and builds the banks. The slot holds 1,192, so the second part has 21
+bytes left and the shared code 14: more code means a third part, or a shorter path buffer. A short or mismatched file, at any
+part, gets a message and does nothing. Plus six 8K pages
 from `IDE_BANK`, paged at MMU3 to MMU5 with interrupts off and the stack in the 8K: two for the bank being built, one for
-the file buffer and tables, three for the site table, and three more for each set chosen,
-so 48K, or 72K with one set, or 96K with two. MMU6 and MMU7 are never changed, and nothing given to the OS lies above `0xC000`. A bank at a
+the file buffer and tables, three for the site table, three more for each set chosen, and three for a tape's table,
+so 48K, or 72K with one set or a tape, or 96K with two sets or a set and a tape. A tape and two sets need 120K, and the refusal for
+too little still says 96K. MMU6 and MMU7 are never changed, and nothing given to the OS lies above `0xC000`. A bank at a
 time goes to the card, so the `.nex` is never all in RAM.
 
 **A set is held a bank at a time, so its size makes no difference to any of that.** Its three pages hold one chunk, at most 18,432 bytes, decoded when needed. Every chunk of a chosen set is decoded and checked before any file is made, then again as its bank is written, so a damaged set is refused with nothing written, and a set adds both passes to the time: in JNext, from Enter to the finished file, Everyone's a Wally (393,728 bytes) takes 6.1 s without its 43,389-byte set and 7.9 s with it, and Sabre Wulf (164,352 bytes) 3.2 s and 4.7 s.

@@ -122,7 +122,7 @@ A patch with only tape targets that does not set bit 0 is damage. Tapes are a fl
 
 A loader that is shown a patch of its level or below can do all of it. `SCR1` makes a level necessary rather than optional because a loader that skipped it would write a wrong `.nex`: a patch with a `SCR1` that says level 1 is damage. A `.sna` target in a patch that also has a `.z80` target does not raise the level, as a level 1 or 2 loader skips the entry and uses the others. The level is worked out from the snapshot targets alone, so a patch with only tapes is level 1, or 2 with a `SCR1`, and sets bit 0; a tape in a patch that has a snapshot target too raises nothing, as a loader that cannot read tapes skips the entry.
 
-`tools/nxc.py` is level 3 and reads tapes. `firmware/nexclash.asm` is level 2, and does not read tapes yet. Both refuse level 4. `SET2` raises no level: it is an extra, so a loader that does not know it skips it and offers no such line, and the game still plays.
+`tools/nxc.py` is level 3 and reads tapes. `firmware/nexclash.asm` is level 2 and reads tapes. Both refuse level 4. `SET2` raises no level: it is an extra, so a loader that does not know it skips it and offers no such line, and the game still plays.
 
 **Memory.** Byte 2 lets a loader on a smaller machine refuse rather than start a game that breaks. A writer works it out from the `.nex`: the highest bank the header lists, or 48 if the header's byte 8 asks for 1792K, whichever is higher. That is all the file shows: a build may use banks at run time that it does not load, such as Layer 2 buffers, so an author may raise it, and nothing can lower it. A reader refuses a value below a bank the header lists.
 
@@ -401,6 +401,8 @@ A reader refuses as damage: a table that is not exactly those fields; a header b
 **Where the build starts** is the writer's choice, usually a `.z80` taken in an emulator from that tape, and the build is made from that `.z80`. The fewer of its bytes that are not on the tape, the better. For The New Zealand Story in JNext (128K), with this format's writer: at the jump into the main code, 5,151 bytes in 312 sites; at "LEVEL 1-1 READY", after the first world loads and before play, 3,813 bytes in 101 sites, with 68,367 bytes in 125 copies; in play, 6,536.
 
 **Multiload.** A build that keeps a multiload's blocks in memory names extra banks for them. Copies place those blocks, or parts of them, wherever in those banks the build wants them; a writer takes them from the tape alone, and carries anything else the build has in such a bank in `SIT1`, as a change of its own. Hooking the game's loader to read the blocks from there is the engine's work, done in its own banks and sites: this format only places them. `OPT1` byte 2 counts them, as the `.nex` lists them.
+
+**Memory.** A loader holds the table, at most 24,576 bytes, and builds a bank at a time from it. `firmware/nexclash.asm` gives it three 8K pages of its own, and reads each copy from the tape straight into the bank being built, so a tape needs 24K more than a snapshot, however long it is.
 
 **Clash fix off.** A tape is never handed over as it is. The plain game is the start as a `.z80`: the table's header, then the machine's banks as whole pages, each 0xFFFF, its page number, then 16,384 bytes, pages 3 to 10 for 128K and 8, 4, 5 for 48K. It is written only after the keyed check, with or without a trainer. Its CRC-32 without POKEs must equal the table's; the POKEs then go in, and each must be in one of the machine's banks.
 

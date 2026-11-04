@@ -36,7 +36,7 @@ This repository holds no game data, and no patches from any game.
 python tools/nxc.py Game.nxc Game.z80 -o Game.nex
 ```
 
-The game can be any file the patch lists, `.z80` or `.sna`. Add `--trainer NAME_OR_NUMBER` for a cheat,
+The game can be any file the patch lists: `.z80`, `.sna`, `.tap` or `.tzx`. Add `--trainer NAME_OR_NUMBER` for a cheat,
 `--colours NAME` or `--language NAME` for a set, or `--original` to write the game itself, unchecked, or with
 `--trainer` a checked snapshot of it with the POKEs in.
 
@@ -58,7 +58,7 @@ Patch: Jon Attree  Colours: Alberto Conde
 ```
 
 It rebuilds the `.nex` from your game file and starts it. A patch can list several dumps of a game. A
-wrong or missing game file gets a message naming the file it needs. The Next reads `.z80` only. Card
+wrong or missing game file gets a message naming the file it needs. The Next reads `.z80`, `.tap` and `.tzx`. A tape with the clash fix off becomes the game's start as a `.z80`, checked. Card
 setup, including the `browser.cfg` line, is in [firmware/README.md](firmware/README.md).
 
 ## Making a patch
@@ -106,6 +106,17 @@ player's file at all. Get the agreement of whoever made the build.
 The game can be `.z80` or `.sna`. It rebuilds the `.nex` from what it wrote before keeping anything, and refuses one it can't package: a `.nex` above `V1.2`, a screen of a later version, anything past the banks, or too much changed from the game for a loader to hold in `SIT1`. A colour or language set has no such limit, and is always a choice on the menu: the plain build stays the default. `--proof-file` takes the proof fields as lines of `KEY=VALUE`, and the [format](spec/NXC-FORMAT.md) lists them. `--colours NAME=NEX` and `--language NAME=NEX` add sets, each from the same build with it applied, and `--colours-by` credits a colour set.
 
 **Memory.** A loader on a 1MB Next refuses a build that needs more, from the highest bank the `.nex` lists. If your build uses higher banks at run time than it loads, as with Layer 2 buffers, say so with `--highest-bank N`.
+
+**From a tape.** A patch can take the game's banks from its original `.tap` or `.tzx` instead of a snapshot, if the tape holds the
+game plainly: give `make` the tape, and with `--start` the `.z80` the build was made from, taken from that tape in an emulator.
+What the tape does not hold of that start, such as the screen and variables, the patch carries, encrypted; more than 8,192 bytes
+of it is refused, as the sign of a packed or protected tape. `--tape-bank N` names banks of the build that hold a multiload's
+blocks. [docs/TAP1-NOTES.md](docs/TAP1-NOTES.md) has the steps.
+
+```sh
+python tools/nxc.py make Game.nex "Game (1989)(Ocean).tap" --start Game_start.z80 -o Game.nxc --title "Game"
+python tools/nxc.py add-target Game.nxc "Game (1989)(Ocean).tap" "Game (1989)(Ocean).tzx" -o Game2.nxc
+```
 
 ## Adding to a patch
 
@@ -157,6 +168,7 @@ checking another implementation.
 - [spec/NXC-FORMAT.md](spec/NXC-FORMAT.md): the format
 - [firmware/README.md](firmware/README.md): the loader and its setup
 - [backgrounds/README.md](backgrounds/README.md): a picture behind any game, an experiment that has only run in JNext
+- [docs/TAP1-NOTES.md](docs/TAP1-NOTES.md): tape targets, how to make one, and what was tested
 
 ## Credits and licence
 
