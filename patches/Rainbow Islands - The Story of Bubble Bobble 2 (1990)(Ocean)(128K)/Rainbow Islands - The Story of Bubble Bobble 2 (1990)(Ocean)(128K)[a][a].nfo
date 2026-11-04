@@ -22,9 +22,15 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Note        Dean Woodyatt's build with a sky palette fix: the dim-blue
+              squares round objects against the bright sky are brightened on
+              islands 1 and 4-7. Islands 2 and 3 use dim blue on purpose and
+              are left alone.
+
 -- MENU ----------------------------------------------------------------------
-   1  Immune except to water
-   2  Press P for next level
+   1  Infinite lives
+   2  Immune except to water
+   3  Press P for next level
 
   Cheats come from the archive's POKEs for this release.
 
@@ -39,25 +45,38 @@
   Owner       Played by Jon Attree in JNext through the real loader,
               2026-11-03
 
-  Replay      RZX IDENTICAL x2 (rainbow 7178 frames, rainbownew 11799) +
-              diagnostic IDENTICAL, unit PASS (recovery 9 cases + control;
-              Z80N as-NOP controls); every simulated overrun frame credited as
-              the beam model
+  Replay      Dean Woodyatt's build with a sky palette fix:
+              rainbow_z80n_sprites + one ULA palette entry (17, blue paper)
+              set at each game frame start. RZX IDENTICAL on rainbow.rzx (7178
+              frames) and rainbownew.rzx (11799) and on 13 round recordings
+              from a full playthrough (rounds 1, 4, 5, 8, 9, 12, 13, 17, 21,
+              24, 25, 28 and the ending; islands 1-7); diagnostic IDENTICAL;
+              entry 17 = the model at every game frame start (bright on
+              islands 1 and 4-7, default on 2-3); 7 negative controls on the
+              palette writes detected; rainbow.rzx and rainbownew unit PASS
 
-  Emulator    JNext 1.1.104 headless, through the real loader, reached play;
-              frames viewed; no person played it; with the loading screen:
-              JNext 1.1.104 headless through the real loader, MD5 exact,
-              reached the screen, the game and play frames, viewed; no person
-              played it
+  Emulator    JNext 1.1.104 headless, this .nex with the P and immunity
+              cheats, islands 1-7, title, round intro and ending, beside
+              Dean's f49494f2 with the same keys: frames the same except blue-
+              paper pixels turned bright on islands 1 and 6; viewed; no person
+              played it; JNext 1.1.104 headless through the real loader,
+              2026-11-03: chosen in the Browser with every cheat on,
+              /tmp/NEXCLASH.NEX equal to apply
 
-  Coverage    one cheat run, on and off with the same keys: Press P for next
-              level; other trainers not run; loading screen stub added in bank
-              32, 2026-11-03: the replay and hardware lines are of the build
-              without it, whose game memory the stub restores at the original
-              start; the stub is emulator-tested only
+  Coverage    owner-approved in JNext 2026-11-04; built on Dean's f49494f2
+              (loading screen stub in bank 32 as there); palette change only,
+              inks and game code untouched; emulator only; cheats proved in a
+              simulator on the original game: Infinite lives: both of Dean's
+              RZXs replayed with the POKE in bank 0: lives (25456) held at 2
+              through every death (plain 2, 1, 0, game over); DEC (HL) at FE56
+              ran with bank 0 paged; Immune except to water: free run from
+              rainbow.rzx frame 900, player idle: plain dies 3 times and game
+              over by frame 2803; with the POKE in bank 0 no death in 3000
+              frames; in bank 1 (as published) identical to plain; Press P for
+              next level: free run from frame 900, P pressed twice: round
+              (25455) 0 to 1 to 2, new island drawn; plain P pauses
 
-  Hardware    bda21ab6 works but slows down in busy scenes (user, 2026-10-31);
-              69369c89 untested
+  Hardware    none
 
   Nothing here claims a result on real hardware unless the line above says so.
 

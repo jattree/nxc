@@ -39,23 +39,37 @@
   Owner       Played by Jon Attree in JNext through the real loader,
               2026-11-03
 
-  Replay      Full 32492-frame differential + RAM convergence + 2705 units
-              PASS
+  Replay      RZX (32492 frames) IDENTICAL (registers, memory, interrupt
+              safety, 54 interrupts deferred to a plot exit, sprite layer
+              incl. mask vs model, plot screen change = old ^ new, old + new
+              image covered from plot entry to exit: 5.1M pixels, attribute
+              reads vs the removed painter), unit cases + interrupt injection
+              + 9 negative controls PASS; hook cost mean 2.3K T, max 16.6K T
+              per frame
 
   Emulator    JNext 1.1.104 headless, through the real loader, reached play;
               frames viewed; no person played it; with the loading screen:
               JNext 1.1.104 headless through the real loader, MD5 exact,
               reached the screen, the game and play frames, viewed; no person
-              played it
+              played it; JNext 1.1.104 headless through the real loader,
+              2026-11-03: chosen in the Browser with every cheat on,
+              /tmp/NEXCLASH.NEX equal to apply
 
-  Coverage    Infinite lives on: its code was not reached by scripted keys, so
-              the cheat itself was not exercised; loading screen stub added in
-              bank 40, 2026-11-03: the replay and hardware lines are of the
-              build without it, whose game memory the stub restores at the
-              original start; the stub is emulator-tested only
+  Coverage    loading screen stub added in bank 32, 2026-11-03: the replay and
+              hardware lines are of the build without it, whose game memory
+              the stub restores at the original start; the stub is emulator-
+              tested only; cheats proved in a simulator on the original game:
+              Infinite lives: SkoolKit, original file, 2 random walks x 15000
+              frames: DEC A on lives (0xEB39) ran 2 and 5 times, lives stayed
+              4 (original fell to 2 and 1); Immunity: SkoolKit, original file,
+              same walks: hits counted 54 and 81 times, life-loss path
+              (0xEB2E) never ran, lives stayed 4 (original lost 2 and 4); No
+              enemies: SkoolKit, original file, same walks: no hit in 2 x
+              15000 frames (original hit 40 and 80 times), lives stayed 4
 
-  Hardware    User reports game runs OK (2026-10-26); platform/test coverage
-              unspecified
+  Hardware    400d0d11 on a real Next (Dean 2026-10-25): corruption in room 5
+              (ISR plot inside a main-code plot; fixed in 53f2665e); dc65565c:
+              flicker (fixed), mask asked (added)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

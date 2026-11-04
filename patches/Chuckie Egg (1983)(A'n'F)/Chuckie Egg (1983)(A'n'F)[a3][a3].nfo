@@ -28,10 +28,10 @@
    1  Infinite lives
    2  Infinite bonus
    3  Infinite time
-   4  Pass level instead of dyi
-   5  Very slow big bird
-   6  Big bird doesn't exist
-   7  Slower hens
+   4  Very slow big bird
+   5  Big bird doesn't exist
+   6  Slower hens
+   7  No hens
 
   Cheats come from the archive's POKEs for this release.
 
@@ -52,10 +52,28 @@
 
   Emulator    JNext 1.1.104 headless, through the real loader, reached play
               with the default and with Spec256 on, with Infinite lives on;
-              frames viewed; no person played it
+              frames viewed; no person played it; JNext 1.1.104 headless
+              through the real loader, 2026-11-03: chosen in the Browser with
+              every cheat on and with Enhanced, /tmp/NEXCLASH.NEX equal to
+              apply
 
-  Coverage    Spec256 colours judged by eye in one room; Infinite lives seen
-              working on the same base without the set
+  Coverage    Spec256 colours judged by eye in one room; cheats proved in a
+              simulator on the original game: Infinite lives: simulator (1
+              player, idle): DEC (HL) at A755 runs at the death at frame 5182;
+              lives 5->4 without, held at 5 with; Infinite bonus: simulator
+              (idle, 7000 frames): bonus held at 1000 with; falls 1000->0530
+              without; Infinite time: simulator (idle, 7000 frames): time held
+              at 900 with; falls to 669 without; Very slow big bird:
+              simulator, level 9 (bird free), 1500 frames: bird routine A0C8
+              runs 34 times with, 82 without; Big bird doesn't exist:
+              simulator, level 9 (bird free), 1500 frames: bird routine A0C8
+              never runs and the bird never moves with; 82 runs, 112 moves
+              without; Slower hens: simulator (idle, 7000 frames): hen-move
+              routine 911E runs 876 times with, 2669 without; no death with, a
+              hen kills the player at frame 4869 without; No hens: simulator
+              (idle, 7000 frames): no hens on screen and no death with; a hen
+              kills the player at frame 4869 without (frames
+              shots/nohens_compare_f2000.png)
 
   Hardware    untested
 

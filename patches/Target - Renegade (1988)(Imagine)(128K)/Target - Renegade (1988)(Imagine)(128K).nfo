@@ -23,9 +23,8 @@
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
-   2  Turbo speed
-   3  Infinite lives (both play
-   4  Advance level on pause
+   2  Infinite lives
+   3  Advance level on pause
 
   Cheats come from the archive's POKEs for this release.
 
@@ -47,13 +46,21 @@
               frames viewed; no person played it; with the loading screen:
               JNext 1.1.104 headless through the real loader, MD5 exact,
               reached the screen, the game and play frames, viewed; no person
-              played it
+              played it; JNext 1.1.104 headless through the real loader,
+              2026-11-03: chosen in the Browser with every cheat on,
+              /tmp/NEXCLASH.NEX equal to apply
 
-  Coverage    one cheat run, on and off with the same keys: Infinite lives
-              (both players); other trainers not run; loading screen stub
-              added in bank 20, 2026-11-03: the replay and hardware lines are
-              of the build without it, whose game memory the stub restores at
-              the original start; the stub is emulator-tested only
+  Coverage    loading screen stub added in bank 20, 2026-11-03: the replay and
+              hardware lines are of the build without it, whose game memory
+              the stub restores at the original start; the stub is emulator-
+              tested only; cheats proved in a simulator on the original game:
+              Infinite time: Dean's RZX replayed with the POKE: the clock's
+              seconds digit (63762) held through 7039 frames; plain counts
+              down 136 times; Infinite lives: RZX with the POKE: P1 lives
+              (63797) held at 3 at the death at frame 5402 (plain 3 to 2); P2
+              not played; Advance level on pause: free run from RZX frame
+              1000, C (pause) pressed: level (63763) 1 to 2, new street and
+              clock 5:55; plain shows PAUSED; same POKE in bank 1 only pauses
 
   Hardware    untested
 

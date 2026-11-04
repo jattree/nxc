@@ -21,17 +21,21 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
-   2  Infinite energy
-   3  Infinite chicken
+   2  Infinite chicken
 
   Cheats come from the archive's POKEs for this release.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Dean Woodyatt
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
-              bleughb/nexclash, GPL-3.0-or-later)
+              bleughb/nexclash, GPL-3.0-or-later); enhanced colours from an
+              older Spec256 conversion (the MVV package), painter not
+              established
   Original    Ultimate, by its original authors. All rights to the game remain
               theirs.
 
@@ -43,19 +47,39 @@
               at the one clear when the menu goes (272 writes, frame 152,
               0x80BB unhooked): the menu icons stay as sprites a few frames.
               Otherwise matched: 37802 setups, 43126998 sprite pixels.
-              Negative controls 3/3 detected
+              Negative controls 3/3 detected; Enhanced: the painted build,
+              walk1 + walk2 (20002 frames): 37802 setups, 43126998 sprite
+              pixels (20858134 painted, compared as ink), failed only at the
+              frame-152 menu clear exactly as the default; unit 1483 cases
+              PASS, negative controls 3/3
 
   Emulator    JNext 1.1.104 headless: plain and sprites reach play; menu icons
               seen lingering over the blank screen at game start. Nobody
               played; with the loading screen: JNext 1.1.104 headless through
               the real loader, MD5 exact, reached the screen, the game and
-              play frames, viewed; no person played it
+              play frames, viewed; no person played it; JNext 1.1.104 headless
+              through the real loader, 2026-11-03: chosen in the Browser with
+              every cheat on and with Enhanced, /tmp/NEXCLASH.NEX equal to
+              apply
 
   Coverage    Dean's recording is not in our copy. Bots wander a few rooms;
               escape and game over not checked; loading screen stub added in
               bank 23, 2026-11-03: the replay and hardware lines are of the
               build without it, whose game memory the stub restores at the
-              original start; the stub is emulator-tested only
+              original start; the stub is emulator-tested only; Enhanced: 194
+              of 207 figure graphics painted, where the .256 bytes match the
+              game's (start state RAM 99.84%), 53 colours fitted to 13; the
+              set also changes 3 bytes of the engine's appear/death row
+              builder (bank 12) so painted pixels count as ink, and during
+              those effects a figure shows in its default ink; judged by eye
+              in headless JNext (menu, game start, three rooms, a sheet of
+              every figure); cheats proved in a simulator on the original
+              game: Infinite lives: simulator (Kempston wander, seed 1): DEC A
+              at 8EA7 runs at each death; lives 3->2->1->0 at frames
+              3036/4333/5713 without, held at 3 with; Infinite chicken:
+              simulator (seed 1, 8000 frames): energy refilled to 241 each
+              time the chicken is redrawn, never below 209; no life lost
+              (original loses 3 by frame 5713)
 
   Hardware    none
 
