@@ -9,17 +9,18 @@ The `.nex` you make contains the game, so it's for your own use. Share the `.nxc
 
 ## What you need
 
-- **Python 3** (3.8 or later), and nothing else: no other checkout, no packages, no settings. On Windows, install it
-  from python.org and use `py` where this page says `python3`.
+- **Python 3**, and nothing else: no NexClash checkout, no packages, no settings. Tested with 3.10 and 3.14. On
+  Windows, install it from python.org and use `py` where this page says `python3`.
 - **git**, or download this repository as a zip file:
 
 ```sh
 git clone https://github.com/jattree/nxc.git
 ```
 
-- **The patch,** a `.nxc` file, with its `.nfo` if it came with one.
-- **Your copy of the game**, as the exact file the patch was made for. The patch names it, and its `.nfo` gives its
-  MD5. Check yours matches:
+- **The patch,** a `.nxc` file, with its `.nfo`. The published ones are in `patches/`, one folder per game.
+- **Your copy of the game**, as the exact file the patch was made for. Each patch's `.nfo` names it and gives its
+  MD5. For example, `patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/…[Magic Knight 2].nfo` asks for
+  `Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80`. Check yours matches:
 
 ```sh
 md5sum "Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80"     # Linux
@@ -34,7 +35,7 @@ A different dump of the same game won't do: the tool refuses it and says which f
 Give the tool the patch on its own:
 
 ```sh
-python3 nxc/tools/nxc.py Spellbound.nxc
+python3 nxc/tools/nxc.py "nxc/patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc"
 ```
 
 It lists the colour sets, the cheats (trainers), the RAM the game needs, the game files it accepts, and how the patch
@@ -42,7 +43,7 @@ was tested:
 
 ```
 colour sets: (default), Enhanced
-trainers: Infinite strength, Infinite time, Infinite spell power, ...
+trainers: Infinite strength, Infinite time, Infinite spell power, Their strength kept, ...
 needs 352K of RAM, up to 16K bank 21: a 1MB Next has it
 accepts Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80, z80, 85709 bytes
 ```
@@ -53,6 +54,8 @@ accepts Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z8
 python3 nxc/tools/nxc.py PATCH.nxc YOUR_GAME.z80 -o Game.nex
 ```
 
+It prints what the patch offers, as above, then `wrote Game.nex` and the file's MD5.
+
 For a game on two tapes, such as a side A and a side B, give the first file, then the second with `--also`, in the order
 the patch's `accepts` line lists them:
 
@@ -61,7 +64,7 @@ python3 nxc/tools/nxc.py new_zealand_story.nxc "New Zealand Story, The (1989)(Oc
     --also "New Zealand Story, The (1989)(Ocean)(48K-128K)(Side B).tzx" -o NZS.nex
 ```
 
-It prints `wrote Game.nex` and the file's MD5. The same patch and game files always give the same `.nex`, byte for byte.
+The same patch and game files always give the same `.nex`, byte for byte.
 
 ## 3. Run it
 
@@ -76,7 +79,9 @@ patch offers:
 - ENTER or SPACE plays, with what the menu shows; BREAK resets the Next.
 
 The choices are applied to the game as it starts, and the game then starts exactly as a `.nex` built with those
-choices fixed would. Choose again every time you run it.
+choices fixed would. Choose again every time you run it. To have some choices already on when the menu comes up, give
+them when you build, as in the table below: `--colours Enhanced --trainer 1` without `--bare` makes a `.nex` whose menu
+starts with those two on.
 
 ## A .nex with the choices fixed
 
@@ -90,12 +95,12 @@ To build one without the menu, starting straight into the game with your choices
 | `--toggle NAME` | a toggle, such as smooth scrolling, where the patch has one |
 
 ```sh
-python3 nxc/tools/nxc.py Spellbound.nxc \
+python3 nxc/tools/nxc.py "nxc/patches/Spellbound (1985)(Mastertronic Added Dimension)(128K)/Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].nxc" \
     "Spellbound (1985)(Mastertronic Added Dimension)(128K)[Magic Knight 2].z80" --bare --colours Enhanced --trainer 1 -o Spellbound.nex
 ```
 
-Without `--bare`, the choices are refused, as they belong on the menu. `--original` writes the game without the patch
-(with `--trainer`, a checked snapshot of it with the cheats in).
+It prints `wrote Spellbound.nex` and its MD5. `--original` writes the game without the patch (with `--trainer`, a
+checked snapshot of it with the cheats in).
 
 ## Good to know
 
