@@ -27,7 +27,9 @@ SCREEN_SIZES = ((1, 49152), (2, 6912), (4, 12288), (8, 12288), (16, 12288)); SCR
 TARGETS_MAX = 32; FILE_NAME_MAX = 127
 SITE_TABLE_MAX = 24576  # what a Next loader holds: three 8K pages
 TRAINER_NAME_MAX = 25; TRAINER_POKES_MAX = 255; TRAINERS_SHOWN = 8; POKES_HELD = 128
-SET_NAME_MAX = 25; SETS_MAX = 256  # a set's table is held in three pages too: SITE_TABLE_MAX
+SET_NAME_MAX = 25; SETS_MAX = 256
+SET_TAG = b'SET2'; SET_STREAM = b'SEB'; SET_CRC_INDEX = 255   # a set's streams: tag SEB and its index; index its bank, or 255 for its CRC
+BITMAP = BANK // 8; SET_CHUNK_MAX = BITMAP + BANK; SET_CHUNK_HEAD = 3   # a bank's chunk: a bit for each byte, then the bytes whose bits are set
 KIND_COLOURS = 1; KIND_LANGUAGE = 2; KIND_NAMES_SET = {KIND_COLOURS: 'colours', KIND_LANGUAGE: 'language'}
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
@@ -268,10 +270,9 @@ def patched_bytes(f, game):
             b, o, l = struct.unpack_from('<BHH', table, i); i += 5 + l
             out.setdefault(b, set()).update(range(o, o + l))
     for t, body in bl:
-        if t == b'SET1':
-            e = parse_set(body)
-            for b, o, data in set_entries(unzx0(st.block(b'SET1', e['stream'])(e['data']), SITE_TABLE_MAX)):
-                out.setdefault(b, set()).update(range(o, o + len(data)))
+        if t == SET_TAG:
+            for b, chunk in read_set(st, parse_set(body))[1]:
+                out.setdefault(b, set()).update(chunk_offsets(chunk))
     for t, body in bl:
         if t == b'BNK1': out[body[0]] = None
     return out
@@ -502,7 +503,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     screen_of_out = nex_screen(out)
     chosen = [(KIND_COLOURS, n, v) for n, v in (colours or {}).items()] + [(KIND_LANGUAGE, n, v) for n, v in (languages or {}).items()]
     if len(chosen) > SETS_MAX: raise ValueError('a patch can have at most %d sets' % SETS_MAX)
-    made = []; next_choice = {}
+    made = []; next_choice = {}; sizes = []
     for stream_index, (kind, name, source) in enumerate(chosen):
         path, choice = source if isinstance(source, tuple) else (source, None)
         next_choice[kind] = next_choice.get(kind, 0) + 1
@@ -510,22 +511,18 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
         with open(path, 'rb') as g: painted = g.read()
         if painted[:512] != out[:512] or len(painted) != len(out) or nex_screen(painted) != screen_of_out:
             raise ValueError('a set must only change banks of the same build')
-        paint = nex_banks(painted); changes = bytearray(struct.pack('<I', zlib.crc32(painted))); ranges = []
-        for b in sorted(want):
-            data = want[b]; i = 0; new = paint[b]
-            while i < BANK:
-                if data[i] != new[i]:
-                    j = i
-                    while j < BANK and data[j] != new[j]: j += 1
-                    changes += struct.pack('<BHH', b, i, j - i) + new[i:j]; ranges.append((b, i, j)); i = j
-                else:
-                    i += 1
+        paint = nex_banks(painted); ranges = []; frames = b''; plain_size = held = 0
         label = name.encode('ascii')
         if not 1 <= len(label) <= SET_NAME_MAX: raise ValueError('set name %r must be 1 to %d characters' % (name, SET_NAME_MAX))
-        if len(changes) > SITE_TABLE_MAX: raise ValueError('set %r is too big for a loader' % name)
-        made.append((kind, name, ranges))
-        body = bytes((stream_index, kind, choice, BASE_SPRITE, len(label))) + label + st.block(b'SET1', stream_index)(zx0(bytes(changes)))
-        bl.append([b'SET1', body])
+        for b in want:                               # in .nex order, as a loader needs them
+            chunk = make_chunk(want[b], paint[b])
+            if chunk is None: continue
+            ranges += [(b, *r) for r in spans(chunk_offsets(chunk))]; plain_size += len(chunk); held = max(held, len(chunk))
+            stream = set_use(st, stream_index, b)(zx0(chunk))
+            frames += struct.pack('<BH', b, len(stream)) + stream
+        made.append((kind, name, sorted(ranges)))
+        body = bytes((stream_index, kind, choice, BASE_SPRITE, len(label))) + label + set_use(st, stream_index, SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(painted))) + frames
+        bl.append([SET_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges})))
     for one in made:
         for other in made:
             if one[0] < other[0]:
@@ -545,7 +542,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     if apply(f, game=game) != out: raise Wrong('the patch does not rebuild the build it was made from')
     for path, fields in more_dumps:
         with open(path, 'rb') as g: f = add_target(f, game, g.read(), kind_of_name(path), fields)
-    return f, dict(sites=count, site_bytes=len(sites), whole=[b for b, _ in whole], whole_bytes=sum(len(d) for _, d in whole))
+    return f, dict(sites=count, site_bytes=len(sites), whole=[b for b, _ in whole], whole_bytes=sum(len(d) for _, d in whole), sets=sizes)
 
 def lowest_memory(nex):
     """The highest 16K bank a .nex is known to need: the highest it lists, or past a 1MB Next's 47 if its header asks for 1792K.
@@ -602,21 +599,56 @@ def blocks(f):
     return nonce, out
 
 def parse_set(d):
-    """The clear part of a SET1 block, or Wrong."""
+    """The clear part of a SET2 block, or Wrong."""
     if len(d) < SET_FIXED or not 1 <= d[4] <= SET_NAME_MAX or len(d) < SET_FIXED + d[4]: raise Wrong('a set block is damaged')
     return dict(stream=d[0], kind=d[1], choice=d[2], base=d[3], name=d[SET_FIXED:SET_FIXED + d[4]], data=d[SET_FIXED + d[4]:])
 
-def set_entries(table):
-    """The replacements in a set's table: (bank, offset, bytes). They must be in rising order with none overlapping."""
-    if len(table) < SET_CRC: raise Wrong('a set is damaged')
-    i = SET_CRC; out = []; last = (0, 0)
-    while i < len(table):
-        if i + 5 > len(table): raise Wrong('a set is damaged')
-        b, o, l = struct.unpack_from('<BHH', table, i); i += 5
-        if not l or b >= 112 or o + l > BANK or i + l > len(table): raise Wrong('a set is out of range')
-        if (b, o) < last: raise Wrong('a set is not in order, or overlaps itself')
-        out.append((b, o, table[i:i + l])); i += l; last = (b, o + l)
-    return out
+def set_use(st, stream, index):
+    """The xor function for one of a set's streams: tag SEB and its stream index, index its bank or SET_CRC_INDEX."""
+    return st.block(SET_STREAM + bytes((stream,)), index)
+
+def make_chunk(old, new):
+    """A bank's chunk from the bank without a set and with it: a bitmap of the bytes that differ, then those bytes in
+    order. None if none differ. At most SET_CHUNK_MAX bytes, whatever the bank holds."""
+    bitmap = bytearray(BITMAP); values = bytearray()
+    for i in range(BANK):
+        if old[i] != new[i]:
+            bitmap[i >> 3] |= 0x80 >> (i & 7); values.append(new[i])
+    return bytes(bitmap) + bytes(values) if values else None
+
+def check_chunk(chunk):
+    """A chunk's shape, or Wrong: a bitmap, and exactly as many bytes after it as the bitmap has bits, at least one."""
+    if len(chunk) <= BITMAP or len(chunk) > SET_CHUNK_MAX: raise Wrong('a set is damaged')
+    if sum(bin(c).count('1') for c in chunk[:BITMAP]) != len(chunk) - BITMAP: raise Wrong('a set is damaged')
+
+def chunk_offsets(chunk):
+    """The offsets in its bank that a chunk changes, rising, each with the place of its byte in the same order."""
+    return [i * 8 + n for i, c in enumerate(chunk[:BITMAP]) if c for n in range(8) if c & 0x80 >> n]
+
+def spans(offsets):
+    """Rising offsets as (start, end) runs."""
+    out = []
+    for o in offsets:
+        if out and out[-1][1] == o: out[-1][1] = o + 1
+        else: out.append([o, o + 1])
+    return [tuple(r) for r in out]
+
+def read_set(st, e):
+    """(the CRC of the file with this set alone, [(bank, chunk)]) of a parsed SET2 block, or Wrong: its CRC, then chunks of
+    1 byte bank, 2 bytes stream length and the stream, in rising .nex order, each with a good stream and shape."""
+    d = e['data']
+    if len(d) < SET_CRC: raise Wrong('a set is damaged')
+    crc = struct.unpack('<I', set_use(st, e['stream'], SET_CRC_INDEX)(d[:SET_CRC]))[0]
+    i = SET_CRC; out = []; last = -1
+    while i < len(d):
+        if i + SET_CHUNK_HEAD > len(d): raise Wrong('a set is damaged')
+        b, n = struct.unpack_from('<BH', d, i); i += SET_CHUNK_HEAD
+        if b >= 112 or ORDER.index(b) <= last or i + n > len(d): raise Wrong('a set is out of order, or out of range')
+        last = ORDER.index(b)
+        chunk = unzx0(set_use(st, e['stream'], b)(d[i:i + n]), SET_CHUNK_MAX); i += n
+        check_chunk(chunk)
+        out.append((b, chunk))
+    return crc, out
 
 def first_overlap(a, b):
     """The first place two sorted lists of (bank, start, end) overlap, or None. One pass of each."""
@@ -630,7 +662,7 @@ def first_overlap(a, b):
 
 def sets(f):
     """Every set block, readable without the game: stream, kind, choice, base, name, data."""
-    return [parse_set(d) for t, d in blocks(f)[1] if t == b'SET1']
+    return [parse_set(d) for t, d in blocks(f)[1] if t == SET_TAG]
 
 def offered(f, kind):
     """The sets of a kind a loader offers, in file order: those whose base is the sprite build."""
@@ -662,7 +694,7 @@ def check_structure(bl):
             if e['index'] != count or count >= TARGETS_MAX: raise Wrong('a target block is out of place')
             count += 1; kinds += e['kind'] in KIND_NAMES
         elif t == b'TRN1': parse_trn1(data)
-        elif t == b'SET1':
+        elif t == SET_TAG:
             index = parse_set(data)['stream']
             if index in indices: raise Wrong('a set repeats a stream index')
             indices.add(index)
@@ -740,11 +772,11 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
         if wanted is None: continue
         found = [e for e in offered(f, kind) if e['name'] == wanted.encode()]
         if not found: raise Wrong('this patch has no %s set called %s' % (KIND_NAMES_SET[kind], wanted))
-        one = unzx0(st.block(b'SET1', found[0]['stream'])(found[0]['data']), SITE_TABLE_MAX)
-        selected.append((one, set_entries(one)))
+        selected.append(read_set(st, found[0]))
     if len(selected) == 2:
-        spans = [[(b, o, o + len(data)) for b, o, data in entries] for _, entries in selected]
-        if first_overlap(*spans): raise Wrong('two sets chosen together change the same bytes')
+        other = dict(selected[1][1])
+        for b, chunk in selected[0][1]:
+            if b in other and any(x & y for x, y in zip(chunk[:BITMAP], other[b][:BITMAP])): raise Wrong('two sets chosen together change the same bytes')
     if banks is None: banks = snapshot_of(game, opened.target['kind']).banks
     have = {k_: bytearray(v) for k_, v in banks.items()}
     if table:
@@ -766,11 +798,11 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
             else: raise Wrong('bank %d is in neither the patch nor the snapshot' % b)
     if len(out) != size: raise Wrong('the rebuilt .nex fails its checksum')
     expected = crc
-    for one, entries in selected:
-        expected ^= struct.unpack_from('<I', one)[0] ^ crc
-        for b, o, data in entries:
+    for set_crc, chunks in selected:
+        expected ^= set_crc ^ crc
+        for b, chunk in chunks:
             if b not in offs: raise Wrong('a set is out of range')
-            out[offs[b] + o:offs[b] + o + len(data)] = data
+            for place, o in enumerate(chunk_offsets(chunk), BITMAP): out[offs[b] + o] = chunk[place]
     if zlib.crc32(bytes(out)) != expected: raise Wrong('the rebuilt .nex fails its checksum')
     for b, o, v in chosen_pokes(f, chosen):
         if b not in offs: raise Wrong('a trainer POKE is in a bank the build does not have')
@@ -929,11 +961,13 @@ def run(argv):
                     build=a.build or os.path.splitext(os.path.basename(a.nex))[0], nex_md5=hashlib.md5(built).hexdigest())
         if a.credit: info['credit'] = a.credit
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))
-        f, _ = make(a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank)
+        f, made = make(a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank)
         for key, value in (('publisher', a.publisher), ('patch_by', a.patch_by), ('colours_by', a.colours_by)):
             if value and inf1_value(f, key) is None: raise Wrong('the menu names must end within the first %d bytes of INF1' % TEXT_READ)
         with open(a.output, 'wb') as g: g.write(f)
         print('rebuilds it exactly, MD5', info['nex_md5']); print(memory_text(dict(blocks(f)[1])[b'OPT1'][2]))
+        for one in made["sets"]:
+            print('set %s: %d bytes decoded in %d banks, %d at most at once, %d stored' % (one['name'], one['decoded'], one['banks'], one['largest'], one['stored']))
         print('wrote', a.output, len(f), 'bytes')
         return
     if argv[:1] == ['add-dump']:

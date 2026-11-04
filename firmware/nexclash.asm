@@ -18,8 +18,10 @@
 ; and banks written in .nex order as /tmp/NEXCLASH.NEX, whose CRC and length must
 ; match OUT1 or it is deleted. %X is left as 1.
 ;
-; Sets chosen (SET1, at most one of each kind): as above, with each applied to each
-; bank, the CRC run over the result, the POKEs after that. As sets chosen together
+; Sets chosen (SET2, at most one of each kind): as above, with each applied to each
+; bank, the CRC run over the result, the POKEs after that. A set is held a bank at a
+; time, so its size is not limited by memory: every chunk is decoded and checked once
+; before any file is made, then again as its bank is written. As sets chosen together
 ; touch different bytes, the CRC that result must have comes from OUT1's and theirs.
 ; It and the length must match, or the file is deleted.
 ;
@@ -47,10 +49,10 @@
 ;   0xA000-0xBFFF  IOPAGE: header, POKEs, bank index, CRC tables, file buffer
 ;                  (one page), or one of the pages of a table
 ;
-; SIT1 and each chosen SET1 are decoded with their three pages each at
-; 0x6000-0xBFFF, reading through the small buffer in the 8K. A set's three
-; pages are allocated only when it is chosen. All addresses given to
-; NextZXOS lie below 0xC000.
+; SIT1, and each chunk of each chosen SET2, are decoded with their three pages each
+; at 0x6000-0xBFFF, reading through the small buffer in the 8K. A set's three pages
+; hold one chunk at a time, and are allocated only when it is chosen. All addresses
+; given to NextZXOS lie below 0xC000.
 ;
 ; No Z80N-only instruction is used, so that it runs on a plain Z80 emulator in
 ; tests/test_nexclash_dot.py; NextREGs are written through their ports.
@@ -97,6 +99,9 @@ PAGES           equ 6
 SET_PAGES       equ 3                       ; more, for each set chosen
 KINDS           equ 2                       ; colours, language
 SET_FIXED       equ 5                       ; stream index, kind, choice, base, name's length
+SET_CRC_INDEX   equ 255                     ; the stream of a set's CRC; a chunk's is its bank
+BITMAP          equ 2048                    ; a chunk's first part: one bit for each byte of a bank
+REC             equ 9                       ; a chosen set's cursor: position 4, left 4, stream 1
 BASE_SPRITE     equ 1                       ; the sprite build: the one base a set here may have
 CREDIT_NAME     equ 32                      ; of a name, as "Colours: " leaves 32
 TRAINERS_SHOWN  equ 8
@@ -152,7 +157,7 @@ rc4_base        equ $AA00                   ; in the I/O page
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A5E
+vars            equ $3A4F
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -187,7 +192,10 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     set_counts, KINDS           ; how many sets each kind offers
         VAR     set_choices, KINDS          ; 0: off; n: its nth
         VAR     set_bases, 2 * KINDS        ; the pages in page_list of each chosen; 0: none
-        VAR     set_lens, 2 * KINDS         ; each table's length
+        VAR     set_lens, 2 * KINDS         ; the length of each one's chunk for this bank; 0: none
+        VAR     set_recs, REC * KINDS       ; each one's next chunk
+        VAR     set_crc_too, 1
+        VAR     set_tag, 4                  ; a set's streams: "SEB", then its stream index
         VAR     mode_changed, 1
         VAR     mode_old_layer, 1
         VAR     mode_old_sub, 1
@@ -227,15 +235,12 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     scr_chunks, 1
         VAR     scr_mask, 1
         VAR     scr_now, 1
-        VAR     prev_bank, 1                ; a set's last entry, in the checking walk
-        VAR     prev_end, 2
         VAR     cur_kind, 1
         VAR     ram_bank, 1                 ; OPT1's highest 16K bank
         VAR     page_goal, 1
         VAR     next_base, 2
         VAR     a_off, 2
         VAR     b_off, 2
-        VAR     a_rec, 5                    ; bank, start, end
         VAR     cur_n, 1
         VAR     cur_stream, 1
         display "variables end ", /h, var_at
@@ -273,81 +278,8 @@ var_at          =   $3F00
 
 ; ================================================================= resident
 
-start:
-        ld      a,i                         ; P/V = IFF2: were interrupts on?
-        ld      a,0
-        jp      po,.di
-        inc     a
-.di:    push    af
-        push    hl
-        ld      hl,vars
-        ld      de,vars+1
-        ld      bc,vars_end - vars - 1
-        ld      (hl),0
-        ldir
-        pop     hl
-        pop     af
-        ld      (interrupts),a
-        ld      (entry_sp),sp
-        ld      a,h
-        or      l
-        jp      z,usage
-        call    parse_name
-        jp      c,usage
-
-        rst     $08
-        db      M_DOSVERSION
-        ld      hl,msg_no_os
-        jp      c,fail_hl
-        or      a
-        jp      nz,fail_hl
-
-        ld      a,NR_SPEED                  ; 28 MHz while it works
-        call    nr_read
-        and     3
-        or      $80
-        ld      (speed),a
-        ld      a,NR_SPEED
-        ld      e,3
-        call    nr_write
-        ld      hl,mmu3
-        ld      b,3
-        ld      a,NR_MMU3
-.mmu:   push    bc
-        push    af
-        call    nr_read
-        ld      (hl),a
-        inc     hl
-        pop     af
-        inc     a
-        pop     bc
-        djnz    .mmu
-
-        ld      a,'*'
-        ld      hl,patch_path
-        ld      b,FA_READ
-        rst     $08
-        db      F_OPEN
-        ld      hl,msg_no_patch
-        jp      c,fail_hl
-        ld      (ph),a
-        ld      hl,patch_path               ; never read what would be written over
-        call    check_alias
-        ld      a,(ph)
-        ld      hl,statbuf
-        rst     $08
-        db      F_FSTAT
-        jp      c,bad_patch
-        ld      hl,statbuf+7
-        ld      de,psize
-        call    copy4
-
-        call    read_header
-        call    walk_first
-        call    build_game_b
-        call    next_game
-        call    c,refuse_game
-        call    menu
+start:  jp      start_menu                  ; all up to the menu is read over later
+after_menu:
         call    load_overlay
         jp      chosen
 
@@ -573,7 +505,7 @@ find_set:
         call    walk_begin
 .next:  call    walk_next
         jp      z,bad_patch
-        ld      de,magic_set1
+        ld      de,magic_set2
         call    tag_is
         jr      nz,.next
         ld      hl,tagbuf
@@ -1122,7 +1054,7 @@ magic_out1:     db "OUT1"
 magic_nex1:     db "NEX1"
 magic_sit1:     db "SIT1"
 magic_tgt1:     db "TGT1"
-magic_set1:     db "SET1"
+magic_set2:     db "SET2"
 ov_tag_want:    db "NXQ1"
 key_file:       db "file=",0
 str_tmp:        db "C:/TMP/",0
@@ -1146,6 +1078,84 @@ msg_level:      db "Patch needs a newer .NEXCLAS", 'H' | $80
 ov_start_at:
 
 ; ================================================ only up to the menu
+
+; Everything before the menu, on the caller's stack and paging.
+start_menu:
+        ld      a,i                         ; P/V = IFF2: were interrupts on?
+        ld      a,0
+        jp      po,.di
+        inc     a
+.di:    push    af
+        push    hl
+        ld      hl,vars
+        ld      de,vars+1
+        ld      bc,vars_end - vars - 1
+        ld      (hl),0
+        ldir
+        pop     hl
+        pop     af
+        ld      (interrupts),a
+        ld      (entry_sp),sp
+        ld      a,h
+        or      l
+        jp      z,usage
+        call    parse_name
+        jp      c,usage
+
+        rst     $08
+        db      M_DOSVERSION
+        ld      hl,msg_no_os
+        jp      c,fail_hl
+        or      a
+        jp      nz,fail_hl
+
+        ld      a,NR_SPEED                  ; 28 MHz while it works
+        call    nr_read
+        and     3
+        or      $80
+        ld      (speed),a
+        ld      a,NR_SPEED
+        ld      e,3
+        call    nr_write
+        ld      hl,mmu3
+        ld      b,3
+        ld      a,NR_MMU3
+.mmu:   push    bc
+        push    af
+        call    nr_read
+        ld      (hl),a
+        inc     hl
+        pop     af
+        inc     a
+        pop     bc
+        djnz    .mmu
+
+        ld      a,'*'
+        ld      hl,patch_path
+        ld      b,FA_READ
+        rst     $08
+        db      F_OPEN
+        ld      hl,msg_no_patch
+        jp      c,fail_hl
+        ld      (ph),a
+        ld      hl,patch_path               ; never read what would be written over
+        call    check_alias
+        ld      a,(ph)
+        ld      hl,statbuf
+        rst     $08
+        db      F_FSTAT
+        jp      c,bad_patch
+        ld      hl,statbuf+7
+        ld      de,psize
+        call    copy4
+
+        call    read_header
+        call    walk_first
+        call    build_game_b
+        call    next_game
+        call    c,refuse_game
+        call    menu
+        jp      after_menu
 
 ; 38 bytes: magic, version, flags, nonce, check. Flags must be 0: this reader knows of none.
 read_header:
@@ -1202,7 +1212,7 @@ walk_first:
         ld      de,magic_trn1
         call    tag_is
         call    z,note_trainer
-        ld      de,magic_set1
+        ld      de,magic_set2
         call    tag_is
         call    z,note_set
         ld      de,magic_scr1_p
@@ -1584,7 +1594,7 @@ note_trainer:
         ld      (ix+6),h
         ret
 
-; A SET1 block, the file at its data: stream index, kind, choice, base, a name of 1 to
+; A SET2 block, the file at its data: stream index, kind, choice, base, a name of 1 to
 ; 25, which must fit. A stream index given twice would use one stream twice. A kind or
 ; base this loader cannot apply is not offered, but is checked all the same.
 note_set:
@@ -2396,8 +2406,7 @@ nexclash_chosen:
         call    map_iopage
         call    all_banks_available
         call    check_screen
-        call    decode_sets
-        call    check_overlap
+        call    check_sets
         xor     a
         call    load_pokes
         ld      hl,nex_out_name
@@ -2414,18 +2423,9 @@ nexclash_chosen:
         call    write_screen
 
         ld      b,0                         ; .nex order: 5,2,0,1,3,4,6,7,8...
-.order: ld      a,b
-        ld      (cur_bank),a
-        push    bc
-        cp      8
-        jr      nc,.big
-        ld      e,a
-        ld      d,0
-        ld      hl,nex_order
-        add     hl,de
-        ld      a,(hl)
-        ld      (cur_bank),a
-.big:   ld      a,(z80_v1)                  ; a v1 file is one stream: 5, 2, 0
+.order: push    bc
+        call    order_bank
+        ld      a,(z80_v1)                  ; a v1 file is one stream: 5, 2, 0
         or      a
         jr      z,.not_v1
         pop     bc
@@ -2447,7 +2447,8 @@ nexclash_chosen:
         call    map_iopage
         jr      .emit
 .patch: call    decode_patch_bank
-.emit:  call    apply_sets
+.emit:  call    bank_sets
+        call    apply_sets
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
@@ -2491,6 +2492,19 @@ check_result:
 .wrong: ld      hl,msg_bad_result
         jp      fail_hl
 
+; The Bth bank in .nex order into cur_bank, and A. Keeps BC.
+order_bank:
+        ld      a,b
+        ld      (cur_bank),a
+        cp      8
+        ret     nc
+        ld      e,a
+        ld      d,0
+        ld      hl,nex_order
+        add     hl,de
+        ld      a,(hl)
+        ld      (cur_bank),a
+        ret
 nex_order:
         db      5, 2, 0, 1, 3, 4, 6, 7
 
@@ -3665,10 +3679,42 @@ decode_sites:
         ret     nc
         jp      bad_patch
 
-; The chosen sets: each decoded, every entry checked, and what its CRC says of the output
-; taken in, all before any file is made. As they touch different bytes and the file's
-; length and layout are the same: CRC(all) = CRC(base) XOR each (CRC(set) XOR CRC(base)).
-decode_sets:
+; The chosen sets, before any file is made: each one's CRC taken into what the output must
+; be, then every chunk of each decoded and checked in the order they will be needed. A chunk
+; in the wrong order, or for a bank the header does not list, is never reached, and being left
+; over is damage. As they touch different bytes and the file's length and layout are the same:
+; CRC(all) = CRC(base) XOR each (CRC(set) XOR CRC(base)).
+check_sets:
+        ld      a,(set_choices)
+        ld      hl,set_choices+1
+        or      (hl)
+        ret     z
+        ld      a,1
+        call    sets_open
+        ld      b,0
+.order: push    bc
+        call    order_bank
+        call    header_has
+        call    nz,bank_sets
+        pop     bc
+        inc     b
+        ld      a,b
+        cp      112
+        jr      c,.order
+        ld      hl,set_recs+4
+        call    is_zero32
+        jp      nz,bad_patch
+        ld      hl,set_recs+REC+4
+        call    is_zero32
+        jp      nz,bad_patch
+        xor     a                           ; from the start again, to write
+; Each chosen set's cursor at its first chunk, and its pages. A not 0: its CRC taken in too.
+sets_open:
+        ld      (set_crc_too),a
+        ld      hl,'S' + 'E' * 256
+        ld      (set_tag),hl
+        ld      a,'B'
+        ld      (set_tag+2),a
         ld      hl,page_list+3+SET_PAGES
         ld      (next_base),hl
         xor     a
@@ -3687,7 +3733,7 @@ decode_sets:
         add     hl,de
         ld      (next_base),hl
         call    find_set
-        ld      a,(tagbuf+4)                ; past its fixed part and name: the stream
+        ld      a,(tagbuf+4)                ; past its fixed part and name
         add     a,SET_FIXED
         ld      l,a
         ld      h,0
@@ -3700,37 +3746,26 @@ decode_sets:
         ld      hl,blk_len
         ld      de,left
         call    sub32
-        ld      a,(cur_stream)
-        ld      c,a
-        ld      hl,blk_pos
-        ld      de,magic_set1
-        call    decode_table
-        ld      de,4                        ; a CRC, at least
-        or      a
-        sbc     hl,de
+        ld      hl,blk_len                  ; a CRC, at least
+        ld      de,four
+        call    sub32
         jp      c,bad_patch
-        add     hl,de
-        push    hl
-        ld      hl,WORK                     ; its CRC, while its pages are mapped
-        ld      de,tmp5
-        call    copy4
-        call    map_std
-        ld      a,(cur_kind)
-        add     a,a
-        ld      c,a
-        ld      b,0
-        ld      hl,set_lens
-        add     hl,bc
-        pop     de
-        ld      (hl),e
-        inc     hl
-        ld      (hl),d
-        ld      hl,set_bases
-        add     hl,bc
-        ld      de,(t_base)
-        ld      (hl),e
-        inc     hl
-        ld      (hl),d
+        ld      a,(set_crc_too)
+        or      a
+        jr      z,.past
+        ld      a,(cur_stream)
+        ld      (set_tag+3),a
+        ld      de,set_tag
+        ld      c,SET_CRC_INDEX
+        call    stream_open
+        ld      hl,blk_pos
+        call    seek_patch
+        ld      hl,tmp5
+        ld      bc,4
+        call    read_patch
+        ld      hl,tmp5
+        ld      bc,4
+        call    rc4_xor
         ld      hl,want
         ld      de,tmp5
         ld      bc,out_buf
@@ -3748,22 +3783,40 @@ decode_sets:
         pop     af
         dec     a
         jr      nz,.xor
+.past:  ld      hl,blk_pos
+        ld      de,four
+        call    add32
+        call    rec_of_kind
+        ex      de,hl
+        ld      hl,blk_pos
+        ld      bc,8
+        ldir
+        ld      a,(cur_stream)
+        ld      (de),a
+        ld      a,(cur_kind)
+        add     a,a
+        ld      c,a
+        ld      b,0
+        ld      hl,set_bases
+        add     hl,bc
+        ld      de,(t_base)
+        ld      (hl),e
+        inc     hl
+        ld      (hl),d
 .none:  ld      a,(cur_kind)
         inc     a
         cp      KINDS
         jp      c,.kind
-        xor     a
-.walk:  ld      (cur_kind),a
-        call    set_of_kind
-        jr      z,.next
-        ld      a,$ff
-        call    table_walk_set
-        call    map_iopage
-.next:  ld      a,(cur_kind)
-        inc     a
-        cp      KINDS
-        jr      c,.walk
-        jp      map_iopage
+        ret
+
+; HL at kind (cur_kind)'s cursor.
+rec_of_kind:
+        ld      hl,set_recs
+        ld      a,(cur_kind)
+        or      a
+        ret     z
+        ld      hl,set_recs+REC
+        ret
 
 ; t_base and t_len for kind (cur_kind). Z when it is not chosen.
 set_of_kind:
@@ -3787,115 +3840,207 @@ set_of_kind:
         or      c
         ret
 
-; Sets chosen together must touch different bytes, even if they write the same: that is what
-; lets their CRCs be combined. Their tables are sorted, so each pair needs one pass of both.
-check_overlap:
-        ld      hl,set_bases
-        ld      a,(hl)
-        inc     hl
-        or      (hl)
-        ret     z
-        ld      hl,set_bases+2
-        ld      a,(hl)
-        inc     hl
-        or      (hl)
-        ret     z
-        ld      hl,4
-        ld      (a_off),hl
-        ld      (b_off),hl
-.loop:  xor     a
-        ld      hl,(a_off)
-        call    read_entry
-        jr      nc,.done
-        ld      (a_rec),a
-        ld      (a_rec+1),de
-        ld      (a_rec+3),hl
-        ld      a,1
-        ld      hl,(b_off)
-        call    read_entry
-        jr      nc,.done
-        ld      c,a
-        ld      a,(a_rec)
-        cp      c
-        jr      c,.next_a
-        jr      nz,.next_b
-        push    hl                          ; the same bank. A ends at or before B's start?
-        ld      hl,(a_rec+3)
-        or      a
-        sbc     hl,de
-        pop     hl
-        jr      z,.next_a
-        jr      c,.next_a
-        ld      bc,(a_rec+1)                ; B ends at or before A's start?
-        or      a
-        sbc     hl,bc
-        jr      z,.next_b
-        jr      c,.next_b
-        jp      bad_patch
-.next_a:
-        ld      hl,(a_rec+3)
-        ld      de,(a_rec+1)
-        or      a
-        sbc     hl,de
-        ld      de,(a_off)
-        add     hl,de
-        ld      de,5
-        add     hl,de
-        ld      (a_off),hl
-        jp      .loop
-.next_b:
-        ld      hl,(site_len)
-        ld      de,(b_off)
-        add     hl,de
-        ld      de,5
-        add     hl,de
-        ld      (b_off),hl
-        jp      .loop
-.done:  jp      map_iopage
-
-; Carry: kind A's table has an entry at offset HL. A its bank, DE its start, HL its end,
-; site_len its length.
-read_entry:
-        ld      (t_off),hl
-        ld      (cur_kind),a
+; Bank (cur_bank): the chunk of each chosen set that has one, decoded and checked. Sets chosen
+; together must touch different bytes, even if they write the same: that is what lets their
+; CRCs be combined. So no bit may be set in both bitmaps.
+bank_sets:
+        xor     a
+.kind:  ld      (cur_kind),a
         call    set_of_kind
-        ld      hl,(t_len)
-        ld      de,(t_off)
+        call    nz,next_chunk
+        ld      a,(cur_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.kind
+        ld      hl,(set_lens)
+        ld      a,h
+        or      l
+        ret     z
+        ld      hl,(set_lens+2)
+        ld      a,h
+        or      l
+        ret     z
+        ld      hl,(set_bases)
+        ld      e,(hl)
+        ld      a,NR_MMU4
+        call    nr_write
+        ld      hl,(set_bases+2)
+        ld      a,(hl)
+        call    map_slot5
+        ld      hl,$8000
+        ld      de,$a000
+        ld      bc,BITMAP
+.both:  ld      a,(de)
+        and     (hl)
+        jp      nz,bad_patch
+        inc     hl
+        inc     de
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.both
+        jp      map_std
+
+; Kind (cur_kind)'s next chunk, if it is for bank (cur_bank), into its pages: 1 byte bank, 2
+; bytes stream length, the stream. It must be a bitmap and exactly as many bytes as the bitmap
+; has bits, at least one. t_base is the kind's. Its length goes in set_lens, or 0 if none.
+next_chunk:
+        ld      hl,0
+        call    set_chunk_len
+        call    rec_of_kind
+        ld      de,blk_pos
+        ld      bc,8
+        ldir
+        ld      a,(hl)
+        ld      (set_tag+3),a
+        ld      hl,blk_len
+        call    is_zero32
+        ret     z
+        ld      hl,blk_len
+        ld      de,three
+        call    sub32
+        jp      c,bad_patch
+        ld      hl,blk_pos
+        call    seek_patch
+        ld      hl,tagbuf
+        ld      bc,3
+        call    read_patch
+        ld      a,(cur_bank)
+        ld      hl,tagbuf
+        cp      (hl)
+        ret     nz
+        ld      hl,blk_pos
+        ld      de,three
+        call    add32
+        ld      hl,(tagbuf+1)
+        ld      (work32),hl
+        ld      hl,0
+        ld      (work32+2),hl
+        ld      hl,blk_len                  ; it must fit in what is left of the block
+        ld      de,work32
+        call    sub32
+        jp      c,bad_patch
+        ld      hl,blk_pos                  ; the cursor goes past it
+        ld      de,work32
+        call    add32
+        call    rec_of_kind
+        ex      de,hl
+        ld      hl,blk_pos
+        ld      bc,8
+        ldir
+        ld      hl,blk_pos                  ; and the stream is the source
+        ld      de,work32
+        call    sub32
+        ld      hl,work32
+        ld      de,blk_len
+        call    copy4
+        ld      a,(cur_bank)
+        ld      c,a
+        ld      hl,blk_pos
+        ld      de,set_tag
+        call    decode_table
+        push    hl
+        ld      de,BITMAP+1
         or      a
         sbc     hl,de
-        ret     z                           ; carry clear
-        call    t_seek
-        call    t_get
-        ld      (site_bank),a
-        call    t_get
-        ld      (site_off),a
-        call    t_get
-        ld      (site_off+1),a
-        call    t_get
-        ld      (site_len),a
-        call    t_get
-        ld      (site_len+1),a
-        ld      hl,(site_off)
-        ld      de,(site_len)
-        add     hl,de
-        ld      de,(site_off)
-        ld      a,(site_bank)
-        scf
+        jp      c,bad_patch
+        ex      de,hl
+        inc     de                          ; DE: the bytes after the bitmap
+        ld      hl,WORK
+.byte:  ld      a,(hl)
+.bit:   add     a,a
+        jr      nc,.clear
+        dec     de
+.clear: jr      nz,.bit
+        inc     hl
+        ld      a,h
+        cp      high (WORK+BITMAP)
+        jr      nz,.byte
+        ld      a,d
+        or      e
+        jp      nz,bad_patch
+        call    map_std
+        pop     hl
+; HL is kind (cur_kind)'s chunk's length.
+set_chunk_len:
+        ex      de,hl
+        ld      a,(cur_kind)
+        add     a,a
+        ld      c,a
+        ld      b,0
+        ld      hl,set_lens
+        add     hl,bc
+        ld      (hl),e
+        inc     hl
+        ld      (hl),d
         ret
 
-; Bank (cur_bank) with each chosen set applied.
+; Bank (cur_bank) with each chosen set's chunk applied. A set bit in the bitmap takes the next
+; byte: nothing else says where a byte goes, so no chunk can reach outside WORK.
 apply_sets:
         xor     a
 .kind:  ld      (cur_kind),a
         call    set_of_kind
         jr      z,.next
-        ld      a,(cur_bank)
-        call    table_walk_set
+        ld      hl,(t_len)
+        ld      a,h
+        or      l
+        call    nz,apply_chunk
 .next:  ld      a,(cur_kind)
         inc     a
         cp      KINDS
         jr      c,.kind
         jp      map_iopage
+
+apply_chunk:
+        ld      hl,0
+        ld      (a_off),hl
+        ld      hl,BITMAP
+        ld      (b_off),hl
+        ld      de,WORK
+.byte:  push    de
+        ld      hl,(a_off)
+        ld      (t_off),hl
+        inc     hl
+        ld      (a_off),hl
+        call    t_seek
+        ld      c,(hl)
+        ld      a,c
+        or      a
+        jr      z,.none
+        push    bc
+        ld      hl,(b_off)
+        ld      (t_off),hl
+        call    t_seek
+        pop     bc
+        pop     de
+        ld      b,8
+.bit:   sla     c
+        jr      nc,.keep
+        call    t_get
+        ld      (de),a
+.keep:  inc     de
+        djnz    .bit
+        ld      a,(t_page)                  ; where the next value is, as an offset
+        rrca
+        rrca
+        rrca
+        ld      b,a
+        ld      a,h
+        and     $1f
+        or      b
+        ld      h,a
+        ld      (b_off),hl
+        jr      .more
+.none:  pop     de
+        ex      de,hl
+        ld      bc,8
+        add     hl,bc
+        ex      de,hl
+.more:  ld      a,(a_off+1)
+        cp      high BITMAP
+        jr      nz,.byte
+        ret
 
 ; ---------------------------------------------------------------- the patch's banks
 
@@ -4496,21 +4641,8 @@ t_get:  ld      a,(hl)
         pop     af
         ret
 
-; Walk a table. A=$FF: check every entry. Otherwise apply the entries of bank A
+; Walk the sites. A=$FF: check every entry. Otherwise apply the entries of bank A
 ; to WORK. Leaves a table page mapped; the caller maps the I/O page again.
-; A set has the same entries as the sites, with no count: CRC and length, then
-; entries up to its end. Its banks are those the header lists, not the game's.
-table_walk_set:
-        ld      (cur_site),a
-        ld      hl,$ffff
-        ld      (t_count),hl
-        xor     a
-        ld      (prev_bank),a
-        ld      h,a
-        ld      l,a
-        ld      (prev_end),hl
-        ld      hl,4
-        jr      table_walk
 sites_walk:
         ld      (cur_site),a
         ld      hl,(sit_len)
@@ -4531,16 +4663,7 @@ sites_walk:
         ld      hl,2
 table_walk:
         ld      (t_off),hl
-.site:  ld      a,(t_base)
-        cp      low (page_list+3)
-        jr      z,.counted
-        ld      hl,(t_len)                  ; a set ends with its table
-        ld      de,(t_off)
-        or      a
-        sbc     hl,de
-        jp      z,.end
-.counted:
-        ld      hl,(t_count)
+.site:  ld      hl,(t_count)
         ld      a,h
         or      l
         jp      z,.end
@@ -4571,37 +4694,7 @@ table_walk:
         inc     a
         jr      nz,.bank_done
         call    map_iopage
-        ld      a,(t_base)
-        cp      low (page_list+3)
         ld      a,(site_bank)
-        jr      z,.sit_bank
-        cp      112
-        jp      nc,bad_patch
-        call    header_has
-        jp      z,bad_patch
-        ld      a,(site_len)                ; no empty entry, and in rising order
-        ld      hl,site_len+1
-        or      (hl)
-        jp      z,bad_patch
-        ld      a,(prev_bank)
-        ld      c,a
-        ld      a,(site_bank)
-        cp      c
-        jp      c,bad_patch
-        jr      nz,.rising
-        ld      hl,(site_off)
-        ld      de,(prev_end)
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-.rising:
-        ld      (prev_bank),a
-        ld      hl,(site_off)
-        ld      de,(site_len)
-        add     hl,de
-        ld      (prev_end),hl
-        jr      .remap
-.sit_bank:
         ld      c,a
         cp      8
         jp      nc,bad_patch

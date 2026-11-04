@@ -19,7 +19,7 @@ A patch does not contain the game file or repeat its memory: a loader takes the 
 - the `.nex` header;
 - the bytes each hook writes over the game (`SIT1`);
 - whole banks the game does not supply (`BNK1`): start-up code, hooks and sprites. **Sprite data is derived from the game's graphics**, so a patch holds a transformed form of part of the game, encrypted. It is not free of the game's content;
-- sets (`SET1`), such as colours and languages, which may hold repainted graphics, translated text and new code;
+- sets (`SET2`), such as colours and languages, which may hold repainted graphics, translated text and new code;
 - a loading screen, if there is one (`SCR1`). **Such a screen, unlike sprites derived from the game, may be art the player's own file does not contain, so a patch with one holds that art, encrypted.**
 
 Encryption is not protection from someone who owns an accepted dump: see below.
@@ -79,7 +79,7 @@ An extra block must never be required to play. A patch that truly needs more tha
 | `SIT1` | once | yes | Patch sites |
 | `BNK1` | zero or more | yes, after its first 3 bytes | One whole bank |
 | `SCR1` | one per 16K of screen | yes, after its first 3 bytes | Part of the `.nex`'s loading screen |
-| `SET1` | no, zero or more | yes, after its name | One choice of a kind: a colour set, a language |
+| `SET2` | no, zero or more | yes, after its name and the heads of its chunks | One choice of a kind: a colour set, a language |
 | `TRN1` | no, zero or more | no | One trainer: its name and its POKEs |
 
 A second `OPT1`, `INF1`, `OUT1`, `NEX1` or `SIT1` is damage at once, however many there are.
@@ -114,7 +114,7 @@ Exactly 3 bytes. Byte 0: the loader level this patch needs. Byte 1: flags, reser
 
 A loader that is shown a patch of its level or below can do all of it. `SCR1` makes a level necessary rather than optional because a loader that skipped it would write a wrong `.nex`: a patch with a `SCR1` that says level 1 is damage. A `.sna` target in a patch that also has a `.z80` target does not raise the level, as a level 1 or 2 loader skips the entry and uses the others.
 
-`tools/nxc.py` is level 3 and `firmware/nexclash.asm` is level 2. Both refuse level 4.
+`tools/nxc.py` is level 3 and `firmware/nexclash.asm` is level 2. Both refuse level 4. `SET2` raises no level: it is an extra, so a loader that does not know it skips it and offers no such line, and the game still plays.
 
 **Memory.** Byte 2 lets a loader on a smaller machine refuse rather than start a game that breaks. A writer works it out from the `.nex`: the highest bank the header lists, or 48 if the header's byte 8 asks for 1792K, whichever is higher. That is all the file shows: a build may use banks at run time that it does not load, such as Layer 2 buffers, so an author may raise it, and nothing can lower it. A reader refuses a value below a bank the header lists.
 
@@ -218,7 +218,7 @@ A bank the game does not supply: start-up code, hooks, sprites.
 
 A reader refuses a length over 16,384, a bank number of 112 or above, a bank given twice, or a bank the `.nex` header does not list. Such an unlisted block is never used, and refusing it means two readers cannot differ over whether its contents matter. A reader must decompress into a buffer that a wrong length cannot escape.
 
-Every ZX0 stream, here and in `NEX1`, `SIT1`, `SCR1` and `SET1`, must make exactly the length expected, no more, must copy only from within what it has made, and must end with its end marker on its last byte. Anything else is damage.
+Every ZX0 stream, here and in `NEX1`, `SIT1`, `SCR1` and `SET2`, must make exactly the length expected, no more, must copy only from within what it has made, and must end with its end marker on its last byte. Anything else is damage.
 
 ### SCR1: a loading screen
 
@@ -246,25 +246,46 @@ So a loader needs no more than the 16K it already has for a bank. A reader refus
 
 **What a player sees depends on the build, not on this format.** `.nexload` loads the listed banks after the screen, in `.nex` order, so a ULA, lo-res or Timex screen, which lives in bank 5, is written over as soon as bank 5 loads, which is first; and Layer 2 lives in banks 9, 10 and 11, so any of those the build lists overwrites its third of the screen. In JNext a Layer 2 screen on a build listing banks 10 and 11 kept only its top third, and a ULA screen on a build with a bank 5 was not seen at all in frames a few apart; on a build listing neither, each stayed up and looked right. Showing a screen while the loader builds is a separate idea, and is not part of this.
 
-### SET1: a choice of a kind
+### SET2: a choice of a kind
 
-An optional set of byte replacements, on the menu. One block per set, replacing the `PAL1` of earlier drafts, which no patch that left this project's hands ever used.
+An optional set of byte replacements, on the menu: a colour set, a language. One block per set. It replaces `SET1`, whose one table had to fit in the loader's memory; no patch that left this project's hands ever used that, and a reader now skips it as it does any other tag it does not know. A patch that held one is made again from its builds. **A set is always an option on the menu, however big. A base build never has to carry someone's colours for them to fit.**
 
 | Offset | Size | Field |
 |---|---|---|
-| 0 | 1 | Stream index, in the clear. **Unique among all `SET1` blocks**, of any kind or base, or two would use one stream. A repeat is damage |
+| 0 | 1 | Stream index, in the clear. **Unique among all `SET2` blocks**, of any kind or base, or two would use one stream. A repeat is damage |
 | 1 | 1 | Kind: 1 colours, 2 language. Others are reserved |
 | 2 | 1 | Choice ID: which choice this is within its kind. It stays the same when a patch is remade, and is shared by the versions of one choice on different bases. A writer keeps kind, choice and base unique together |
 | 3 | 1 | Base: 1 the sprite build, 2 the plain game (reserved: see "Snapshot output") |
 | 4 | 1 | Length of the name, 1 to 25 |
 | 5 | | The name in ASCII, in the clear, so a loader can offer it. A name that does not fit in the block is damage. A writer keeps names unique within a kind |
-| | | The table, ZX0-compressed, then encrypted under `SET1` with the stream index |
+| | 4 | The CRC-32 of the finished file with this set alone over the base, encrypted under tag `SEB` plus the stream index, index 255 |
+| | | Its chunks, to the end of the block |
 
-The table: the CRC-32 of the finished file with this set alone over the base (4 bytes), then entries of 1 byte bank, 2 bytes offset, 2 bytes length (not 0), then the bytes, up to its end. **Entries are in rising order of bank then offset, and no entry starts before the last one ended.** A reader refuses an entry out of order, one whose bank the `.nex` header does not list, whose offset plus length passes 16,384, or which runs past the end of the table, and a table shorter than 4 bytes. An entry may be in a bank from `BNK1`, and may overwrite bytes that `SIT1` changed. The table must be no longer than 24,576 bytes once decompressed, as with `SIT1`. A loader holds each chosen table as well as `SIT1`, so 72K for one and 96K for two. A stream is checked as in `BNK1`.
+**A chunk** is what the set changes in one bank:
 
-A set is only byte replacements in the banks the build already has: same header, same screen, same length. A writer refuses anything else. A translation that needs more room has to fit it in by its author's own relocation, as part of the build. Anything that adds banks or changes the header is not a set.
+| Size | Field |
+|---|---|
+| 1 | The bank, in the clear |
+| 2 | The length of its stream, in the clear, not 0 |
+| | Its stream: the chunk's plain bytes, ZX0-compressed on their own, then encrypted under tag `SEB` plus the stream index, with the bank as index |
 
-**One choice per kind.** Alternatives within a kind may overlap, as they can never be chosen together. Sets of different kinds **must not overlap**: a writer refuses any pair that could be chosen together, and a loader refuses the actual selection, by one pass through the two sorted tables, before it makes any file. That holds even for two sets writing the same bytes to the same place. Kinds say what the menu offers, not what works together: two sets that do not overlap can still disagree about pointers or fonts, and nothing here shows that a combination plays.
+The plain bytes are a **bitmap** of 2,048 bytes, one bit for each byte of the bank, the top bit of the first being offset 0; then, for each bit set, in rising order of offset, the byte to write there. So a chunk is at most 18,432 bytes whatever the bank holds, and that is the most a loader ever holds of a set at once. A set has no limit of its own: every bank a `.nex` can list may be changed in full.
+
+A reader refuses: a block too short for the CRC; a chunk's head or stream running past the block; a stream of length 0; plain bytes that are not a bitmap and exactly one byte for each bit set, with at least one bit set; and any chunk out of `.nex` order, repeated, for a bank of 112 or above, or for a bank the `.nex` header does not list. The last group is found by going through the listed banks in order and taking the next chunk only if it is for that bank: **a chunk not taken by the end is damage.** A stream is checked as in `BNK1`. Nothing in a chunk says where a byte goes but its place in the bitmap, so no chunk can reach outside its bank. An entry may be in a bank from `BNK1`, and may overwrite bytes that `SIT1` changed.
+
+A writer leaves out a bank the set does not change, and writes the chunks in `.nex` order, so that a loader can keep one position per set and hold one chunk at a time.
+
+**Why this layout, as measured.** On the real sets in hand, packed with `zx0` version 2, all sizes in bytes. "Before" is `SET1`'s single table of (bank, offset, length, bytes):
+
+| Set | Banks changed | `SET1` table | `SET1` packed | Same entries, one stream per bank | Bitmap chunks, plain | Largest chunk | **Bitmap chunks, packed** |
+|---|---|---|---|---|---|---|---|
+| Everyone's a Wally | 8 | 67,919 | 26,308 | 26,617 | 43,389 | 6,823 | **11,366** |
+| Sabre Wulf | 5 | 39,330 | 21,379 | 21,526 | 31,376 | 9,281 | **13,629** |
+| Underwurlde | 5 | 32,625 | 16,409 | 17,027 | 22,441 | 6,164 | **8,823** |
+
+Splitting by bank alone costs 1 to 4%. Moving the offsets out of the bytes more than pays for that: the sets above have thousands of short runs, and each run's 5-byte head compresses badly. Holding more of the table in RAM was the other choice measured against: a linear table of 128K needs 16 pages and a decoder that follows its back-references across a paged window, for nothing a player sees, on every bank. Here a set needs the same three pages however big it is. `tests/test_nexclash_dot.py` holds a set of 165,888 decoded bytes.
+
+**One choice per kind.** Alternatives within a kind may overlap, as they can never be chosen together. Sets of different kinds **must not overlap**: a writer refuses any pair that could be chosen together, and a loader refuses the actual selection, by comparing the bitmaps of the two chunks of each bank, before it makes any file. That holds even for two sets writing the same bytes to the same place. Kinds say what the menu offers, not what works together: two sets that do not overlap can still disagree about pointers or fonts, and nothing here shows that a combination plays.
 
 **The check.** With the file's length and layout the same, and the replacements disjoint, CRC-32 being affine for equal lengths gives one value per set instead of one per combination:
 
@@ -272,9 +293,11 @@ A set is only byte replacements in the banks the build already has: same header,
 CRC(combination) = CRC(base) XOR (CRC(set 1) XOR CRC(base)) XOR (CRC(set 2) XOR CRC(base)) ...
 ```
 
-where `CRC(base)` is in `OUT1` and `CRC(set n)` in each table. A loader runs one CRC-32 over the real output, with sets applied and before any POKEs, and compares it and the length with those. With no set chosen that is `OUT1` itself. If they differ, the file is deleted. That checks the reconstruction, as a CRC over a table could not. It is checked as the file is written, not read back from the card.
+where `CRC(base)` is in `OUT1` and `CRC(set n)` in each block. A loader runs one CRC-32 over the real output, with sets applied and before any POKEs, and compares it and the length with those. With no set chosen that is `OUT1` itself. If they differ, the file is deleted. That checks the reconstruction, as a CRC over a table could not. It is checked as the file is written, not read back from the card.
 
 A reader that does not know a kind or a base checks the block's shape and index, and does not offer it. A set is decoded only when it is chosen, so a damaged stream in a set that is not chosen, in a file whose check value is good, does not stop the game.
+
+**Memory.** A loader needs one bitmap and its bytes for each set chosen, for one bank at a time, as well as `SIT1`: `firmware/nexclash.asm` keeps three 8K pages for each, so 72K for one set and 96K for two, the same whatever the size of the set, and says so if it cannot get them. A 1MB Next has 96 8K pages of ZX memory, so this is well within it. What a build needs to run is separate, and is in `OPT1`.
 
 **A set can change how a game starts.** It cannot change the header, but it can change any byte of any listed bank, and those banks hold the start-up code and hooks. An unchanged header says nothing about that. A set from a stranger is code, as the rest of a patch is.
 
@@ -284,7 +307,7 @@ No tool or loader here writes or reads this. A language-only patch, for a game w
 
 - **Applying a language must pass the keyed check.** The unchecked copy of the plain route is only for the file with nothing applied.
 - **The output is deterministic:** a `.z80` of whole pages under the input's own header, version 1 becoming version 2, as the clash fix off with a trainer writes now.
-- **The baselines are per input.** Accepted dumps must have the same banks, but may keep different registers, so one CRC of a whole file cannot cover them. `SNP1` holds, encrypted, for each target by its index, the CRC-32 and length of that input's header part. The pages are common to them all: one CRC-32 of the pages, in `SNP1` too. A `SET1` with base 2 gives the CRC-32 of the pages with it alone, and the sum above applies to the pages.
+- **The baselines are per input.** Accepted dumps must have the same banks, but may keep different registers, so one CRC of a whole file cannot cover them. `SNP1` holds, encrypted, for each target by its index, the CRC-32 and length of that input's header part. The pages are common to them all: one CRC-32 of the pages, in `SNP1` too. A `SET2` with base 2 gives the CRC-32 of the pages with it alone, and the sum above applies to the pages.
 - **A patch can do both**, with base 1 and base 2 versions of one language sharing a choice ID. The base 2 sets are extras a lower level skips, so that needs no level of its own. With the clash fix off such a language line stays available.
 
 ### Reserved: L2B1, Layer 2 backgrounds
@@ -405,7 +428,8 @@ No two uses share a stream. Each tag has one purpose, and within a tag the index
 | master | `OUT1`, `NEX1`, `SIT1` | 0 | Those blocks |
 | master | `BNK1` | The bank number | That bank |
 | master | `SCR1` | The piece's index | That piece |
-| master | `SET1` | The set's stream index | That set |
+| master | `SEB` then the set's stream index, as one byte | 255 | That set's CRC |
+| master | `SEB` then the set's stream index, as one byte | The bank | That set's chunk for that bank |
 
 `TGT1` is never used under the master base nor anything else under a dump's, and these tags are fixed, so a writer needs no other rule. A new encrypted block needs a new tag, and with it its own streams. Changing a clear block keeps the nonce, the key and the streams, as the plaintext of every encrypted block is unchanged. Changing what an encrypted block holds means a new nonce and key.
 
@@ -431,14 +455,14 @@ Packing: `ED ED n v` is `n` copies of `v`, and `n` may be 0. An `ED` with fewer 
 
 ## Applying a patch, in this order
 
-Nothing is decompressed before step 5, and nothing is written before step 6.
+Nothing is decompressed before step 5, and nothing is written before step 6. A set's chunks are decoded in both, one at a time for each set.
 
 1. Open the patch, and refuse it if its name is one of the outputs: see below. Read the header. Refuse it as "not a patch" as above.
-2. Walk every block, once, up to the end of the file. Refuse anything that does not fit. Refuse a second required block at once. For `OPT1`: its length, level and flags. For each `TGT1`: its shape, index and `file`. For each `TRN1`: its shape, flags and every POKE. For each `SET1`: its name fitting, its stream index unique. Take `INF1`'s text. At the end: every required block there; at least one target this reader can read, or say a newer loader is needed; a `SCR1` only with level 2 or above.
+2. Walk every block, once, up to the end of the file. Refuse anything that does not fit. Refuse a second required block at once. For `OPT1`: its length, level and flags. For each `TGT1`: its shape, index and `file`. For each `TRN1`: its shape, flags and every POKE. For each `SET2`: its name fitting, its stream index unique. Take `INF1`'s text. At the end: every required block there; at least one target this reader can read, or say a newer loader is needed; a `SCR1` only with level 2 or above.
 3. Find the game: the first file that exists, in this order, whose length equals that of a target this reader can read: each target's `file` beside the patch, then the patch's own name with `.z80`. One that is not there is passed over. One that is there under an output's name is refused. One of no listed length is noted and passed over. None found: say which file is needed, and that the one there is wrong if one was noted. Show the menu.
 4. Clash fix on, or off with a trainer on: absorb the file once, as `dump_base`. Take the targets of that length, from a copy of that state each, until a wrap's first 8 bytes are right: that is the master key. The file is never read again for another entry. None right: go on to the next file from step 3, or refuse as the wrong file. Build `key_base`, and check the value at offset 22. Refuse as damage if it differs. Decrypt `OUT1`.
-5. Clash fix on: walk the `BNK1` blocks and index them, refusing bad lengths and repeats. Decrypt and decode `NEX1`, and read the game's pages. Decode `SIT1` and check the whole of it. Refuse a listed bank with no source, or a `BNK1` for a bank not listed. Size any screen from byte 10 and check all its `SCR1` headers. For each set chosen, decode its `SET1` under its stream index and check the whole of that table. With two, refuse any overlap between them. Work out what the output's CRC-32 must be, from `OUT1` and theirs. Check the chosen POKEs' banks exist.
-6. Create the output. Write the `.nex`: the header; any screen, a piece at a time; then each bank the header lists, in `.nex` order (5, 2, 0, 1, 3, 4, 6, 7, then upward), from `BNK1` if present, otherwise from the game with `SIT1` applied. Fill short banks with zeros. Apply each chosen set's entries for that bank, run the CRC over it, then apply the trainers' POKEs, then write it.
+5. Clash fix on: walk the `BNK1` blocks and index them, refusing bad lengths and repeats. Decrypt and decode `NEX1`, and read the game's pages. Decode `SIT1` and check the whole of it. Refuse a listed bank with no source, or a `BNK1` for a bank not listed. Size any screen from byte 10 and check all its `SCR1` headers. For each set chosen, decrypt its CRC. Then go through the listed banks in `.nex` order, decoding and checking the chunk each set has for that bank, and with two, refusing any bit set in both bitmaps. A chunk not reached that way is refused. Work out what the output's CRC-32 must be, from `OUT1` and theirs. Check the chosen POKEs' banks exist.
+6. Create the output. Write the `.nex`: the header; any screen, a piece at a time; then each bank the header lists, in `.nex` order (5, 2, 0, 1, 3, 4, 6, 7, then upward), from `BNK1` if present, otherwise from the game with `SIT1` applied. Fill short banks with zeros. Decode each chosen set's chunk for that bank again, check it again, apply it, run the CRC over it, then apply the trainers' POKEs, then write it.
 7. Check the CRC-32 against the value from step 5, and the length against `OUT1`. If either differs, delete the file and report damage.
 8. Start the `.nex` with NextZXOS's own loader.
 
