@@ -1,7 +1,7 @@
 # .nxc
 
-A patch format for ZX Spectrum Next games. By Jon Attree. Inspired by Bleugh.biz's
-[nexclash](https://github.com/bleughb/nexclash), by Dean Woodyatt.
+A patch format for ZX Spectrum Next games. By Jon Attree. Built with NexClash by Dean Woodyatt
+(Bleugh.biz, [bleughb/nexclash](https://github.com/bleughb/nexclash), GPL-3.0-or-later).
 
 NexClash turns Spectrum games into `.nex` files whose figures are hardware sprites, removing colour
 clash. A `.nex` contains the game, so it can't be freely shared. A `.nxc` holds what the build adds,

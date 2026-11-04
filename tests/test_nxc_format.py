@@ -1267,6 +1267,7 @@ class MakeCommand(Case):
         self.assertEqual(nxc.apply(f, game=self.game), self.nex)
         self.assertEqual(nxc.inf1_value(f, "build"), b"o")
         self.assertIn(nxc.CREDIT.encode(), dict(nxc.blocks(f)[1])[b"INF1"])
+        self.assertEqual(nxc.CREDIT, "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)")
 
     def test_clear_refusals_and_no_file_left(self) -> None:
         nex = self.nex

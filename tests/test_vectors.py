@@ -118,7 +118,7 @@ class SpecAgainstVectors(unittest.TestCase):
         text = SPEC.read_text()
         for tag in {e["tag"] for e in self.v["layout"]} | {"CHK1", "TAP1", "BUN1", "CAC1", "TRN2", "L2B1", "MNU1", "SNP1", "MEM1", "SPR2"}:
             self.assertIn(f"`{tag}`", text, tag)
-        for claim in ("By Jon Attree. Inspired by Bleugh.biz's nexclash, by Dean Woodyatt.", "not cryptographic strength",
+        for claim in ("By Jon Attree. Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later).", "not cryptographic strength",
                       "can recover the master key", "Sprite data is derived from the game's graphics", "A set can change how a game starts"):
             self.assertIn(claim, text)
         for gone in ("meaningless", "none of the game itself", "so it cannot change how the game starts", "This will change before release"):

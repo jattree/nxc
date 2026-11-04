@@ -268,7 +268,7 @@ class UsageAndArguments(Base):
         failed, _ = m.run(None)
         self.assertFalse(failed)
         text = " ".join(m.screen)
-        self.assertIn("Inspired by Bleugh.biz's nexclash", text)
+        self.assertIn("Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0+)", text)
         self.assertIn("GPL-3.0", text)
         self.assertNotIn("Tested", text)
         self.assertNotIn("not on a Next", text)
@@ -1976,7 +1976,8 @@ class Jetpac(Choices, Base):
 
     def test_credit_and_trainer_as_built(self) -> None:
         credit = text_of(self.patch, b"INF1")["credit"]
-        self.assertIn("Inspired by Bleugh.biz's nexclash", credit)
+        # build/v1/Jetpac.nxc was made before the credit named Dean Woodyatt; a patch made now carries nxc.CREDIT
+        self.assertIn("bleughb/nexclash, GPL-3.0-or-later)", credit)
         self.assertIn("painter not established", credit)
         self.assertIsNone(nxc.inf1_value(self.patch, "colours_by"))
         self.assertEqual(nxc.inf1_value(self.patch, "patch_by"), b"Jon Attree")

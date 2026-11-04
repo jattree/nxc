@@ -6,7 +6,7 @@
  },
  "nonce": "101112131415161718191a1b1c1d1e1f",
  "master_key": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
- "patch_md5": "c6444f6006224e5a23b299ff9929e0a2",
+ "patch_md5": "341e5df20e1c9f98e9b709b5f4f2de0c",
  "sna_file": {
   "made_by": "make_vectors.sna",
   "md5": "df5195716698feac7ff355cabfa9ac9c",
@@ -235,16 +235,16 @@
    "j": 222
   },
   "after_the_file": {
-   "s": "787dc7f1e0f98151f065914da4cdbcab6644467413e8af7b50e1f70a80820b0c891926c3f83ba512183e140ebe5f3ae57ebd09599331aa1ed04b588edd1d2398e2c4ede9fdd8ae83909e6447b9d25a482fad2e45de277503b62288e710d4722cd13f84ef5c16daea9bc141d95367a295253d963985fcb78a6dd5c9a9b2cbf4cf9c70567a35fabf0f698b339202c04fa7cab32b490df2c82d30b46c791ab8e44ed7df61f55dce0038b1ec6f293687a3071bdba68dfb4c7f62e337b02a5b60d6e6eb2897151c7ca8eeb573526af3c2551f11060524779a68ccffa18f3c948c0457a0f643ac20996e01089d7642d3dcc6349f32716bbb63175e4ac540feba218654",
-   "i": 244,
-   "j": 174
+   "s": "2b3086943e078fd0f59019df875e3d5f80ae21a45a2402c9b0fb7ba53bffbe89b276f2001c8dac2efcd967c14ba731bc5cfa51dd470696bd253722dcbf08b9ce3a2a2303491e6b431f81a14af1e19fa90acdbac2607d4439cb4cebb1010d6d98c5a845fd9eabc74ffe587c1171ad3fc8f3620f64daee48e740c37318631742c46883e3d81256e46192b39b5b27db4dde70a2c60584d2b40b57f08a5304745d9533ca1b09d528699c15b8f9e5cf6ee9afd67e65ede0ccb7f48eea996a467a1a100e9db5f638203ca0885536b6d4aabb8b34854e0c8214592f29526fe213937f6c2c8c4172f854e8e6789a79f77726913566d1c0d7ef16502d9732a3ecd3a61d75",
+   "i": 3,
+   "j": 223
   },
   "after_dropping": {
-   "s": "781ffde6e8bc68a04af1a87413be7d174fb91eafeb8a28f33c6b73fee3705133fc77e43f6a6f22d9a5c19b80144941a687c5d08c35964504474b82ef307cb863122500acec0294d7d5ba50186e01230e1d3a69e916082921b4cd79656c07665d898e9ad29c60fa988bbd191b39461a5b4eb556f4057681a7f85832b05fa4c73b40d6e7d3b2d8a20a260c7adb8d2e57cf5a7b0b484ddcf291e29f2ba91cb610c42c97e0ea902f0d8f5c360f6dffcc9dce44a34388b3edc6f9aa37062dee7eca317f5ef054abd4554c0986d195df9ee5cb615283b7bb34f63e7515aef5384299dafbc36259c28464a12071e103f7de2a27b1c9538572dd3dbf11c86724c09293ad",
-   "i": 244,
-   "j": 212
+   "s": "233c0ccdff714be6908dba2b6154f28330af4ac7bb1befc6dcfe3792ca5109a1744c0a031df8701a99569bb4ed2d7fe2336b4510ab630b877b7222e1bf5cec689460c977150866c3a6a71f58179f6fd585488ed480bcd15ed6d39e5d9a5aa83deeac144ef3f4819388344d0e1ccc024626b0438ab678f5d24f6224e5eaf0212f5500b1e349faa0db13e7b235cfb53fcea3df419528def93e2eeb67ada9b83989507d27dd16329665079c6a44e442522c380120e09dc85f840625317aa4be757e0f3bc5fb9782e8cb29b76d86f712188f197c8b47a5b9c2d0692a5364f1aafdc136bd1e11408c6cd9570de90598ae73595b91fcc43ad7a26ec076f679dad8b304",
+   "i": 3,
+   "j": 80
   },
-  "value": "4098dbf51902421e9c7e918197822990"
+  "value": "a555f5d2a32f114ac68da7983310a014"
  },
  "layout": [
   {
@@ -270,56 +270,56 @@
   {
    "tag": "INF1",
    "data_offset": 388,
-   "length": 133
+   "length": 148
   },
   {
    "tag": "PRF1",
-   "data_offset": 529,
+   "data_offset": 544,
    "length": 62
   },
   {
    "tag": "ROM1",
-   "data_offset": 599,
+   "data_offset": 614,
    "length": 1
   },
   {
    "tag": "TRN1",
-   "data_offset": 608,
+   "data_offset": 623,
    "length": 12
   },
   {
    "tag": "OUT1",
-   "data_offset": 628,
+   "data_offset": 643,
    "length": 8
   },
   {
    "tag": "NEX1",
-   "data_offset": 644,
+   "data_offset": 659,
    "length": 27
   },
   {
    "tag": "SIT1",
-   "data_offset": 679,
+   "data_offset": 694,
    "length": 27
   },
   {
    "tag": "BNK1",
-   "data_offset": 714,
+   "data_offset": 729,
    "length": 409
   },
   {
    "tag": "SET2",
-   "data_offset": 1131,
+   "data_offset": 1146,
    "length": 28
   },
   {
    "tag": "SET2",
-   "data_offset": 1167,
+   "data_offset": 1182,
    "length": 33
   },
   {
    "tag": "SCR1",
-   "data_offset": 1208,
+   "data_offset": 1223,
    "length": 71
   }
  ],
@@ -384,7 +384,7 @@
  "refused": [
   {
    "name": "a clear trainer value",
-   "offset": 619,
+   "offset": 634,
    "xor": 85
   },
   {
@@ -414,7 +414,7 @@
   },
   {
    "name": "OUT1",
-   "offset": 628,
+   "offset": 643,
    "xor": 1
   }
  ]

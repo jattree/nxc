@@ -34,7 +34,7 @@ KIND_COLOURS = 1; KIND_LANGUAGE = 2; KIND_NAMES_SET = {KIND_COLOURS: 'colours', 
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
 TEXT_READ = 252; MENU_COLUMNS = 41; CREDIT_NAME = 32  # what a loader reads of INF1, shows, and keeps of a name
-CREDIT = "Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-later)"
+CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
               'timing', 'timing_when')

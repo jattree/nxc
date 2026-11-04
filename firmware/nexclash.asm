@@ -2224,9 +2224,10 @@ str_colours:    db "Colours: ",0
 msg_usage:      db ".NEXCLASH ",34,"GAME.nxc",34,13
                 db "Rebuilds NexClash's game from a",13
                 db "patch and your own copy.",13
-                db "Inspired by Bleugh.biz's",13
-                db "nexclash (bleughb/nexclash,",13
-                db "GPL-3.0+). ZX0: Einar Saukas.",13 | $80
+                db "Built with NexClash by Dean",13
+                db "Woodyatt (Bleugh.biz,",13
+                db "bleughb/nexclash, GPL-3.0+).",13
+                db "ZX0: Einar Saukas.",13 | $80
 msg_not_patch:  db "Not a .nxc fil", 'e' | $80
 msg_cancelled:  db "Cancelle", 'd' | $80
 msg_ram_small:  db "Needs more RAM: turn fix of", 'f' | $80

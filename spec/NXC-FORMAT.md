@@ -1,6 +1,6 @@
 # The .nxc file format, version 1 (draft)
 
-By Jon Attree. Inspired by Bleugh.biz's nexclash, by Dean Woodyatt.
+By Jon Attree. Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later).
 
 **Status: a draft, with Dean's go-ahead (2026-11-02) and not yet reviewed by him. Implemented by `tools/nxc.py` and by the dot command `firmware/nexclash.asm`, which matches it byte for byte on a Z80 emulator and in JNext running NextZXOS. Nothing here has run on a Next or a Tang.**
 
@@ -153,7 +153,7 @@ Every entry in a patch must rebuild the same banks. A writer checks that, by reb
 
 ### INF1
 
-Keys: `publisher` (for the menu, such as `Ocean, 1986`; a loader may show the first 16 characters), `patch_by` and `colours_by` (optional, for the menu's credit line), `build`, `nex_md5`, `nexclash`, `credit`, and for languages, all optional and not needed to play: `game_language`, the ISO 639 code of the language the game itself is in; `language_codes`, each language set's code as `Name=code`, comma-separated, such as `Espanol=es`; and `text_by`, who translated it, kept here and not on the menu. A writer always includes `credit`, and a patch from NexClash carries "Inspired by Bleugh.biz's nexclash". Anything derived from its GPL-3.0-or-later code keeps those terms as well. `credit` lives here and in the project's documentation, including who painted a colour set: a loader need not show it on its menu or play screens. `nxc.py credit PATCH GAME -o OUT --patch-by NAME --colours-by NAME` sets the two menu names, right after `publisher`, and refuses if they would end past the first 252 bytes.
+Keys: `publisher` (for the menu, such as `Ocean, 1986`; a loader may show the first 16 characters), `patch_by` and `colours_by` (optional, for the menu's credit line), `build`, `nex_md5`, `nexclash`, `credit`, and for languages, all optional and not needed to play: `game_language`, the ISO 639 code of the language the game itself is in; `language_codes`, each language set's code as `Name=code`, comma-separated, such as `Espanol=es`; and `text_by`, who translated it, kept here and not on the menu. A writer always includes `credit`, and a patch from NexClash carries "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)", which `nxc.py make` writes. Anything derived from its GPL-3.0-or-later code keeps those terms as well. `credit` lives here and in the project's documentation, including who painted a colour set: a loader need not show it on its menu or play screens. `nxc.py credit PATCH GAME -o OUT --patch-by NAME --colours-by NAME` sets the two menu names, right after `publisher`, and refuses if they would end past the first 252 bytes.
 
 ### PRF1
 

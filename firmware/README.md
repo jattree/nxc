@@ -3,8 +3,8 @@
 `nexclash.asm` is a NextZXOS dot command. Given a `.nxc` patch and the player's own copy of the game, it shows a menu and
 rebuilds the NexClash `.nex`, with enhanced colours if chosen, or hands over the game itself, with any trainers chosen. The patch format is in
 `../spec/NXC-FORMAT.md`; `../tools/nxc.py` is the reference it matches byte for byte. It is level 2 in `OPT1`'s terms:
-`.z80` games and loading screens. Inspired by Bleugh.biz's
-nexclash (Dean Woodyatt, `bleughb/nexclash`, GPL-3.0-or-later); this command is GPL-3.0-or-later too. Its ZX0 decoder is
+`.z80` games and loading screens. Built with NexClash by Dean Woodyatt
+(Bleugh.biz, `bleughb/nexclash`, GPL-3.0-or-later); this command is GPL-3.0-or-later too. Its ZX0 decoder is
 derived from dzx0_standard by Einar Saukas and Urusergi (BSD-3-Clause).
 
 **Status. It has run on a Z80 emulator with NextZXOS faked, and in JNext on real NextZXOS v2.09 from a copy of an SD
