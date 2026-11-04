@@ -47,7 +47,7 @@ class TapeLoader(T.Base):
         super().setUpClass()
         cls.patch, cls.nex, cls.tap, cls.tzx, cls.z80, cls.banks = P.made()
 
-    def go(self, patch=None, files=None, keys=("enter",), **options):
+    def go(self, patch=None, files=None, keys=("space",), **options):
         m = self.machine({"patch.nxc": self.patch if patch is None else patch, **(files if files is not None else {"game.tap": self.tap})},
                          keys=keys, **options)
         failed, message = m.run('"patch.nxc"')
@@ -65,11 +65,11 @@ class TapeLoader(T.Base):
                 self.made_it(m, failed, message, NEX, self.nex)
 
     def test_a_trainer_on_the_nex(self) -> None:
-        m, failed, message = self.go(keys=["1", "enter"])
+        m, failed, message = self.go(keys=["1", "space"])
         self.made_it(m, failed, message, NEX, nxc.apply(self.patch, game=self.tap, chosen=[1]))
 
     def test_the_clash_fix_off_is_the_start_checked_with_or_without_a_trainer(self) -> None:
-        for keys, chosen in ((["2", "enter"], []), (["1", "2", "enter"], [1])):
+        for keys, chosen in ((["2", "space"], []), (["1", "2", "space"], [1])):
             for files, tape in (({"game.tap": self.tap}, self.tap), ({"game.tzx": self.tzx}, self.tzx)):
                 with self.subTest(keys=keys, tape=sorted(files)):
                     m, failed, message = self.go(files=files, keys=keys)
@@ -80,16 +80,16 @@ class TapeLoader(T.Base):
         patch, nex, tap, tzx, z80, banks = P.made(is128=False)
         m, failed, message = self.go(patch, {"game.tzx": tzx})
         self.made_it(m, failed, message, NEX, nex)
-        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["1", "2", "enter"])
+        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["1", "2", "space"])
         self.made_it(m, failed, message, Z80, nxc.original_with_pokes(patch, tap, [1]))
 
     def test_with_a_colour_set_the_pages_add_up(self) -> None:
         patch, nex, painted, tap = with_colours()
         self.assertEqual(nxc.apply(patch, game=tap, colours="Painted"), painted)
-        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["3", "enter"])
+        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["3", "space"])
         self.made_it(m, failed, message, NEX, painted)
         self.assertEqual(m.peak_pages, 12)
-        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["3", "enter"], free_pages=11)
+        m, failed, message = self.go(patch, {"game.tap": tap}, keys=["3", "space"], free_pages=11)
         self.assert_refused(m, failed, message, "Needs 96K free RAM")
 
     def test_not_enough_ram_for_the_table(self) -> None:
@@ -130,7 +130,7 @@ class TapeLoader(T.Base):
         listed = P.with_table(self.patch, self.tap, r.remade(rules, copies=c + [(k, 0, 1, 30, 0)]))
         for name, table in tables.items():
             patch = P.with_table(self.patch, self.tap, table)
-            for keys in (["enter"], ["2", "enter"]):
+            for keys in (["space"], ["2", "space"]):
                 with self.subTest(name, keys=keys):
                     with self.assertRaises(nxc.Wrong):
                         nxc.apply(patch, game=self.tap)
@@ -138,7 +138,7 @@ class TapeLoader(T.Base):
                     self.assert_refused(m, failed, message, DAMAGED)
         m, failed, message = self.go(listed)
         self.assert_refused(m, failed, message, DAMAGED)
-        m, failed, message = self.go(listed, keys=["2", "enter"])
+        m, failed, message = self.go(listed, keys=["2", "space"])
         self.made_it(m, failed, message, Z80, nxc.original_with_pokes(listed, self.tap, []))
 
     def test_the_structure_before_the_menu(self) -> None:
@@ -189,9 +189,13 @@ class TapeLoader(T.Base):
         said = "NEXCLASH cut or mixed: recopy it"
         one = H.FIRST_PART + self.symbols["ov_size"]
         two = one + self.symbols["tape1_size"]
-        for name, binary in (("no tape parts", self.binary[:one]), ("the first cut short", self.binary[:two - 1]), ("the second cut short", self.binary[:-1]),
-                             ("the first mixed", self.binary[:two - 4] + b"XXXX" + self.binary[two:]), ("the second mixed", self.binary[:-4] + b"XXXX")):
-            for keys in (["enter"], ["2", "enter"]):
+        menu_at = self.symbols["FILE_MENU_AT"]         # the menu's part, then the menu .nex's writer, follow the tape parts
+        for name, binary, key_sets in (("no tape parts", self.binary[:one], None), ("the first cut short", self.binary[:two - 1], None),
+                                       ("the first mixed", self.binary[:two - 4] + b"XXXX" + self.binary[two:], None),
+                                       ("the third mixed", self.binary[:menu_at - 4] + b"XXXX" + self.binary[menu_at:], None),
+                                       ("the writer cut short", self.binary[:-1], (["enter"],)),
+                                       ("the writer mixed", self.binary[:-4] + b"XXXX", (["enter"],))):
+            for keys in key_sets or (["space"], ["2", "space"]):
                 with self.subTest(name, keys=keys):
                     m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=keys, binary=binary)
                     failed, message = m.run('"patch.nxc"')
@@ -208,7 +212,7 @@ class TapeLoader(T.Base):
         """Each mistake, put back in the loader, is caught by a test above."""
         def run(replace, **kw):
             binary, symbols = H.assemble(replace)
-            m = self.machine({"patch.nxc": kw.get("patch", self.patch), **kw.get("files", {"game.tap": self.tap})}, keys=kw.get("keys", ("enter",)),
+            m = self.machine({"patch.nxc": kw.get("patch", self.patch), **kw.get("files", {"game.tap": self.tap})}, keys=kw.get("keys", ("space",)),
                              binary=binary, symbols=symbols)
             try:
                 failed, message = m.run('"patch.nxc"')

@@ -85,40 +85,30 @@ patch needs no assembler; `tests/test_menu_nex.py` checks it is what the source 
 cd firmware && sjasmplus --nologo --raw=nxcstub.bin nxcstub.asm
 ```
 
-**This dot command does not use `menu.asm` yet,** and still shows the older menu below and writes the bare `.nex`. Its part
-before the menu has 1,235 bytes free, and `menu.asm` is about 1,300, with the description to build and the font to copy from
-the ROM besides: it needs the menu read in as a part of its own, into a page of its own, before it can share the code.
-
 ## The menu
 
-```
- JETPAC                    Ultimate, 1983
+The command shows the same menu, from the same `menu.asm`, as a `.nex` that carries it (the spec's "The menu"): a blue bar
+with the title and stripes, the publisher in white below, `TRAINER` and `OPTIONS` in yellow, the selected line in cyan, `ON`
+green and `OFF` red, `ENTER play` and `BREAK exit`, the selected line's help from `HLP1`, `Colours:` and `Patch:` above the bar
+naming Dean Woodyatt's engines. Before the menu the command takes one 8K page for it, reads its menu part from its own file
+(after the tape parts) into the page at 0xA000, with interrupts off, and builds the description there from the patch; the font
+is ROM 3's, read from the card's `C:/MACHINES/NEXT/enNextZX.rom` at 0xFD00, as a dot command cannot see the ROM (without the
+file it stops with `Needs NEXT/enNextZX.rom: no font`). It switches to layer 0 for the menu if the caller is in another, and
+back after it.
 
- TRAINER
-  1  Infinite lives            [OFF]
+**What the keys write.** With the clash fix on, **ENTER writes the `.nex` that carries its menu**, the default: the bare
+`.nex` with nothing chosen, then the menu banks, its lines starting as they were left here, byte for byte what
+`nxc.py PATCH GAME` with the same choices writes; `.nexload` then starts it, and its menu comes up again, already set, for
+ENTER. **SPACE writes the bare `.nex`** with the choices fixed in it, as before. With the fix off either key writes the
+player's own game, as before. BREAK stops with `Cancelled`. The menu `.nex` is written by a part read over the game's part
+once the bare banks are done; it decodes each set a chunk at a time in three pages of its own (a tape's, by then done with, or
+three more), writes M0 and the data, and puts the header, the stub's count and the lines' offsets in place by seeking back
+(the output is opened for reading too, to take the 16 bytes below the build's stack from it). A build that cannot carry a
+menu is refused with `No menu .nex: press SPACE`.
 
- NEXCLASH
-  2  Colour clash fix          [ON]
-  3  Enhanced colours          [OFF]
-
- ENTER to play
-
-Patch: Jon Attree  Colours: Alberto Conde
-```
-
-Toggles (`SET2` kinds 3 and 4) get a line each after the sets', with their own names, `[OFF]` to begin with. At most two sets
-and toggles can be on at once: with two on, a key that would turn on another does nothing. The number keys work a line. Trainers start off, the clash fix on, the sets off, and trainers combine with any of it. Each kind of
-set a patch has gets a line, "Enhanced colours" then "Language", whose key steps from `[OFF]` through its sets and back. One colour
-set is `[ON]` or `[OFF]`; otherwise the line names it, in up to 17 characters. With the fix off these read `[N/A]`, ignore their
-keys and are not applied; turning the fix on again brings the choices back. Only ten lines have keys, the tenth being key 0, so with
-two kinds of set the menu shows 7 trainers rather than 8. ENTER and SPACE both start with what is shown; BREAK cancels. A patch
-whose `INF1` has a `fix_label` names the clash fix's line with it, in up to 25 characters, such as `Colour` for a game that had
-no clash; without one the line reads `Colour clash fix`. The line does what it always did. The label is kept below the stack,
-and cleared before `INF1` is read, until the menu.
-
-The last line credits the patch's maker and colourist, from `patch_by` and `colours_by` in `INF1`, set by `nxc.py credit`.
-It shows only what is there, with colours only for a patch with a colour set, and no line if neither. It fits 41 columns from the
-first: the gap closes from 5 to 2 before a name is cut (the spec has the rule). Dean's credit is in the usage text and here.
+**Memory.** The menu's page is held from before the menu to the end, so every route needs 8K more than before; the RAM
+messages still name what the rebuild itself needs on top of it. The menu `.nex` needs no more pages than the bare one, but
+for three to decode sets in when the patch has any.
 
 **Assumed, and tested only in JNext running the card's own NextZXOS v2.09:** that all of the above behaves the same on
 a Next, including the Browser's 8.3 matching, the merge at line 0, `cd` before `.nexload`, and the Enter that chose being

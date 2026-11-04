@@ -22,7 +22,7 @@ circulated, so it may still change.
 | | |
 |---|---|
 | PC tool | Tested |
-| Next loader | Tested on a Z80 emulator and in JNext on NextZXOS v2.09; still has the old menu |
+| Next loader | Tested on a Z80 emulator and in JNext on NextZXOS v2.09, the new menu and the menu `.nex` included |
 | A `.nex` with its menu | Tested on a Z80 emulator and in JNext 1.1.104 |
 | Real Next or NextTang | **Not run** |
 | Review by Dean Woodyatt | **Not yet** |
@@ -76,8 +76,8 @@ under the keys if the patch has any. ENTER or SPACE plays; BREAK resets the Next
 menu, with the choices fixed: `--trainer NAME_OR_NUMBER`, `--colours NAME`, `--language NAME`, `--toggle NAME`.
 `--original` writes the game itself, unchecked, or with `--trainer` a checked snapshot of it with the POKEs in.
 
-**On the Next,** a dot command gives a menu in the Browser (still the older look, for now). It rebuilds the bare `.nex`
-from your game file and starts it. A patch can list several dumps of a game. A wrong or missing game file gets a
+**On the Next,** a dot command gives the same menu in the Browser. ENTER rebuilds the `.nex` that carries the menu from
+your game file and starts it, its menu set as you left it; SPACE rebuilds a bare one with your choices fixed. A patch can list several dumps of a game. A wrong or missing game file gets a
 message naming the file it needs. The Next reads `.z80`, `.tap` and `.tzx`. A tape with the clash fix off becomes the
 game's start as a `.z80`, checked. Card setup, including the `browser.cfg` line, is in [firmware/README.md](firmware/README.md).
 

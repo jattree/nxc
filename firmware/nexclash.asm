@@ -72,7 +72,7 @@ F_FSTAT         equ $a1
 F_GETCWD        equ $a8
 F_UNLINK        equ $ad
 FA_READ         equ $01
-FA_CREATE       equ $0e                     ; write, create or truncate
+FA_CREATE       equ $0f                     ; read and write, create or truncate
 
 IDE_BANK        equ $01bd
 IDE_INTEGER_VAR equ $01c9
@@ -218,7 +218,7 @@ name:   ld      hl,cur_fi
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A4C
+vars            equ $3A4B
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -231,8 +231,10 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     mmu4, 1
         VAR     mmu5, 1
         VAR     mapped, 1
-        VAR     page_count, 1
+        VAR     page_count, 1               ; with the menu's page, all_pages[0]
+        VAR     all_pages, 1
         VAR     page_list, PAGES + KINDS * SET_PAGES + TAPE_PAGES ; WORK x 2, I/O, sites x 3, each set x 3, a tape's x 3
+        VAR     menu_route, 1               ; 1: the .nex written carries its menu
         VAR     ph, 1                       ; handles; 0: not open
         VAR     gh, 1
         VAR     oh, 1
@@ -261,7 +263,6 @@ game_kind       equ target_kinds
         VAR     mode_changed, 1
         VAR     mode_old_layer, 1
         VAR     mode_old_sub, 1
-        VAR     mode_old_width, 1
         VAR     out_rec, 8                  ; position, length of OUT1
         VAR     nex_rec, 8                  ; of NEX1
         VAR     sit_rec, 8                  ; and of SIT1
@@ -308,17 +309,11 @@ game_kind       equ target_kinds
         display "variables end ", /h, var_at
         assert  var_at == rc4_s, "the variables must end where the key state starts"
 ; Only up to the menu, or scratch until a key state is made, so these can lie in it.
-        VAR     title, 24
-        VAR     publisher, 17
         VAR     seen, 5                     ; how many of each required block
         VAR     text_len, 2
         VAR     col, 1
-        VAR     patch_by, CREDIT_NAME + 1
-        VAR     colours_by, CREDIT_NAME + 1
         VAR     pal_seen, 32                ; a bit per colour-set index
         VAR     opt_level, 1
-        VAR     cur_line, 1
-        VAR     cur_name, 1
         VAR     scr_seen, 1
         VAR     opt_flags, 1
         VAR     snap_seen, 1                ; a .z80 or .sna target
@@ -951,17 +946,6 @@ put:    ld      hl,col
         ret
 
 mode_off:
-        ld      a,(mode_old_width)          ; 0 before mode_on
-        or      a
-        ret     z
-        ld      a,30
-        rst     $10
-        ld      a,(mode_old_width)
-        rst     $10
-        ld      a,14
-        rst     $10
-        xor     a
-        ld      (mode_old_width),a
         ld      a,(mode_changed)
         or      a
         ret     z
@@ -972,7 +956,10 @@ mode_off:
         ld      a,(mode_old_layer)
         ld      b,a
         ld      a,1
-        jr      call_mode
+        call    call_mode
+        ld      a,14                        ; the window, which the menu drew over
+        rst     $10
+        ret
 
 call_mode_bc0:
         ld      bc,0
@@ -1039,7 +1026,7 @@ finish: ld      hl,gh
         ld      (page_count),a
         ld      e,a
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      e,(hl)
         ld      d,0
@@ -1058,7 +1045,7 @@ finish: ld      hl,gh
         and     3
         ld      e,a
         ld      a,NR_SPEED
-        jp      nr_write
+        jr      nr_write
 
 ; Errors: HL is the message, whose last character has bit 7 set. Any state.
 fail_de:
@@ -1099,13 +1086,6 @@ print:  ld      a,(hl)
         ret
 
 ; ------------------------------------------------------------------ NextREG
-
-nr_read:
-        ld      bc,NR_SELECT
-        out     (c),a
-        inc     b
-        in      a,(c)
-        ret
 
 nr_write:
         ld      bc,NR_SELECT
@@ -1156,7 +1136,6 @@ is_zero32:
         or      (hl)
         ret
 
-magic_nxc1:     db "NXC1"
 first_tags:
 magic_opt1:     db "OPT1"
 magic_inf1:     db "INF1"
@@ -1170,7 +1149,6 @@ key_file:       db "file=",0
 str_tmp:        db "C:/TMP/",0
 nex_out_name:   db "/tmp/NEXCLASH.NEX",0
 z80_out_name:   db "/tmp/NEXCLASH.Z80",0
-opt_size:       dd 3
 eight:          dd 8
 target_size:    dd TARGET_FIXED
 msg_no_os:      db "Needs NextZXO", 'S' | $80
@@ -1182,7 +1160,6 @@ msg_game_bad:   db "Game file is damage", 'd' | $80
 msg_long:       db "File name too lon", 'g' | $80
 msg_alias:      db "Input has the /tmp output's nam", 'e' | $80
 msg_overlay:    db "NEXCLASH cut or mixed: recopy i", 't' | $80
-msg_no_patch:   db "Cannot open the .nx", 'c' | $80
 msg_level:      db "Patch needs a newer .NEXCLAS", 'H' | $80
 
 ov_start_at:
@@ -1736,7 +1713,7 @@ set_game:
         call    add32
         ld      de,key_file                 ; its first file
         call    set_open
-        jp      c,.again
+        jr      c,.again
         ld      hl,gsize
         ld      de,set_len1
         call    same_tag
@@ -1745,7 +1722,7 @@ set_game:
         ld      (seen_wrong),a
         ld      hl,gh
         call    close_at
-        jp      .again
+        jr      .again
 .first: ld      hl,gh
         call    close_at
         ld      a,(set_tab)                 ; each other file: there, with its length
@@ -1779,7 +1756,7 @@ set_game:
         pop     af
         inc     a
         djnz    .f
-        jp      .found
+        jr      .found
 .again: ld      hl,scan_pos
         ld      de,pos
         call    copy4
@@ -1899,7 +1876,7 @@ set_list:
         sbc     hl,de
         sbc     hl,bc
         pop     hl
-        jp      c,.long
+        jr      c,.long
         ldir
         xor     a
         ld      (de),a
@@ -1953,26 +1930,11 @@ first_inf1:
         xor     a                           ; below the stack, so not cleared with the rest
         ld      (fix_label),a
         call    read_text
-        ld      de,key_publisher
-        call    text_find
-        ld      de,publisher
-        ld      a,16
-        call    nc,copy_text
-        ld      de,key_patch_by
-        call    text_find
-        ld      de,patch_by
-        call    nc,copy_credit
         ld      de,key_fix_label
         call    text_find
         ld      de,fix_label
         ld      a,FIX_LABEL_MAX
-        call    nc,copy_text
-        ld      de,key_colours_by
-        call    text_find
-        ld      de,colours_by
         ret     c
-copy_credit:
-        ld      a,CREDIT_NAME
         jp      copy_text
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
 first_tgt1:
@@ -2018,17 +1980,7 @@ first_tgt1:
         call    text_find
         jp      c,bad_patch
         call    check_name
-        call    set_names
-        ld      a,(title)
-        or      a
-        ret     nz                          ; the first with a title
-        ld      de,key_title
-        call    text_find
-        ret     c
-        ld      de,title
-        ld      a,23
-        call    copy_text
-        jp      upper_title
+        jp      set_names
 ; HL, BC: a file name. 1 to FILE_NAME_MAX bytes, printable, none of / \ : * ? " < > |,
 ; no "..", no space first, no space or dot last: never a path. Otherwise damage.
 check_name:
@@ -2107,20 +2059,6 @@ copy_text:
 .end:   xor     a
         ld      (de),a
         ret
-
-upper_title:
-        ld      hl,title
-.c:     ld      a,(hl)
-        or      a
-        ret     z
-        cp      'a'
-        jr      c,.n
-        cp      'z'+1
-        jr      nc,.n
-        sub     'a'-'A'
-        ld      (hl),a
-.n:     inc     hl
-        jr      .c
 
 ; game_b: the patch's whole path with its extension changed to .z80, in place,
 ; as nothing needs that name once the patch is open.
@@ -2359,81 +2297,91 @@ note_set:
 
 ; ----------------------------------------------------------------- the menu
 
-menu:   call    mode_on
-        call    menu_draw
-.wait:  call    wait_release
-.poll:  call    scan_keys
+; The menu is firmware/menu.asm, read with what draws it from this file's menu part into a page of
+; its own, mapped at 0xA000 while it runs, with interrupts off. The page stays the first in the
+; list, so that the .nex writer can take the stub and the description from it, and is freed with
+; the rest. Carry from the part: BREAK.
+menu:   ld      hl,BANK_ALLOC
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ld      hl,msg_ram_menu
+        jp      nc,fail_hl
+        ld      a,e
+        ld      (all_pages),a
+        ld      a,1
+        ld      (page_count),a
+        call    mode_on
+        di
+        ld      a,1
+        ld      (mapped),a
+        ld      a,(all_pages)
+        ld      e,a
+        ld      a,NR_MMU5
+        call    nr_write
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_menu_at
+        call    seek_file
+        ld      hl,MP_AT
+        ld      bc,mp_size
+        call    load_part
+        call    MP_AT
+        push    af
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_overlay_at
+        call    seek_file
+        call    unmap
+        ld      a,(interrupts)
         or      a
-        jr      z,.poll
-        cp      13
-        jr      z,.go
-        cp      1
-        jr      z,.cancel
-        cp      ' '                         ; as ENTER: with what the menu shows
-        jr      z,.go
-        sub     '0'                         ; a digit
-        ld      c,a
-        ld      a,(trainer_count)
-        inc     a
-        cp      c
-        jr      z,.version
-        jr      c,.colours
-        ld      a,c
-        dec     a
-        call    trainer_entry
-        ld      a,(ix+0)
-        xor     1
-        ld      (ix+0),a
-.again: call    menu_draw
-        jr      .wait
-.version:
-        ld      a,(ver_original)
-        xor     1
-        ld      (ver_original),a
-        jr      .again
-.colours:                                   ; each line after: a kind that offers any
-        ld      hl,set_counts
-        ld      b,KINDS
-.kind:  ld      e,(hl)
-        inc     e
-        dec     e
-        jr      z,.not_this
-        inc     a
-        cp      c
-        jr      z,.step
-.not_this:
-        inc     hl
-        djnz    .kind
-        jp      menu_toggle_key             ; a toggle's line, or none
-.step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
-        or      a
-        jp      nz,.wait
-        ld      a,e                         ; off, then each in turn, then off
-        ld      de,KINDS
-        add     hl,de
-        cp      (hl)
-        jr      nz,.more
-        ld      (hl),0
-        jp      .again
-.more:  ld      a,(hl)                      ; from off, only if there is room for one more
-        or      a
-        jr      nz,.inc
-        call    chosen_count
-        cp      KINDS
-        jp      nc,.wait
-.inc:   inc     (hl)
-        jp      .again
-.go:    call    wait_release
+        jr      z,.di
+        ei
+.di:    pop     af
+        ld      hl,msg_cancelled
+        jp      c,fail_hl
         call    check_ram
         call    toggles_to_slots
         jp      mode_off
-.cancel:
-        ld      hl,msg_cancelled
-        jp      fail_hl
 
-; The rebuilt game must fit this machine: its highest bank is within the 8K banks NextZXOS
-; says there are. The player's own game with the fix off needs nothing of the kind. If
-; the call fails, nothing is known, and it goes on.
+file_menu_at:   dd FILE_MENU_AT
+file_overlay_at: dd FIRST_PART
+
+; Layer 0, the ULA screen the menu draws on, if the caller has another; mode_off puts it back.
+mode_on:
+        xor     a
+        call    call_mode_bc0
+        ld      hl,msg_no_os
+        jp      nc,fail_hl
+        ld      d,a
+        and     3
+        ld      (mode_old_layer),a
+        ld      b,a
+        ld      a,d
+        rrca
+        rrca
+        and     3
+        ld      (mode_old_sub),a
+        or      b
+        ret     z
+        ld      a,1
+        ld      bc,0
+        call    call_mode
+        ld      hl,msg_no_os
+        jp      nc,fail_hl
+        ld      a,1
+        ld      (mode_changed),a
+        ret
+
+nr_read:
+        ld      bc,NR_SELECT
+        out     (c),a
+        inc     b
+        in      a,(c)
+        ret
+
 check_ram:
         ld      a,(ver_original)
         or      a
@@ -2455,261 +2403,6 @@ check_ram:
         jp      fail_hl
 
 ; Until no key is down, steadily.
-wait_release:
-.again: ld      hl,DEBOUNCE
-.loop:  ld      bc,$00fe
-        in      a,(c)
-        and     $1f
-        cp      $1f
-        jr      nz,.again
-        dec     hl
-        ld      a,h
-        or      l
-        jr      nz,.loop
-        ret
-
-; A: 0 none, 13 Enter, ' ' Space, 1 Break, or '1' to '9', and '9'+1 for key 0,
-; which is the tenth line.
-scan_keys:
-        ld      bc,$bffe                    ; Enter
-        in      a,(c)
-        rra
-        ld      a,13
-        ret     nc
-        ld      bc,$7ffe                    ; Space, or Break with Caps Shift
-        in      a,(c)
-        rra
-        jr      c,.digits
-        ld      bc,$fefe
-        in      a,(c)
-        rra
-        ld      a,' '
-        ret     c
-        ld      a,1
-        ret
-.digits:
-        ld      bc,$f7fe                    ; 1 to 5: bits 0 to 4
-        in      a,(c)
-        ld      e,'1'
-        ld      b,5
-.left:  rra
-        jr      nc,.found
-        inc     e
-        djnz    .left
-        ld      bc,$effe                    ; 6 to 9, 0: bits 4 down to 0
-        in      a,(c)
-        ld      e,'6'
-        ld      b,5
-.right: bit     4,a
-        jr      z,.found
-        add     a,a
-        inc     e
-        djnz    .right
-        xor     a
-        ret
-.found: ld      a,e
-        ret
-
-menu_draw:
-        ld      a,14                        ; clear the window
-        rst     $10
-        xor     a
-        ld      (col),a
-        ld      a,' '
-        call    put
-        ld      hl,title
-        call    put_z
-        ld      hl,publisher
-        call    len_z
-        jr      z,.no_publisher
-        ld      a,41                        ; flush with the last column
-        sub     c
-        call    pad_to
-.no_publisher:
-        ld      hl,publisher
-        call    put_z
-        call    newline
-        call    newline
-        ld      a,(trainer_count)
-        or      a
-        jr      z,.no_trainers
-        ld      hl,str_trainer
-        call    put_z
-        call    newline
-        ld      a,(trainer_count)
-        ld      b,a
-        ld      c,0
-.row:   push    bc
-        ld      a,c
-        call    digit_row
-        pop     bc
-        push    bc
-        ld      a,c
-        call    trainer_entry
-        push    ix                          ; the name lies before the POKEs
-        pop     hl
-        ld      de,3
-        add     hl,de
-        ld      de,work32
-        call    copy4
-        ld      a,(ix+1)                    ; - (name's length + 1)
-        inc     a
-        neg
-        ld      e,a
-        ld      d,$ff
-        ld      (left),de
-        ld      hl,$ffff
-        ld      (left+2),hl
-        ld      hl,work32
-        ld      de,left
-        call    add32
-        ld      hl,work32
-        call    seek_patch
-        ld      c,(ix+1)
-        ld      b,0
-        ld      hl,smallbuf
-        call    read_patch
-        ld      b,(ix+1)
-        ld      hl,smallbuf
-        call    put_name
-        pop     bc
-        push    bc
-        ld      a,c
-        call    trainer_entry
-        ld      a,(ix+0)
-        call    put_on_off
-        pop     bc
-        inc     c
-        dec     b
-        jr      nz,.row
-        call    newline
-.no_trainers:
-        ld      hl,str_nexclash
-        call    put_line
-        ld      a,(trainer_count)
-        call    digit_row
-        ld      hl,fix_label            ; the patch's name for the line, or the usual one
-        ld      a,(hl)
-        or      a
-        jr      nz,.label
-        ld      hl,str_fix
-.label: call    put_z
-        ld      a,(ver_original)
-        xor     1
-        call    put_on_off
-        ld      a,(trainer_count)
-        ld      (cur_line),a
-        xor     a
-        call    kind_line
-        ld      a,1
-        call    kind_line
-        call    toggle_lines
-        call    newline
-        ld      hl,str_keys
-        call    put_line
-; The credit line, if there is anything to show: "Patch: a     Colours: b", in 41
-; columns from the first. Colours only with a set. With both, the words and a gap of
-; 2 leave 23 for the names: a keeps 11 or what b leaves, b the rest, and the gap is 5
-; if that fits. A name is cut in its buffer, so all this can repeat.
-        ld      a,(set_counts)
-        or      a
-        jr      nz,.sets
-        ld      (colours_by),a
-.sets:  ld      a,(patch_by)
-        ld      hl,colours_by
-        or      (hl)
-        ret     z                           ; neither
-        call    newline
-        ld      a,(patch_by)
-        or      a
-        ld      hl,str_colours
-        jr      z,.no_patch
-        ld      hl,colours_by
-        call    len_z
-        jr      z,.one
-        cp      12                          ; both: b, or 12 of it, has its room
-        jr      c,.short
-        ld      a,12
-.short: neg
-        add     a,23
-        ld      hl,patch_by
-        call    cut_name
-        ld      hl,patch_by
-        call    len_z
-        neg
-        add     a,23
-        ld      hl,colours_by
-        call    cut_name
-.one:   ld      hl,str_patch
-        call    put_z
-        ld      hl,patch_by
-        call    put_z
-        ld      hl,colours_by
-        call    len_z
-        jp      z,newline
-        neg
-        add     a,41 - 9                    ; "Colours: b" ends in the last column
-        ld      d,a
-        ld      a,(col)
-        add     a,5
-        cp      d
-        jr      c,.gap
-        ld      a,d
-.gap:   call    pad_to
-        ld      hl,str_colours
-.no_patch:
-        call    put_z
-        ld      hl,colours_by
-        jp      put_line
-
-; ------------------------------------------------------------ toggles on the menu
-
-; Each toggle's line, after the sets': its name, then [ON], [OFF], or [N/A] with the fix off.
-toggle_lines:
-        ld      a,(tg_count)
-        or      a
-        ret     z
-        ld      b,a
-        ld      c,0
-.t:     push    bc
-        ld      hl,cur_line
-        inc     (hl)
-        ld      a,(hl)
-        call    digit_row
-        pop     bc
-        push    bc
-        ld      a,c
-        call    toggle_find
-        ld      a,(tagbuf+4)
-        ld      (cur_name),a
-        ld      c,a
-        ld      b,0
-        ld      hl,smallbuf
-        call    read_patch
-        ld      a,(cur_name)
-        ld      b,a
-        ld      hl,smallbuf
-        call    put_name
-        ld      a,(ver_original)
-        or      a
-        jr      nz,.na
-        pop     bc
-        push    bc
-        ld      a,c
-        call    toggle_bit
-        and     (hl)
-        call    put_on_off
-        jr      .n
-.na:    ld      a,31
-        call    pad_to
-        ld      hl,str_unavailable
-        call    put_line
-.n:     pop     bc
-        inc     c
-        djnz    .t
-        ret
-
-; Toggle A (from 0)'s SET2 block found, its fixed part in tagbuf, the file at its name.
 toggle_find:
         ld      e,a
         ld      d,0
@@ -2736,63 +2429,6 @@ toggle_bit:
         ret
 
 ; A: how many sets and toggles are chosen.
-chosen_count:
-        push    hl
-        ld      c,0
-        ld      hl,set_choices
-        ld      b,KINDS
-.s:     ld      a,(hl)
-        or      a
-        jr      z,.s0
-        inc     c
-.s0:    inc     hl
-        djnz    .s
-        ld      a,(tg_on)
-        ld      b,8
-.t:     rrca
-        jr      nc,.t0
-        inc     c
-.t0:    djnz    .t
-        ld      a,c
-        pop     hl
-        ret
-
-; A is the line's number past the sets' lines (C the key's line): a toggle's line turns it on or
-; off; on only while fewer than KINDS are chosen, so a third choice cannot be made at all.
-menu_toggle_key:
-        ld      b,a                         ; the last line with a key so far
-        ld      a,c
-        sub     b
-        jp      c,menu.wait
-        jp      z,menu.wait
-        dec     a                           ; toggle number
-        ld      hl,tg_count
-        cp      (hl)
-        jp      nc,menu.wait
-        ld      e,a
-        ld      a,(ver_original)
-        or      a
-        jp      nz,menu.wait
-        ld      a,e
-        call    toggle_bit
-        ld      d,a
-        and     (hl)
-        jr      nz,.off
-        call    chosen_count
-        cp      KINDS
-        jp      nc,menu.wait
-        ld      a,(tg_on)
-        or      d
-        ld      (tg_on),a
-        jp      menu.again
-.off:   ld      a,d
-        cpl
-        and     (hl)
-        ld      (hl),a
-        jp      menu.again
-
-; ENTER: each toggle on takes a slot no set uses, its kind and rank there. The menu let no more
-; be chosen than there are slots.
 toggles_to_slots:
         ld      a,(tg_count)
         or      a
@@ -2834,206 +2470,6 @@ toggles_to_slots:
 
 ; The line of kind A, if it offers any. Colours with one set is [ON] or [OFF]; otherwise it
 ; says [OFF] or the name, from the patch, at most 17 characters, ending in the last column.
-kind_line:
-        ld      (cur_kind),a
-        ld      c,a
-        ld      b,0
-        ld      hl,set_counts
-        add     hl,bc
-        ld      a,(hl)
-        or      a
-        ret     z
-        ld      hl,cur_line
-        inc     (hl)
-        ld      a,(hl)
-        call    digit_row
-        ld      a,(cur_kind)
-        or      a
-        ld      hl,str_enhanced
-        jr      z,.label
-        ld      hl,str_language
-.label: call    put_z
-        ld      a,(ver_original)
-        or      a
-        jr      nz,.unavailable
-        ld      a,(cur_kind)
-        ld      c,a
-        ld      b,0
-        ld      hl,set_choices
-        add     hl,bc
-        ld      a,(hl)
-        or      a
-        jp      z,put_on_off                ; A=0: [OFF]
-        ld      (cur_n),a
-        ld      a,(cur_kind)
-        or      a
-        jr      nz,.name
-        ld      a,(set_counts)
-        dec     a
-        jr      nz,.name
-        inc     a
-        jp      put_on_off                  ; [ON]
-.name:  call    find_set
-        ld      a,(tagbuf+4)
-        cp      18
-        jr      c,.short
-        ld      a,17
-.short: ld      (cur_name),a
-        ld      c,a                         ; only as much as is shown, in any case
-        ld      b,0
-        ld      hl,smallbuf
-        call    read_patch
-        ld      a,(cur_name)
-        neg
-        add     a,41-2
-        cp      31
-        jr      c,.pad
-        ld      a,31                        ; [ON] and [OFF] start here, and names that fit
-.pad:   call    pad_to
-        ld      a,'['
-        call    put
-        ld      a,(cur_name)
-        ld      b,a
-        ld      hl,smallbuf
-        call    put_name
-        ld      hl,str_close
-        jp      put_line
-.unavailable:
-        ld      a,31
-        call    pad_to
-        ld      hl,str_unavailable
-        jp      put_line
-
-; End the name at HL after A characters.
-cut_name:
-        ld      e,a
-        ld      d,0
-        add     hl,de
-        ld      (hl),d
-        ret
-
-put_line:
-        call    put_z
-        jr      newline
-
-; B bytes of a name from HL; anything unprintable is shown as '?'.
-put_name:
-.name:  ld      a,(hl)
-        cp      ' '
-        jr      c,.q
-        cp      $7f
-        jr      c,.n
-.q:     ld      a,'?'
-.n:     push    hl
-        push    bc
-        call    put
-        pop     bc
-        pop     hl
-        inc     hl
-        djnz    .name
-        ret
-
-; From column 31, [ON] if A is not 0, otherwise [OFF], and the end of the line.
-put_on_off:
-        push    af
-        ld      a,31
-        call    pad_to
-        pop     af
-        or      a
-        ld      hl,str_on
-        jr      nz,put_line
-        ld      hl,str_off
-        jr      put_line
-
-; "  n  " for line A (from 0). The tenth line's key is 0.
-digit_row:
-        push    af
-        ld      hl,str_indent
-        call    put_z
-        pop     af
-        add     a,'1'
-        cp      '9'+1
-        jr      nz,.digit
-        ld      a,'0'
-.digit: call    put
-        ld      hl,str_indent
-        jp      put_z
-; C = the length of the string at HL.
-len_z:  ld      c,0
-.c:     ld      a,(hl)
-        or      a
-        jr      z,.end
-        inc     hl
-        inc     c
-        jr      .c
-.end:   ld      a,c
-        or      a
-        ret
-
-; Spaces up to column A.
-pad_to: ld      hl,col
-        cp      (hl)
-        ret     c
-        ret     z
-        push    af
-        ld      a,' '
-        call    put
-        pop     af
-        jr      pad_to
-
-newline:
-        xor     a
-        ld      (col),a
-        ld      a,13
-        rst     $10
-        ret
-
-; A window that holds the menu's 41 columns: 6-pixel characters on layer 1,1
-; (layer 0 has only 32 columns and no such codes). Anything that was changed
-; is put back by mode_off.
-mode_on:
-        xor     a
-        call    call_mode_bc0
-        ld      hl,msg_no_os
-        jp      nc,fail_hl
-        ld      d,a
-        ld      a,b
-        ld      (mode_old_width),a
-        ld      a,d
-        and     3
-        ld      (mode_old_layer),a
-        ld      e,a
-        ld      a,d
-        rrca
-        rrca
-        and     3
-        ld      (mode_old_sub),a
-        ld      c,a
-        ld      a,e                         ; layer 0, or lo-res: too narrow
-        or      a
-        jr      z,.change
-        dec     a
-        jr      nz,.width
-        ld      a,c
-        or      a
-        jr      nz,.width
-.change:
-        ld      a,1
-        ld      b,1
-        ld      c,1
-        call    call_mode
-        ld      hl,msg_no_os
-        jp      nc,fail_hl
-        ld      a,b
-        ld      (mode_old_width),a
-        ld      a,1
-        ld      (mode_changed),a
-.width: ld      a,30                        ; character width 6
-        rst     $10
-        ld      a,6
-        rst     $10
-        ret
-
 usage:  ld      hl,msg_usage
         call    print
         or      a
@@ -3093,19 +2529,9 @@ key_patch_by:   db "patch_by=",0
 key_fix_label:  db "fix_label=",0
 key_colours_by: db "colours_by=",0
 ext_z80:        db ".z80",0
-str_trainer:    db " TRAINER",0
-str_nexclash:   db " NEXCLASH",0
-str_indent:     db "  ",0
-str_on:         db "[ON]",0
-str_off:        db "[OFF]",0
-str_close:      db "]",0
-str_unavailable: db "[N/A]",0
 str_fix:        db "Colour clash fix",0
 str_enhanced:   db "Enhanced colours",0
 str_language:   db "Language",0
-str_keys:       db " ENTER to play",0
-str_patch:      db "Patch: ",0
-str_colours:    db "Colours: ",0
 msg_usage:      db ".NEXCLASH ",34,"GAME.nxc",34,13
                 db "Rebuilds NexClash's game from a",13
                 db "patch and your own copy.",13
@@ -3114,6 +2540,12 @@ msg_usage:      db ".NEXCLASH ",34,"GAME.nxc",34,13
                 db "GPL-3.0+). ZX0: Einar Saukas.",13 | $80
 msg_not_patch:  db "Not a .nxc fil", 'e' | $80
 msg_cancelled:  db "Cancelle", 'd' | $80
+msg_ram_menu:   db "Not enough free RAM for the men", 'u' | $80
+msg_rom:        db "Needs NEXT/enNextZX.rom: no fon", 't' | $80   ; the menu part's, here as it is unmapped first
+msg_big:        db "Too much for the men", 'u' | $80
+msg_no_patch:   db "Cannot open the .nx", 'c' | $80
+magic_nxc1:     db "NXC1"
+opt_size:       dd 3
 msg_ram_small:  db "Needs more RAM: turn fix of", 'f' | $80
 
 first_end:
@@ -3241,6 +2673,9 @@ nexclash_chosen:
         cp      112
         jr      c,.order
 
+        ld      a,(menu_route)              ; the menu, its stub and data after them
+        or      a
+        call    nz,menu_nex
         call    close_out                   ; length and CRC, or no file
         ld      hl,crc
         ld      de,want
@@ -3248,6 +2683,18 @@ nexclash_chosen:
         ld      a,1
         ld      (oh_done),a
         jp      done
+
+; The part that writes the menu banks, read in over the game's part, which is done with.
+menu_nex:
+        rst     $08
+        db      M_GETHANDLE
+        ld      hl,file_mnx_at
+        call    seek_file
+        ld      hl,z80_part_at
+        ld      bc,mnx_size
+        call    load_part
+        jp      z80_part_at
+file_mnx_at:    dd FILE_MNX_AT
 
 ; The running CRC at HL and out_len against the CRC and length at DE.
 check_result:
@@ -3641,7 +3088,7 @@ work_begin:
         ld      e,(hl)
         inc     (hl)
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      (hl),a
         djnz    .more
@@ -4906,7 +4353,7 @@ load_bank_index:
         pop     de
         ld      bc,8
         ldir
-        jp      .next
+        jr      .next
 
 ; Bank (cur_bank) from the patch into WORK, zeros to its end.
 decode_patch_bank:
@@ -6189,7 +5636,7 @@ tape_base1:
         sub     TAPE_PAGES
         ld      e,a
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      (t_base),hl
         ret
@@ -6590,7 +6037,7 @@ tape_read:
         ld      bc,0
         ld      hl,left
         call    below32
-        jp      c,tape_bad_w
+        jr      c,tape_bad_w
         ld      hl,pos
         ld      a,(gh)
         call    seek_file
@@ -6873,7 +6320,7 @@ tape_base2:
         sub     TAPE_PAGES
         ld      e,a
         ld      d,0
-        ld      hl,page_list
+        ld      hl,all_pages
         add     hl,de
         ld      (t_base),hl
         ret
@@ -6921,6 +6368,1279 @@ tape3_size      equ tape3_end - tape3_start
         assert  z80_part_at + tape2_size <= patch_path, "a tape's second part runs into the fixed memory"
         assert  z80_part_at + tape3_size <= patch_path, "a tape's third part runs into the fixed memory"
         display "snapshot part: ", /d, ov_end - z80_part_at, ", tape parts: ", /d, tape1_size, ", ", /d, tape2_size, " and ", /d, tape3_size, ", room for a part: ", /d, patch_path - z80_part_at
+
+; ============================================== the menu's part, read into a page of its own
+; firmware/menu.asm and what builds its description from the patch, as the spec's "The
+; description" has it, so that it is the same as a .nex's (tools/nxc.py menu_description); and
+; the stub, for the .nex writer. Run at 0xA000 with interrupts off, before the menu, from menu.
+
+FIRST_PART      equ 8192
+MP_AT           equ $A000
+HELP_READ       equ 1024
+MENU_TITLE      equ 54                      ; two bar rows of 27
+MENU_TEXT       equ 32                      ; a publisher, a name in the credits
+HELP_MAX        equ 64
+NAME_MAX        equ 25
+
+        disp    MP_AT
+mp_start:
+        jp      mp_main
+mp_desc_len:    dw 0                        ; for the .nex writer: the description's length,
+mp_ptrs_off:    dw 0                        ; and where its lines' data offsets go in it
+mp_tg:          ds 2 + 2 * TOGGLES_MAX      ; and the toggles (count, on, kinds, ranks), kept here, as the key state takes their memory
+mp_rom_name:    db "C:/MACHINES/NEXT/ENNEXTZX.ROM",0
+mp_rom_at:      dd $FD00                    ; its ROM 3's font
+mp_hlp1:        db "HLP1"
+mp_k_trainer:   db "trainer_",0
+mp_k_toggle:    db "toggle_",0
+mp_k_fix:       db "fix=",0
+mp_k_colours:   db "colours=",0
+mp_k_language:  db "language=",0
+
+mp_main:
+        ld      a,'*'                       ; the font, from the card's ROM file
+        ld      hl,mp_rom_name
+        ld      b,FA_READ
+        rst     $08
+        db      F_OPEN
+        ld      hl,msg_rom
+        jp      c,fail_hl
+        push    af
+        ld      hl,mp_rom_at
+        call    seek_file
+        pop     af
+        push    af
+        ld      hl,MP_FONT
+        ld      bc,768
+        ld      de,msg_rom
+        call    read_exact
+        pop     af
+        rst     $08
+        db      F_CLOSE
+        ld      hl,0                        ; HLP1, its first 1,024 bytes, if there is one
+        ld      (mp_help_len),hl
+        call    walk_begin
+.h:     call    walk_next
+        jr      z,.hd
+        ld      de,mp_hlp1
+        call    tag_is
+        jr      nz,.h
+        ld      bc,HELP_READ
+        ld      hl,(blk_len+2)
+        ld      a,h
+        or      l
+        jr      nz,.hc
+        ld      hl,(blk_len)
+        or      a
+        sbc     hl,bc
+        jr      nc,.hc
+        ld      bc,(blk_len)
+.hc:    ld      (mp_help_len),bc
+        ld      a,b
+        or      c
+        jr      z,.hd
+        ld      hl,MP_HELP
+        call    read_patch
+.hd:
+; The description: flags, N, the number of lines, then the strings.
+        ld      de,MP_DESC
+        xor     a
+        ld      (de),a
+        inc     de
+        ld      a,KINDS
+        ld      (de),a
+        inc     de
+        call    mp_lines
+        ld      (de),a
+        inc     de
+        push    de                          ; the title: of the first target that has one
+        call    walk_begin
+.t:     call    walk_next
+        jr      z,.not
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.t
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        bit     7,a
+        jr      z,.text
+        ld      hl,smallbuf                 ; a set of tapes: past its head, n then 5 each after the first
+        ld      bc,1
+        call    read_patch
+        ld      a,(smallbuf)
+        dec     a
+        ld      c,a
+        add     a,a
+        add     a,a
+        add     a,c
+        ld      c,a
+        ld      b,0
+        inc     a
+        ld      l,a
+        ld      h,b
+        ld      (work32),hl
+        ld      (work32+2),bc
+        ld      a,c
+        or      a
+        jr      z,.past
+        ld      hl,smallbuf
+        call    read_patch
+.past:  ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+.text:  call    read_text
+        ld      de,key_title
+        call    text_find
+        jr      c,.t
+        pop     de
+        push    de
+        ld      a,MENU_TITLE
+        call    copy_text
+        pop     hl                          ; in capitals
+.up:    ld      a,(hl)
+        or      a
+        jr      z,.upd
+        cp      'a'
+        jr      c,.un
+        cp      'z' + 1
+        jr      nc,.un
+        sub     'a' - 'A'
+        ld      (hl),a
+.un:    inc     hl
+        jr      .up
+.not:   pop     hl
+        ld      (hl),0
+.upd:   inc     hl
+        push    hl                          ; INF1: the publisher, colours_by with a colour set, patch_by
+        call    walk_begin
+.i:     call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_inf1
+        call    tag_is
+        jr      nz,.i
+        call    read_text
+        pop     de
+        ld      hl,key_publisher
+        call    mp_inf
+        ld      a,(set_counts)
+        or      a
+        jr      nz,.col
+        ld      (de),a
+        inc     de
+        jr      .pby
+.col:   ld      hl,key_colours_by
+        call    mp_inf
+.pby:   ld      hl,key_patch_by
+        call    mp_inf
+; Each line: kind, state, sets, name, help, the sets' names.
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.fix
+        ld      b,a
+        ld      c,0
+.tr:    push    bc
+        xor     a
+        call    mp_head
+        pop     bc
+        push    bc
+        push    de
+        ld      a,c
+        call    trainer_entry
+        push    ix                          ; the name lies before the count and the POKEs
+        pop     hl
+        ld      de,3
+        add     hl,de
+        ld      de,work32
+        call    copy4
+        ld      a,(ix+1)
+        inc     a
+        neg
+        ld      e,a
+        ld      d,$ff
+        ld      (left),de
+        ld      hl,$ffff
+        ld      (left+2),hl
+        ld      hl,work32
+        ld      de,left
+        call    add32
+        ld      hl,work32
+        call    seek_patch
+        ld      c,(ix+1)
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        pop     de
+        ld      c,(ix+1)
+        ld      b,0
+        ld      hl,smallbuf
+        call    mp_name
+        pop     bc
+        push    bc
+        ld      a,c
+        inc     a
+        ld      hl,mp_k_trainer
+        call    mp_numbered
+        pop     bc
+        inc     c
+        djnz    .tr
+.fix:   ld      a,1                         ; the main line: on, as the menu starts
+        call    mp_head
+        ld      hl,fix_label
+        ld      a,(hl)
+        or      a
+        jr      nz,.fl
+        ld      hl,str_fix
+.fl:    call    mp_copyz
+        ld      hl,mp_k_fix
+        call    mp_help
+        xor     a                           ; each kind of set offered
+.kd:    ld      (cur_kind),a
+        ld      c,a
+        ld      b,0
+        ld      hl,set_counts
+        add     hl,bc
+        ld      a,(hl)
+        or      a
+        jr      z,.kn
+        push    af
+        ld      a,2
+        call    mp_head
+        dec     de
+        pop     af
+        ld      (de),a
+        inc     de
+        ld      a,(cur_kind)
+        or      a
+        ld      hl,str_enhanced
+        jr      z,.kl
+        ld      hl,str_language
+.kl:    call    mp_copyz
+        ld      a,(cur_kind)
+        or      a
+        ld      hl,mp_k_colours
+        jr      z,.kh
+        ld      hl,mp_k_language
+.kh:    call    mp_help
+        ld      a,(cur_kind)
+        ld      c,a
+        ld      b,0
+        ld      hl,set_counts
+        add     hl,bc
+        ld      b,(hl)
+        ld      c,1
+.sn:    push    bc
+        ld      a,c
+        ld      (cur_n),a
+        push    de
+        call    find_set
+        call    mp_setname
+        pop     bc
+        inc     c
+        djnz    .sn
+.kn:    ld      a,(cur_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.kd
+        ld      a,(tg_count)                ; each toggle
+        or      a
+        jr      z,.ptrs
+        ld      b,a
+        ld      c,0
+.tg:    push    bc
+        ld      a,3
+        call    mp_head
+        pop     bc
+        push    bc
+        ld      a,c
+        push    de
+        call    toggle_find
+        call    mp_setname
+        pop     bc
+        push    bc
+        ld      a,c
+        inc     a
+        ld      hl,mp_k_toggle
+        call    mp_numbered
+        pop     bc
+        inc     c
+        djnz    .tg
+.ptrs:  ld      hl,-MP_DESC                 ; then 3 bytes for each line, filled in by the writer
+        add     hl,de
+        ld      (mp_ptrs_off),hl
+        call    mp_lines
+        ld      b,a
+        add     a,a
+        add     a,b
+        ld      b,a
+        xor     a
+.z:     ld      (de),a
+        inc     de
+        djnz    .z
+        ld      hl,-MP_DESC
+        add     hl,de
+        ld      (mp_desc_len),hl
+        ld      bc,MP_DESC_ROOM
+        or      a
+        sbc     hl,bc
+        ld      hl,msg_big
+        jp      nc,fail_hl
+        ld      hl,tg_count                 ; the toggles for the writer: count, on, kinds, ranks
+        ld      de,mp_tg
+        ld      bc,2 + 2 * TOGGLES_MAX
+        ldir
+; The menu, then what it chose, in the command's own terms.
+        ld      hl,MP_DESC
+        ld      de,MP_FONT
+        call    menu_run
+mp_chosen:
+        ret     c                           ; BREAK
+        ld      (mp_key),a                  ; 0 for ENTER
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.af
+        ld      b,a
+        ld      c,0
+.at:    push    bc
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     bc
+        push    bc
+        push    af
+        ld      a,c
+        call    trainer_entry
+        pop     af
+        ld      (ix+0),a
+        pop     bc
+        inc     c
+        djnz    .at
+.af:    ld      a,(trainer_count)
+        ld      c,a
+        push    bc
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        xor     1
+        ld      (ver_original),a
+        pop     bc
+        inc     c
+        xor     a
+.ak:    ld      (cur_kind),a
+        ld      e,a
+        ld      d,0
+        ld      hl,set_counts
+        add     hl,de
+        ld      a,(hl)
+        or      a
+        jr      z,.akn
+        push    bc
+        push    de
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     de
+        ld      hl,set_choices
+        add     hl,de
+        ld      (hl),a
+        pop     bc
+        inc     c
+.akn:   ld      a,(cur_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.ak
+        xor     a
+        ld      (tg_on),a
+        ld      a,(tg_count)
+        or      a
+        jr      z,.route
+        ld      b,a
+        ld      e,1
+.atg:   push    bc
+        push    de
+        ld      a,c
+        call    md_line
+        inc     hl
+        ld      a,(hl)
+        pop     de
+        or      a
+        jr      z,.atn
+        ld      a,(tg_on)
+        or      e
+        ld      (tg_on),a
+.atn:   sla     e
+        pop     bc
+        inc     c
+        djnz    .atg
+; ENTER with the clash fix on: the .nex that carries its menu, which starts with these choices,
+; over a build with none. SPACE, or the fix off: as before, the choices fixed in what is written.
+.route: ld      a,(mp_key)
+        or      a
+        ret     nz
+        ld      a,(ver_original)
+        or      a
+        ret     nz
+        inc     a
+        ld      (menu_route),a
+        xor     a
+        ld      (set_choices),a
+        ld      (set_choices+1),a
+        ld      (tg_on),a
+        ld      a,(trainer_count)
+        or      a
+        ret     z
+        ld      b,a
+.off:   ld      a,b
+        dec     a
+        push    bc
+        call    trainer_entry
+        ld      (ix+0),0
+        pop     bc
+        djnz    .off
+        or      a
+        ret
+
+; A: how many lines the menu has.
+mp_lines:
+        ld      a,(trainer_count)
+        inc     a
+        ld      hl,set_counts
+        ld      b,KINDS
+.k:     inc     (hl)
+        dec     (hl)
+        jr      z,.n
+        inc     a
+.n:     inc     hl
+        djnz    .k
+        ld      hl,tg_count
+        add     a,(hl)
+        ret
+
+; A line's head at DE: kind A, its state (1 for the main line), 0 sets.
+mp_head:
+        ld      (de),a
+        inc     de
+        cp      1
+        ld      a,1
+        jr      z,.s
+        xor     a
+.s:     ld      (de),a
+        inc     de
+        xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+; INF1's value for the key at HL, at most MENU_TEXT characters, at DE, then a zero; DE past it.
+mp_inf: ex      de,hl
+        push    hl
+        call    text_find
+        pop     de
+        jr      c,.none
+        ld      a,MENU_TEXT
+        call    copy_text
+        inc     de
+        ret
+.none:  xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+; BC bytes at HL as a name, at most NAME_MAX, at DE; DE past its zero.
+mp_name:
+        ld      a,NAME_MAX
+        call    copy_text
+        inc     de
+        ret
+
+; The zero-terminated string at HL as a name.
+mp_copyz:
+        push    hl
+        ld      bc,0
+.l:     ld      a,(hl)
+        or      a
+        jr      z,.e
+        inc     hl
+        inc     bc
+        jr      .l
+.e:     pop     hl
+        jr      mp_name
+
+; A set's name, the patch at it (tagbuf+4 its length), at the DE on the stack; DE past it.
+mp_setname:
+        ld      a,(tagbuf+4)
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        pop     hl                          ; the return address
+        pop     de
+        push    hl
+        ld      a,(tagbuf+4)
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        jr      mp_name
+
+; The key at HL, then the digit A, then '=', as the help key.
+mp_numbered:
+        push    de
+        ld      de,mp_keybuf
+.c:     ld      c,a
+        ld      a,(hl)
+        or      a
+        jr      z,.d
+        ld      (de),a
+        inc     hl
+        inc     de
+        ld      a,c
+        jr      .c
+.d:     ld      a,c
+        add     a,'0'
+        ld      (de),a
+        inc     de
+        ld      a,'='
+        ld      (de),a
+        inc     de
+        xor     a
+        ld      (de),a
+        pop     de
+        ld      hl,mp_keybuf
+; The help for the key at HL (with its '='), from HLP1's whole lines, the first with a value, at
+; most HELP_MAX, at DE, then a zero; DE past it.
+mp_help:
+        ld      (mp_keyp),hl
+        push    de
+        ld      hl,MP_HELP
+        ld      bc,(mp_help_len)
+.line:  ld      a,b
+        or      c
+        jr      z,.none
+        push    hl
+        push    bc
+        ld      a,10
+        cpir
+        jr      nz,.cut                     ; no line end: a line cut off counts as absent
+        ld      (mp_next),hl
+        ld      (mp_left),bc
+        pop     bc
+        pop     hl
+        ld      de,(mp_keyp)
+.cmp:   ld      a,(de)
+        or      a
+        jr      z,.match
+        cp      (hl)
+        jr      nz,.next
+        inc     hl
+        inc     de
+        jr      .cmp
+.match: ld      de,(mp_next)
+        dec     de
+        ex      de,hl
+        or      a
+        sbc     hl,de
+        ld      b,h
+        ld      c,l
+        ex      de,hl
+        ld      a,b
+        or      c
+        jr      z,.next
+        pop     de
+        ld      a,HELP_MAX
+        call    copy_text
+        inc     de
+        ret
+.next:  ld      hl,(mp_next)
+        ld      bc,(mp_left)
+        jr      .line
+.cut:   pop     bc
+        pop     hl
+.none:  pop     de
+        xor     a
+        ld      (de),a
+        inc     de
+        ret
+
+        include "menu.asm"
+
+mp_stub:        incbin "nxcstub.bin"
+MP_STUB_LEN     equ $ - mp_stub
+        db      "NXQ1"
+mp_end:
+mp_size         equ mp_end - mp_start
+; Not read from the file: the page's memory after the part.
+mp_help_len     equ mp_end                  ; 2
+mp_next         equ mp_end + 2
+mp_left         equ mp_end + 4
+mp_keyp         equ mp_end + 6
+mp_key          equ mp_end + 8
+mp_keybuf       equ mp_end + 9              ; 12
+MENU_RAM        equ mp_end + 21             ; 13
+MP_FONT         equ mp_end + 34             ; 768
+MP_HELP         equ MP_FONT + 768           ; HELP_READ
+MP_DESC         equ MP_HELP + HELP_READ
+MP_DESC_ROOM    equ $C000 - MP_DESC
+        assert  MP_DESC_ROOM >= 1024, "the menu's page has too little room for its description"
+        display "menu part: ", /d, mp_size, ", room for the description: ", /d, MP_DESC_ROOM
+        ent
+
+; ============================================== the menu .nex's writer, read in after the bare banks
+; Over the game's part, which is done with by then. See the spec's "A .nex that carries its menu":
+; the bare file is written; this writes M0 (the stub, its parameters, the description, the shadow
+; below the build's stack) and the data (each line's trainer POKEs or decoded set chunks), then
+; puts the header, the stub's count of banks and the lines' offsets in place, as tools/nxc.py
+; apply_menu writes them, byte for byte.
+
+STUB_BLOCK      equ 57
+STUB_DESC_END   equ $1D00
+
+        disp    z80_part_at
+mnx_start:
+        ld      hl,HDR+4                    ; what a build must be to carry its menu
+        ld      de,mnx_v12
+        call    same_tag
+        jp      nz,mnx_refuse
+        ld      hl,(HDR+140)                ; no file handle passed on
+        ld      a,h
+        or      l
+        jp      nz,mnx_refuse
+        ld      hl,(HDR+14)                 ; a start the last 57 bytes can reach
+        ld      (mnx_pc),hl
+        ld      de,$4000 + STUB_BLOCK
+        or      a
+        sbc     hl,de
+        jp      c,mnx_refuse
+        ld      a,(mnx_pc+1)
+        and     $1f
+        jr      nz,.pc
+        ld      a,(mnx_pc)
+        or      a
+        jr      z,.pc
+        cp      5
+        jp      c,mnx_refuse
+.pc:    ld      hl,(HDR+12)
+        ld      (mnx_sp),hl
+        ld      a,(HDR+139)
+        ld      (mnx_entry),a
+        ld      a,(ram_bank)                ; M0: above all the build needs
+        inc     a
+        ld      (mnx_m0),a
+        ld      hl,out_len                  ; M0's place: just after the bare file
+        ld      de,mnx_m0pos
+        call    copy4
+        ld      a,(all_pages)               ; the description's size, from the menu's page
+        call    map_slot5
+        ld      hl,(mp_desc_len)
+        ld      (mnx_desc_len),hl
+        ld      hl,(mp_ptrs_off)
+        ld      (mnx_ptrs_off),hl
+        ld      hl,mp_tg
+        ld      de,mnx_tg
+        ld      bc,2 + 2 * TOGGLES_MAX
+        ldir
+        call    map_iopage
+        ld      hl,MP_STUB_LEN
+        ld      de,(mnx_desc_len)
+        add     hl,de
+        ld      (mnx_desc_end),hl
+        ld      de,STUB_DESC_END + 1
+        or      a
+        sbc     hl,de
+        jr      nc,mnx_refuse
+        xor     a
+        ld      (mnx_shadow),a
+        ld      (mnx_line),a
+        ld      (mnx_paged),a
+        ld      hl,(mnx_sp)                 ; the shadow: 16 below SP, if that is in the entry bank
+        ld      de,-16
+        add     hl,de
+        ld      a,h
+        cp      $c0
+        jr      c,.ns
+        sub     $c0
+        ld      h,a
+        ld      (mnx_lo),hl
+        call    mnx_room
+        jr      c,mnx_refuse
+        ld      a,1
+        ld      (mnx_shadow),a
+        call    mnx_shadow_read
+.ns:    call    mnx_write_m0
+        call    mnx_data
+        jp      mnx_fix
+
+mnx_refuse:
+        ld      hl,msg_no_menu
+        jp      fail_hl
+
+; NC when the shadow's 16 bytes lie in M0's free room.
+mnx_room:
+        ld      hl,(mnx_lo)
+        ld      de,$3f80
+        or      a
+        sbc     hl,de
+        ret     nc
+        ld      hl,(mnx_lo)
+        ld      de,$1d40
+        or      a
+        sbc     hl,de
+        jr      c,.low
+        ld      hl,(mnx_lo)
+        ld      de,$2000 - 16 + 1
+        or      a
+        sbc     hl,de
+        ccf
+        ret
+.low:   ld      hl,(mnx_lo)                 ; or after the stub and description, to 0x1D00
+        ld      de,STUB_DESC_END - 16 + 1
+        or      a
+        sbc     hl,de
+        ccf
+        ret     c
+        ld      hl,(mnx_lo)
+        ld      de,(mnx_desc_end)
+        or      a
+        sbc     hl,de
+        ret
+
+; The entry bank's 16 bytes below SP as the bare file holds them, read back from it.
+mnx_shadow_read:
+        ld      hl,0
+        ld      (work32),hl
+        ld      (work32+2),hl
+        ld      b,0                         ; its place among the listed banks, x 16K
+.o:     push    bc
+        call    order_bank
+        call    header_has
+        jr      z,.n
+        ld      a,(cur_bank)
+        ld      hl,mnx_entry
+        cp      (hl)
+        jr      z,.got
+        ld      hl,work32+1
+        ld      a,(hl)
+        add     a,$40
+        ld      (hl),a
+        jr      nc,.n
+        inc     hl
+        inc     (hl)
+.n:     pop     bc
+        inc     b
+        ld      a,b
+        cp      112
+        jr      c,.o
+        jp      bad_patch
+.got:   pop     bc
+        ld      hl,(mnx_lo)                 ; + lo + 512 + the screen
+        ld      de,512
+        add     hl,de
+        ld      (left),hl
+        ld      hl,0
+        ld      (left+2),hl
+        ld      hl,work32
+        ld      de,left
+        call    add32
+        call    screen_size
+        ld      hl,work32
+        ld      de,scr_left
+        call    add32
+        ld      a,(oh)
+        ld      hl,work32
+        call    seek_file
+        ld      a,(oh)
+        ld      hl,mnx_sh
+        ld      bc,16
+        ld      de,msg_write
+        call    read_exact
+        ld      a,(oh)                      ; back to the end
+        ld      hl,mnx_m0pos
+        jp      seek_file
+
+; M0: the stub with its parameters, the description from the menu's page, the shadow.
+mnx_write_m0:
+        ld      de,WORK
+        call    fill_zeros
+        ld      a,(all_pages)
+        call    map_slot5
+        ld      hl,mp_stub
+        ld      de,WORK
+        ld      bc,MP_STUB_LEN
+        ldir
+        ld      hl,MP_DESC
+        ld      bc,(mnx_desc_len)
+        ldir
+        call    map_iopage
+        ld      ix,WORK + MP_STUB_LEN - 8   ; the parameters
+        ld      a,(mnx_m0)
+        add     a,a
+        ld      (ix+0),a
+        ld      hl,(mnx_pc)
+        ld      (ix+1),l
+        ld      (ix+2),h
+        ld      hl,(mnx_sp)
+        ld      (ix+3),l
+        ld      (ix+4),h
+        ld      a,(mnx_entry)
+        add     a,a
+        ld      (ix+5),a
+        ld      a,(mnx_shadow)
+        ld      (ix+7),a
+        ld      (ix+8),1                    ; the description's flags: the main line fixed on
+        or      a
+        jr      z,.w
+        ld      hl,(mnx_lo)
+        ld      de,WORK
+        add     hl,de
+        ex      de,hl
+        ld      hl,mnx_sh
+        ld      bc,16
+        ldir
+.w:     ld      hl,WORK
+        ld      bc,BANK_SIZE
+        jp      write_out
+
+; The data, from M0 + 1, in the lines' order, each line's offset kept.
+mnx_data:
+        ld      hl,out_len
+        ld      de,mnx_dstart
+        call    copy4
+        ld      a,(trainer_count)
+        or      a
+        jr      z,.fix
+        ld      b,a
+        ld      c,0
+.tr:    push    bc
+        call    mnx_mark
+        pop     bc
+        push    bc
+        ld      a,c
+        call    trainer_entry
+        ld      a,(ix+2)                    ; its count, then its POKEs as TRN1 has them
+        ld      (mnx_one),a
+        ld      hl,mnx_one
+        ld      bc,1
+        call    write_out
+        pop     bc
+        push    bc
+        ld      a,c
+        call    trainer_entry
+        push    ix
+        pop     hl
+        ld      de,3
+        add     hl,de
+        call    seek_patch
+        ld      a,(mnx_one)
+        ld      l,a
+        ld      h,0
+        add     hl,hl
+        add     hl,hl
+        ld      (mnx_n),hl
+        ld      b,h
+        ld      c,l
+        ld      hl,IOBUF
+        call    read_patch
+        ld      hl,IOBUF                    ; none may change the shadow
+        ld      a,(mnx_one)
+.pk:    push    af
+        ld      a,(mnx_shadow)
+        or      a
+        jr      z,.pn
+        ld      a,(mnx_entry)
+        cp      (hl)
+        jr      nz,.pn
+        inc     hl
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        dec     hl
+        dec     hl
+        call    mnx_in_shadow
+        jp      nc,mnx_refuse
+.pn:    inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        pop     af
+        dec     a
+        jr      nz,.pk
+        ld      hl,IOBUF
+        ld      bc,(mnx_n)
+        call    write_out
+        pop     bc
+        inc     c
+        djnz    .tr
+.fix:   ld      hl,mnx_line                 ; the main line: no data
+        ld      a,(hl)
+        inc     (hl)
+        call    mnx_ptr
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),$ff
+        inc     hl
+        ld      (hl),$ff
+        xor     a
+.kd:    ld      (mnx_kind),a                ; each kind of set: all its sets, in turn
+        ld      e,a
+        ld      d,0
+        ld      hl,set_counts
+        add     hl,de
+        ld      a,(hl)
+        or      a
+        jr      z,.kn
+        push    af
+        call    mnx_mark
+        pop     bc
+        ld      c,1
+.sn:    push    bc
+        ld      a,(mnx_kind)
+        inc     a
+        ld      b,c
+        call    mnx_set
+        pop     bc
+        inc     c
+        djnz    .sn
+.kn:    ld      a,(mnx_kind)
+        inc     a
+        cp      KINDS
+        jr      c,.kd
+        ld      a,(mnx_tg)                  ; each toggle
+        or      a
+        ret     z
+        ld      b,a
+        ld      c,0
+.tg:    push    bc
+        call    mnx_mark
+        pop     bc
+        push    bc
+        ld      b,0
+        ld      hl,mnx_tg + 2
+        add     hl,bc
+        ld      a,(hl)
+        ld      de,TOGGLES_MAX
+        add     hl,de
+        ld      b,(hl)
+        call    mnx_set
+        pop     bc
+        inc     c
+        djnz    .tg
+        ret
+
+; NC when DE, an offset in the entry bank, is in the shadow.
+mnx_in_shadow:
+        push    hl
+        ld      hl,(mnx_lo)
+        ex      de,hl
+        or      a
+        sbc     hl,de                       ; offset - lo
+        jr      c,.r
+        ld      de,16
+        sbc     hl,de
+        ccf
+.r:     pop     hl
+        ret
+
+; Line (mnx_line)'s data offset: where the output has got to, from the data's start.
+mnx_mark:
+        ld      hl,out_len
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,mnx_dstart
+        call    sub32
+        ld      hl,mnx_line
+        ld      a,(hl)
+        inc     (hl)
+        call    mnx_ptr
+        ex      de,hl
+        ld      hl,work32
+        ld      bc,3
+        ldir
+        ret
+
+; HL at line A's 3 bytes in the offsets' table.
+mnx_ptr:
+        ld      l,a
+        ld      h,0
+        ld      e,l
+        ld      d,h
+        add     hl,hl
+        add     hl,de
+        ld      de,mnx_ptrs
+        add     hl,de
+        ret
+
+; The set of SET2 kind A and choice B, decoded a chunk at a time in its three pages, each written
+; as its bank, its length and the chunk; then 0xFF.
+mnx_set:
+        ld      (slot_kinds),a
+        ld      a,b
+        ld      (set_choices),a
+        xor     a
+        ld      (set_choices+1),a
+        ld      a,(mnx_paged)               ; three pages for it, once: a tape's, done with, or new ones
+        or      a
+        jr      nz,.open
+        inc     a
+        ld      (mnx_paged),a
+        ld      a,(page_count)
+        cp      1 + PAGES + SET_PAGES
+        jr      nc,.open
+        ld      b,SET_PAGES
+.al:    push    bc
+        ld      hl,BANK_ALLOC
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ld      a,e
+        pop     bc
+        ld      hl,msg_ram_set
+        jp      nc,fail_hl
+        ld      hl,page_count
+        ld      e,(hl)
+        inc     (hl)
+        ld      d,0
+        ld      hl,all_pages
+        add     hl,de
+        ld      (hl),a
+        djnz    .al
+.open:  xor     a
+        call    sets_open
+        ld      b,0
+.o:     push    bc
+        call    order_bank
+        call    header_has
+        jr      z,.n
+        call    bank_sets
+        ld      hl,(set_lens)
+        ld      a,h
+        or      l
+        jr      z,.n
+        ld      (mnx_head+1),hl
+        ld      a,(cur_bank)
+        ld      (mnx_head),a
+        ld      hl,mnx_head
+        ld      bc,3
+        call    write_out
+        ld      hl,(set_bases)
+        call    map3
+        ld      a,(mnx_shadow)
+        or      a
+        call    nz,mnx_chunk_shadow
+        ld      hl,WORK
+        ld      bc,(set_lens)
+        call    write_out
+        call    map_std
+.n:     pop     bc
+        inc     b
+        ld      a,b
+        cp      112
+        jr      c,.o
+        ld      hl,set_recs+4
+        call    is_zero32
+        jp      nz,bad_patch
+        ld      a,$ff
+        ld      (mnx_one),a
+        ld      hl,mnx_one
+        ld      bc,1
+        jp      write_out
+
+; With the chunk at WORK for the entry bank, no bit of the shadow may be set.
+mnx_chunk_shadow:
+        ld      a,(cur_bank)
+        ld      hl,mnx_entry
+        cp      (hl)
+        ret     nz
+        ld      de,(mnx_lo)
+        ld      b,16
+.b:     push    bc
+        push    de
+        ld      a,e                         ; the bit for offset DE
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,$01
+.r:     rrca
+        djnz    .r
+        ld      c,a
+        srl     d
+        rr      e
+        srl     d
+        rr      e
+        srl     d
+        rr      e
+        ld      hl,WORK
+        add     hl,de
+        ld      a,(hl)
+        and     c
+        jp      nz,mnx_refuse
+        pop     de
+        inc     de
+        pop     bc
+        djnz    .b
+        ret
+
+; The padding, then what goes back in place: the header, the stub's count of banks, the lines'
+; offsets. The output's expected length grows by the menu banks'.
+mnx_fix:
+        ld      hl,out_len                  ; the menu banks' length, so far
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,mnx_m0pos
+        call    sub32
+        ld      hl,(work32)
+        ld      a,h
+        and     $3f
+        ld      h,a
+        or      l
+        jr      z,.full
+        ex      de,hl
+        ld      hl,BANK_SIZE
+        or      a
+        sbc     hl,de
+        push    hl
+        ld      de,WORK
+        call    fill_zeros
+        pop     bc
+        ld      hl,WORK
+        call    write_out
+        jr      mnx_fix
+.full:  ld      a,(work32+1)                ; banks: the length / 16K
+        rlca
+        rlca
+        and     3
+        ld      b,a
+        ld      a,(work32+2)
+        add     a,a
+        add     a,a
+        or      b
+        ld      (mnx_count),a
+        ld      b,a
+        ld      a,(mnx_m0)
+        add     a,b
+        dec     a
+        cp      112
+        jp      nc,mnx_refuse
+        cp      48
+        jr      c,.mb
+        ld      a,1
+        ld      (HDR+8),a
+.mb:    ld      hl,HDR+18                   ; each menu bank listed
+        ld      a,(mnx_m0)
+        ld      e,a
+        ld      d,0
+        add     hl,de
+.f:     ld      (hl),1
+        inc     hl
+        djnz    .f
+        ld      hl,HDR+9
+        ld      a,(mnx_count)
+        add     a,(hl)
+        ld      (hl),a
+        ld      hl,$c000
+        ld      (HDR+14),hl
+        ld      a,(mnx_m0)
+        ld      (HDR+139),a
+        ld      hl,want+4                   ; the length the output must have
+        ld      de,work32
+        call    add32
+        ld      hl,out_len
+        ld      de,mnx_end
+        call    copy4
+        ld      hl,0
+        ld      (work32),hl
+        ld      (work32+2),hl
+        ld      hl,HDR
+        ld      bc,512
+        call    mnx_put
+        ld      hl,MP_STUB_LEN - 2          ; the stub's count of banks
+        ld      a,(mnx_count)
+        ld      (mnx_one),a
+        call    mnx_at_m0
+        ld      hl,mnx_one
+        ld      bc,1
+        call    mnx_put
+        ld      hl,(mnx_ptrs_off)           ; the lines' offsets
+        ld      de,MP_STUB_LEN
+        add     hl,de
+        call    mnx_at_m0
+        ld      a,(mnx_line)
+        ld      l,a
+        ld      h,0
+        ld      e,l
+        ld      d,h
+        add     hl,hl
+        add     hl,de
+        ld      b,h
+        ld      c,l
+        ld      hl,mnx_ptrs
+        call    mnx_put
+        ld      hl,mnx_end
+        ld      de,out_len
+        jp      copy4
+
+; work32 = M0's place + HL.
+mnx_at_m0:
+        ld      (left),hl
+        ld      hl,0
+        ld      (left+2),hl
+        ld      hl,mnx_m0pos
+        ld      de,work32
+        call    copy4
+        ld      hl,work32
+        ld      de,left
+        jp      add32
+
+; BC bytes from HL, at the output's place work32.
+mnx_put:
+        push    hl
+        push    bc
+        ld      a,(oh)
+        ld      hl,work32
+        call    seek_file
+        pop     bc
+        pop     hl
+        jp      write_out
+
+msg_no_menu:    db "No menu .nex: press SPAC", 'E' | $80
+mnx_v12:        db "V1.2"
+        db      "NXQ1"
+mnx_end_code:
+mnx_size        equ mnx_end_code - mnx_start
+; Not read from the file.
+mnx_pc          equ mnx_end_code
+mnx_sp          equ mnx_end_code + 2
+mnx_entry       equ mnx_end_code + 4
+mnx_m0          equ mnx_end_code + 5
+mnx_m0pos       equ mnx_end_code + 6        ; 4
+mnx_desc_len    equ mnx_end_code + 10
+mnx_ptrs_off    equ mnx_end_code + 12
+mnx_desc_end    equ mnx_end_code + 14
+mnx_shadow      equ mnx_end_code + 16
+mnx_lo          equ mnx_end_code + 17
+mnx_sh          equ mnx_end_code + 19       ; 16
+mnx_dstart      equ mnx_end_code + 35       ; 4
+mnx_line        equ mnx_end_code + 39
+mnx_one         equ mnx_end_code + 40
+mnx_n           equ mnx_end_code + 41
+mnx_kind        equ mnx_end_code + 43
+mnx_paged       equ mnx_end_code + 44
+mnx_head        equ mnx_end_code + 45       ; 3
+mnx_count       equ mnx_end_code + 48
+mnx_end         equ mnx_end_code + 49       ; 4
+mnx_ptrs        equ mnx_end_code + 53       ; 30
+mnx_tg          equ mnx_end_code + 83       ; 10
+mnx_vars_end    equ mnx_end_code + 93
+; It may run on over the paths, which nothing needs once the banks are written; not the trainers'.
+        assert  mnx_vars_end <= trainer_table, "the menu .nex's writer runs into the trainers' table"
+        display "menu .nex part: ", /d, mnx_size, ", with its variables: ", /d, mnx_vars_end - z80_part_at, " of ", /d, trainer_table - z80_part_at
+        ent
+
+FILE_MENU_AT    equ FIRST_PART + ov_size + tape1_size + tape2_size + tape3_size
+FILE_MNX_AT     equ FILE_MENU_AT + mp_size
 
 ; The highest the code reaches, whichever part is in.
         if      z80_part_at + tape1_size > ov_start_at + ov_size

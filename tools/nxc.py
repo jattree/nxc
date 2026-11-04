@@ -44,7 +44,7 @@ KIND_NAMES_SET = {KIND_COLOURS: 'colours', KIND_LANGUAGE: 'language', KIND_TOGGL
 TOGGLE_KINDS = (KIND_TOGGLE, KIND_TOGGLE_LOGIC)
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
-TEXT_READ = 252; MENU_COLUMNS = 41; CREDIT_NAME = 32  # what a loader reads of INF1, shows, and keeps of a name
+TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
 FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label')   # the main line's name without INF1's fix_label
 CREDIT = "Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
@@ -1518,17 +1518,17 @@ def fix_label(f):
     return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:FIX_LABEL_MAX])
 
 def credit_line(f):
-    """The menu's credit line, or None: "Patch: a     Colours: b" in MENU_COLUMNS columns, the colours only if the patch has
-    a colour set. With both, the gap closes from 5 to 2 before a name is cut, then a keeps at least 11, b what is left."""
-    def name(key):
+    """The menu's credit rows, or None: "Colours: b" (only with a colour set, b cut to 23) above "Patch: a" (cut to 25),
+    each only if it is there, joined by a newline. Anything unprintable is ?."""
+    def name(key, n):
         v = inf1_value(f, key) or b''
-        return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:CREDIT_NAME])
-    a = name('patch_by'); b = name('colours_by') if colour_sets(f) else ''
-    if not a and not b: return None
-    if not b: return 'Patch: ' + a
-    if not a: return 'Colours: ' + b
-    a = a[:23 - min(len(b), 12)]; b = b[:23 - len(a)]
-    return 'Patch: ' + a + ' ' * min(5, 25 - len(a) - len(b)) + 'Colours: ' + b
+        return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:CREDIT_NAME])[:n]
+    rows = []
+    b = name('colours_by', 23) if colour_sets(f) else ''
+    a = name('patch_by', 25)
+    if b: rows.append('Colours: ' + b)
+    if a: rows.append('Patch: ' + a)
+    return '\n'.join(rows) or None
 
 def set_credits(f, game, patch_by=None, colours_by=None):
     """The patch with INF1's patch_by and colours_by set, or removed if '': the same nonce and encrypted blocks, with a

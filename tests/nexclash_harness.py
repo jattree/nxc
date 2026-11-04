@@ -26,6 +26,20 @@ SPEED_MHZ = 28
 FLAGS = 0x5C3B
 FIRST_PART = 8192       # NextZXOS loads this much of a dot command; the rest stays in its open file
 OWN_HANDLE = 2
+ROM_FILE = "c:/machines/next/ennextzx.rom"   # the card's ROMs: the menu takes its font from ROM 3's
+
+
+def font_glyph(c: int) -> bytes:
+    """A made-up font: each character's 8 bytes differ from every other's."""
+    return bytes(((c * 37 + k * 11) ^ (k << 4) ^ c) & 255 for k in range(8))
+
+
+FAKE_ROM = bytearray(65536)
+for _c in range(32, 128):
+    FAKE_ROM[0xFD00 + (_c - 32) * 8:0xFD00 + (_c - 31) * 8] = font_glyph(_c)
+GLYPHS = {font_glyph(c): chr(c) for c in range(32, 128)}
+GLYPHS[bytes((0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF))] = "/"
+GLYPHS[bytes(8)] = " "
 
 
 def junk(address: int) -> int:
@@ -59,14 +73,20 @@ def assemble(replace: list[tuple[str, str]] | None = None) -> tuple[bytes, dict[
     with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as directory:
         source = Path(directory) / "nexclash.asm"
         text = SOURCE.read_text()
+        menu = (SOURCE.parent / "menu.asm").read_text()       # the menu's one source: a broken copy beside it is taken first
         for old, new in replace or []:
-            if old not in text:
+            if old in text:
+                text = text.replace(old, new, 1)
+            elif old in menu:
+                menu = menu.replace(old, new, 1)
+            else:
                 raise AssertionError(f"not in the source: {old!r}")
-            text = text.replace(old, new, 1)
+        (Path(directory) / "menu.asm").write_text(menu)
+        text = text.replace('include "menu.asm"', f'include "{Path(directory) / "menu.asm"}"')
         source.write_text(text)
         out = Path(directory) / "NEXCLASH"
         sym = Path(directory) / "nexclash.sym"
-        subprocess.run(["sjasmplus", "--nologo", f"--raw={out}", f"--sym={sym}", str(source)],
+        subprocess.run(["sjasmplus", "--nologo", f"--inc={SOURCE.parent}", f"--raw={out}", f"--sym={sym}", str(source)],
                        check=True, capture_output=True)
         symbols = {}
         for line in sym.read_text().splitlines():
@@ -84,17 +104,24 @@ class Machine:
     """One run of the dot command."""
 
     KEYS = {"enter": (0xBF, 0), "space": (0x7F, 0), "caps": (0xFE, 0)}
+    # The tests before the menu round drive the bare route, SPACE: the choices fixed in the .nex, as before.
     for _i in range(5):
         KEYS[str(_i + 1)] = (0xF7, _i)
         KEYS[str(_i + 6)] = (0xEF, 4 - _i)
     KEYS["0"] = (0xEF, 0)
 
-    def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("enter",),
+    def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("space",),
                  free_pages: int = 90, fail_read: int | None = None, os_mode: int = 0,
                  fail_write: int | None = None, fail_create: bool = False, cwd: str = "/",
                  total_pages: int | None = 224) -> None:
         self.symbols = symbols
         self.files = {name.lower(): bytes(data) for name, data in files.items()}
+        self.files.setdefault(ROM_FILE, bytes(FAKE_ROM))
+        self.menu_draws = 0
+        self.overlay_part = None
+        self.menu_page = None
+        self.just_menu = False
+        self.menu_attrs: list[list[bytes]] = []
         self.keys = list(keys)
         self.free_pages = free_pages
         self.fail_read = fail_read
@@ -158,7 +185,7 @@ class Machine:
         # caller's memory above its stack. The stack below ENTRY_SP is the caller's own.
         code_end = symbols["code_end"]
         m.mark_addrs(0x0000, code_end, m.WRITE_MARK)
-        m.mark_addrs(0x4000, 0x2000, m.WRITE_MARK)
+        m.mark_addrs(0x5B00, 0x0500, m.WRITE_MARK)       # the screen, 0x4000 to 0x5AFF, is the menu's
         m.unmark_addr(FLAGS, m.WRITE_MARK)                  # the one system variable it touches
         m.mark_addrs(0xC000, ENTRY_SP - 256 - 0xC000, m.WRITE_MARK)
         m.mark_addrs(ENTRY_SP + 2, 0x10000 - ENTRY_SP - 2, m.WRITE_MARK)
@@ -174,8 +201,10 @@ class Machine:
     def on_write(self, addr: int, value: int) -> None:
         # Once the .nex is being written, only the ZX0 decoder may write at the I/O page's address, and only with a chunk of a set's
         # own page mapped there. A site or a stray pointer landing on a table page is still found.
-        decoding = self.iopage_guard and self.mmu[5] != self.allocated[2] and self.symbols["src_copy"] <= self.m.pc < self.symbols["zx_bounds"]
-        if not (decoding and 0xA000 <= addr < 0xB000):
+        decoding = self.iopage_guard and self.mmu[5] != self.allocated[3] and self.symbols["src_copy"] <= self.m.pc < self.symbols["zx_bounds"]
+        # The menu .nex's writer puts its header right, at the end, in the header's own place.
+        header = self.overlay_part == "mnx" and self.symbols["mnx_start"] <= self.m.pc < self.symbols["mnx_end_code"] and 0xA000 <= addr < 0xA200
+        if not (decoding and 0xA000 <= addr < 0xB000) and not header:
             self.bad_writes.append((self.m.pc, addr, value))
         self.m.memory[addr] = value
 
@@ -275,6 +304,8 @@ class Machine:
         if a == 0x80:
             self.problems.append("RST $10 with A=0x80")
         self.printed.append(a)
+        if a >= 32:
+            self.just_menu = False
         if self.control:
             if self.control == 30:
                 self.width = a
@@ -285,6 +316,9 @@ class Machine:
         if a == 30:
             self.control = 30
         elif a == 14:
+            if self.just_menu and self.screen == [""]:
+                self.just_menu = False
+                return
             self.screens.append("\n".join(self.screen))
             self.screen = [""]
             if self.layer == (0, 0):
@@ -324,7 +358,9 @@ class Machine:
                 page = 223 - len(self.ever_allocated)
                 self.ever_allocated.append(page)
                 self.allocated.append(page)
-                self.peak_pages = max(self.peak_pages, len(self.allocated))
+                if not self.overlay_read and self.menu_page is None:
+                    self.menu_page = page          # the menu's own, before the menu: not counted in peak_pages
+                self.peak_pages = max(self.peak_pages, len(self.allocated) - (self.menu_page in self.allocated))
                 m.e = page
                 return True
             if reason == 3:
@@ -437,7 +473,9 @@ class Machine:
             m.set_memory_block(m.hl, data)
             entry[1] += len(data)
             m.bc = len(data)
-            if m.a == OWN_HANDLE and not self.overlay_read:
+            if m.a == OWN_HANDLE and entry[1] - len(data) == self.symbols.get("FILE_MNX_AT", -1):
+                self.overlay_part = "mnx"
+            if m.a == OWN_HANDLE and not self.overlay_read and entry[1] - len(data) == FIRST_PART:
                 self.overlay_read = True
                 for name in self.phases:
                     m.set_breakpoint(self.symbols[name])
@@ -473,6 +511,9 @@ class Machine:
             m.set_memory_block(ARGS_AT, argument.encode("latin-1") + b"\r")
             m.hl = ARGS_AT
         self.host_hash[HOST_MMU[2]] = bytes(m.memory[0x4000:0x6000])
+        for name in ("menu_draw", "mp_chosen"):
+            if name in self.symbols:
+                m.set_breakpoint(self.symbols[name])
         m.pc = LOAD_AT
         m.sp = ENTRY_SP - 2
         m.set_memory_block(m.sp, RETURN_AT.to_bytes(2, "little"))
@@ -498,6 +539,11 @@ class Machine:
                 m.f = (m.f | 1) if carry else (m.f & ~1)
                 m.pc = back + 1
                 continue
+            if m.pc in (self.symbols.get("menu_draw"), self.symbols.get("mp_chosen")):
+                if self.mmu[5] in self.allocated[:1]:
+                    self.on_menu(m.pc == self.symbols.get("mp_chosen"))
+                self.step()                  # an older loader's menu_draw is in its 8K: not this menu
+                continue
             if m.pc in phase_marks and self.overlay_read:
                 name = phase_marks[m.pc]
                 if last_phase is not None:
@@ -507,7 +553,8 @@ class Machine:
                     self.callbacks[name]()
                 self.step()
                 continue
-            if m.halted or not (LOAD_AT <= m.pc < LOAD_AT + 0x2000):
+            in_menu_page = 0xA000 <= m.pc < 0xC000 and self.allocated and self.mmu[5] == self.allocated[0]
+            if m.halted or not (LOAD_AT <= m.pc < LOAD_AT + 0x2000 or in_menu_page):
                 raise Hung(f"stopped at {m.pc:#06x}")
         if last_phase is not None:
             self.phase_ticks[last_phase] = self.phase_ticks.get(last_phase, 0) + self.ticks - mark_at
@@ -522,6 +569,36 @@ class Machine:
                 if byte & 0x80:
                     break
         return bool(m.f & 1), message
+
+    def ula_text(self) -> str:
+        """The ULA screen as text, each cell's glyph in the made-up font, '#' for anything else."""
+        mem = self.pages.get(HOST_MMU[2]) if self.mmu[2] != HOST_MMU[2] else self.m.memory[0x4000:0x6000]
+        rows = []
+        for r in range(24):
+            line = ""
+            for c in range(32):
+                g = bytes(mem[(r & 0x18) << 8 | (r & 7) << 5 | c | k << 8] for k in range(8))
+                line += GLYPHS.get(g, "#")
+            rows.append(line.rstrip())
+        while rows and not rows[-1]:
+            rows.pop()
+        return "\n".join(rows)
+
+    def ula_attrs(self) -> list[bytes]:
+        return [bytes(self.m.memory[0x5800 + r * 32:0x5800 + r * 32 + 32]) for r in range(24)]
+
+    def on_menu(self, chosen: bool) -> None:
+        """At each drawing of the menu, the screen before it; when it is done, the last."""
+        if self.menu_draws == 0 and not chosen:
+            self.screens.append("\n".join(self.screen))
+            self.screen = [""]
+        elif self.menu_draws:
+            self.screens.append(self.ula_text())
+            self.menu_attrs.append(self.ula_attrs())
+        if chosen:
+            self.just_menu = True
+        else:
+            self.menu_draws += 1
 
     def step(self) -> None:
         m = self.m
@@ -556,6 +633,7 @@ class Machine:
                 continue    # the caller's stack lives there, and only its own words change
             if slot == 2:
                 now[FLAGS - start] = self.host_hash[page][FLAGS - start]
+                now[:6912] = self.host_hash[page][:6912]          # the screen the menu drew on
             if now != self.host_hash[page]:
                 out.append(f"the caller's page {page} changed")
         return out

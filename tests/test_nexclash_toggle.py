@@ -53,22 +53,22 @@ class ToggleLoader(T.Base):
         return TG.variant(self.nex, [c for ch in changes for c in ch])
 
     def test_the_menu_lines(self) -> None:
-        m, failed, message = self.go(["enter"])
+        m, failed, message = self.go(["space"])
         self.assertFalse(failed, message)
         menu = m.screens[1]
-        for line in ("  1  Lives", "  2  Colour clash fix          [ON]", "  3  Enhanced colours          [OFF]",
-                     "  4  Smooth scrolling          [OFF]", "  5  Fix the lift              [OFF]"):
+        for line in ("1 Lives", T.row("2", "Colour clash fix", "[ ON]"), T.row("3", "Enhanced colours", "[OFF]"),
+                     T.row("4", "Smooth scrolling", "[OFF]"), T.row("5", "Fix the lift", "[OFF]")):
             self.assertIn(line, menu)
         self.assertEqual(bytes(m.written[NEX]), self.nex)
 
     def test_each_and_together(self) -> None:
         for keys, changes, apply_args in (
-                (["4", "enter"], [SMOOTH], dict(toggles=["Smooth scrolling"])),
-                (["5", "enter"], [LIFT], dict(toggles=["Fix the lift"])),
-                (["4", "5", "enter"], [SMOOTH, LIFT], dict(toggles=["Smooth scrolling", "Fix the lift"])),
-                (["3", "4", "enter"], [PAINT, SMOOTH], dict(toggles=["Smooth scrolling"], colours="Painted")),
-                (["1", "4", "enter"], [SMOOTH, LIVES], dict(toggles=["Smooth scrolling"], chosen=[1])),
-                (["4", "4", "enter"], [], dict())):
+                (["4", "space"], [SMOOTH], dict(toggles=["Smooth scrolling"])),
+                (["5", "space"], [LIFT], dict(toggles=["Fix the lift"])),
+                (["4", "5", "space"], [SMOOTH, LIFT], dict(toggles=["Smooth scrolling", "Fix the lift"])),
+                (["3", "4", "space"], [PAINT, SMOOTH], dict(toggles=["Smooth scrolling"], colours="Painted")),
+                (["1", "4", "space"], [SMOOTH, LIVES], dict(toggles=["Smooth scrolling"], chosen=[1])),
+                (["4", "4", "space"], [], dict())):
             with self.subTest(keys=keys):
                 m, failed, message = self.go(keys)
                 self.assertFalse(failed, message)
@@ -77,27 +77,27 @@ class ToggleLoader(T.Base):
                 self.assertEqual(bytes(m.written[NEX]), nxc.apply(self.patch, game=self.tap, **apply_args))
 
     def test_a_third_choice_cannot_be_made(self) -> None:
-        m, failed, message = self.go(["3", "4", "5", "enter"])
+        m, failed, message = self.go(["3", "4", "5", "space"])
         self.assertFalse(failed, message)
-        self.assertIn("  5  Fix the lift              [OFF]", m.screens[-2])
+        self.assertIn(T.row("5", "Fix the lift", "[OFF]"), m.screens[-2])
         self.assertEqual(bytes(m.written[NEX]), self.want(PAINT, SMOOTH))
-        m, failed, message = self.go(["4", "5", "3", "enter"])                     # a set as the third is refused too
-        self.assertIn("  3  Enhanced colours          [OFF]", m.screens[-2])
+        m, failed, message = self.go(["4", "5", "3", "space"])                     # a set as the third is refused too
+        self.assertIn(T.row("3", "Enhanced colours", "[OFF]"), m.screens[-2])
         self.assertEqual(bytes(m.written[NEX]), self.want(SMOOTH, LIFT))
-        m, failed, message = self.go(["4", "5", "4", "3", "enter"])                # one off, and there is room again
+        m, failed, message = self.go(["4", "5", "4", "3", "space"])                # one off, and there is room again
         self.assertEqual(bytes(m.written[NEX]), self.want(LIFT, PAINT))
 
     def test_not_available_with_the_fix_off(self) -> None:
-        m, failed, message = self.go(["2", "4", "enter"])
+        m, failed, message = self.go(["2", "4", "space"])
         self.assertFalse(failed, message)
-        self.assertIn("  4  Smooth scrolling          [N/A]", m.screens[-2])
+        self.assertIn(T.row("4", "Smooth scrolling", "[N/A]"), m.screens[-2])
         self.assertNotIn(NEX, m.written)
         self.assertEqual(bytes(m.written[Z80]), nxc.original_with_pokes(self.patch, self.tap, []))
 
     def test_the_loader_before_toggles(self) -> None:
         old = subprocess.run(["git", "-C", str(T.ROOT), "show", "e018c42:firmware/nexclash.asm"], capture_output=True, text=True, check=True).stdout
         binary, symbols = assemble_text(old)
-        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["4", "enter"], binary=binary, symbols=symbols)
+        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["4", "space"], binary=binary, symbols=symbols)
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertNotIn("Smooth scrolling", m.screens[1])
@@ -105,11 +105,12 @@ class ToggleLoader(T.Base):
 
     def test_controls(self) -> None:
         # The menu not counting choices: the third is taken, and the loader has no slot for it.
-        binary, symbols = H.assemble([("""        call    chosen_count
-        cp      KINDS
-        jp      nc,menu.wait
-        ld      a,(tg_on)""", """        ld      a,(tg_on)""")])
-        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["3", "4", "5", "enter"], binary=binary, symbols=symbols)
+        binary, symbols = H.assemble([("""        pop     hl
+        ret     z
+        ret     c
+""", """        pop     hl
+""")])
+        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["3", "4", "5", "space"], binary=binary, symbols=symbols)
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed or bytes(m.written.get(NEX, b"")) != self.want(PAINT, SMOOTH), "a loader taking a third choice passed")
         # A toggle's slot left with the colours' kind: the wrong block found, or none.
@@ -117,7 +118,7 @@ class ToggleLoader(T.Base):
         ld      (de),a
         ld      de,TOGGLES_MAX""", """        ld      a,(hl)
         ld      de,TOGGLES_MAX""")])
-        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["4", "enter"], binary=binary, symbols=symbols)
+        m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["4", "space"], binary=binary, symbols=symbols)
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed or bytes(m.written.get(NEX, b"")) != self.want(SMOOTH), "a loader not saying a slot's kind passed")
 

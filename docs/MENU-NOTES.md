@@ -42,26 +42,32 @@ Next or a Tang.**
   every form made up in the test, and 61 game files from the published patches and the pilot runs.
 - **The look:** JNext screenshots of the in-`.nex` menu are in `NextTang-evidence/2026-11-03-tap1/tmp/menu/jn/shots/`.
 
-## Not done
+## The loader (second pass, 2026-11-04)
 
-- **The dot command still has the old menu** and writes the bare `.nex`. `menu.asm` is about 1,300 bytes and the part
-  before the menu has 1,235 free, with the description to build and the ROM font to copy as well. The way in: read
-  `menu.asm` as a part of the command's file into an allocated page, as the tape parts are read, build the description
-  there and copy the font with MMU1 paged to the ROM from code in that page. Writing a menu `.nex` from the dot command
-  then needs every set decoded into runs and the stub written after the banks. So there is no loader screenshot of the
-  new menu to set beside the `.nex` one yet.
-- No `HLP1` in any published patch yet: `nxc.py help` makes one.
+- **The same menu.** `firmware/nexclash.asm` reads `menu.asm`, with what builds its description, from its own file into a page
+  of its own before the menu, and takes the font from the card's `C:/MACHINES/NEXT/enNextZX.rom` (ROM 3, 0xFD00).
+- **ENTER writes the menu `.nex`**, starting as the menu was left; SPACE the bare one; fix off, the game as before. Its writer
+  is a part read over the game's part after the bare banks.
+- **Byte-exact with `nxc.py`** on the harness: the vector with no choices, a trainer, both sets, a trainer and a set; the tape,
+  tape-set, toggle and label vectors; and the published patches and NZS's in `NXC_MENU_GAMES`. **In JNext through the
+  Browser, real NextZXOS and `.nexload`:** NZS's two-file patch with trainer 1 and Smooth scrolling gave `b297e48f…`, the
+  same as `nxc.py`; `.nexload` started it, its menu came up set, and ENTER reached the title screen.
+- **The same screen:** the loader's menu and the `.nex`'s, both on line 6 with 1 and 6 on, are pixel for pixel the same over
+  the screen area; only the border differs (the Browser's against the build's).
+- **The title is never cut:** it has the bar to itself, wrapping to a second bar row past 27; the publisher is below it.
+- **The test card** is `nexclash-patch/build/batch3/card_menu.img`: `card_nzs.img` with the new `NEXCLASH` and `NXCHAND.BAS`,
+  and the NZS patch (unchanged: the new menu needs no change to a patch) in `C:/NZS/`.
+
+**Changed in the existing tests:** they drive the bare route with SPACE, as ENTER is now the menu `.nex`; page counts leave
+out the menu's page, which every run holds; free-RAM thresholds are one page higher; menu text checks use the new layout;
+the credit line is now two rows, each cut on its own. The real-game Cobra and Jetpac tests, which skip without `build/v1`,
+still check the old menu text and will need the same change when run.
 
 ## For you to decide
 
-- **The main line in a `.nex`** is fixed `[ ON]`: a `.nex` holds the rebuilt game, not the plain one. Carrying the plain
-  game for "off" (the bytes `SIT1` and `BNK1` replaced, the start state, a start routine like NexClash's own) is reserved
-  in the spec. Wanted?
-- **BREAK in a `.nex`** resets the Next, as there is nothing to go back to. All right?
-- **The credit wording,** ` Engine: Dean Woodyatt` on the bottom bar, and `Colours: <colours_by>` above `Patch:` when a
-  colour set has a colourist.
-- **Long publishers** are cut: `Mastertronic Added Dimension, 1985` shows as `Mastertronic Ad`. Shorter `publisher`
-  values (`Mastertronic, 1985`) would read better; changing them changes the patches.
+- Decided and in the spec: the main line in a `.nex` fixed `[ ON]`; BREAK in a `.nex` resets; ` Engine: Dean Woodyatt`.
+- **The menu twice.** ENTER in the loader writes the menu `.nex`, so its menu shows again when `.nexload` starts it, already
+  set; SPACE skips that with a bare file. Keep, or should the loader's ENTER be the bare file?
 - **zx0.** A pure-Python compressor was considered and not written: `zx0`'s optimal parse searches every offset for every
   byte, which in Python would take minutes a bank, and matching its output byte for byte means porting its exact tie
   breaks. It stays an optional dependency for `make`; applying never needs it.

@@ -593,21 +593,21 @@ Nothing is decompressed before step 5, and nothing is written before step 6. A s
 Every reader that offers choices shows this one menu, the same in the dot command and in a `.nex` that carries it (below), from one source, `firmware/menu.asm`. It is a standard ULA screen of 32 columns and 24 rows, in the ROM's 8 x 8 font, every attribute BRIGHT. The word NexClash appears nowhere on it.
 
 ```text
-row  0   RENEGADE              Imagine, 1987 ////     blue bar, yellow text, four stripes
-row  1
-row  2  TRAINER                                       yellow
-row  3  1 Infinite lives                     [ ON]    ON green
-row  4  2 Infinite time                      [OFF]    the selected line: cyan bar, blue text
-row  5
-row  6  OPTIONS                                       yellow
-row  7  3 Colour clash fix                   [ ON]
-row  8  4 Enhanced colours                   [OFF]    OFF red
-row  9
-row 10  ENTER play   BREAK exit                       green, red
-row 11
-row 12  Infinite time:                                cyan: the selected line's name
-row 13  the clock stops at every round.               its help, two rows of 32
-row 14
+row  0   RENEGADE                    ////   blue bar, yellow title, four stripes
+row  1   Imagine, 1987                             the publisher, white
+row  2
+row  3  TRAINER                                    yellow
+row  4  1 Infinite lives           [ ON]           ON green
+row  5  2 Infinite time            [OFF]           the selected line: cyan bar, blue text
+row  6
+row  7  OPTIONS                                    yellow
+row  8  3 Colour clash fix         [ ON]
+row  9  4 Enhanced colours         [OFF]           OFF red
+row 10
+row 11  ENTER play   BREAK exit                    green, red
+row 12
+row 13  Infinite time:                             cyan: the selected line's name
+row 14  the clock stops at every round.            its help, two rows of 32
 row 21  Colours: Alberto Conde
 row 22  Patch: Jon Attree
 row 23   Engine: Dean Woodyatt                 ////   blue bar, yellow text, four stripes
@@ -615,14 +615,14 @@ row 23   Engine: Dean Woodyatt                 ////   blue bar, yellow text, fou
 
 **Colours.** Attribute bytes, BRIGHT (0x40) in each: paper black and ink white (0x47) wherever nothing else is said; the bars 0x4E (blue paper, yellow ink); headings 0x46; `ON` 0x44, `OFF` 0x42, `N/A` and the brackets 0x47; a set's name, shown when it is on, 0x44; `ENTER play` 0x44 and `BREAK exit` 0x42; the help's first row 0x45; the selected line, its whole row, 0x69 (cyan paper, blue ink). The border is not changed. **The stripes** are the four last cells of each bar, each the same glyph, its pixels set where x + y >= 7 (x from the left, y from the top, 0 to 7: bytes 01 03 07 0F 1F 3F 7F FF), with paper and ink blue and red, red and yellow, yellow and green, green and cyan.
 
-**Rows.** Row 0: the title, in capitals, from column 1, cut to 20 characters; then the publisher ending in column 26, cut to 16 characters and to the room left after a blank; columns 27 to 31 are the bar's end and its stripes (27 blank). A patch shows best with a short publisher, such as `Mastertronic, 1985`. Row 2 on: `TRAINER` and the trainers' lines, if there are any, then a blank row, then `OPTIONS` and its lines: the main line, one line for each kind of set offered, one for each toggle. A blank row, then `ENTER play` in columns 0 to 9 and `BREAK exit` in 13 to 22. A blank row, then the help: the selected line's name and `:` (cut to 31), then its help text, characters 1 to 32 and 33 to 64, if the patch gives it; otherwise those rows are blank. With ten lines and both sections the help ends in row 20. Row 21: `Colours: ` and `colours_by`, cut to 23, only for a patch with a colour set offered and that name. Row 22: `Patch: ` and `patch_by`, cut to 25, if it is there. Row 23, always: the bar, ` Engine: Dean Woodyatt`, crediting the NexClash engines that every build here comes from. Anything unprintable shows as `?`.
+**Rows.** **The title is never cut:** it has the blue bar to itself, in capitals, from column 1 to 27, before the stripes in 28 to 31. A longer one wraps at its last space within the first 27 characters (or at 27 if there is none) to a second bar row, also with its stripes; a writer keeps a title to 54 characters, two bar rows, and a reader shows no more. The publisher, `INF1`'s `publisher` as it stands, is on the row below in white, from column 1, or from column 0 when it needs all 32; it is cut only past 32. Then a blank row, unless the title took two. Then `TRAINER` and the trainers' lines, if there are any, then a blank row, then `OPTIONS` and its lines: the main line, one line for each kind of set offered, one for each toggle. A blank row, then `ENTER play` in columns 0 to 9 and `BREAK exit` in 13 to 22. A blank row, unless the help would then end past row 20, then the help: the selected line's name and `:` (cut to 31), then its help text, characters 1 to 32 and 33 to 64, if the patch gives it; otherwise those rows are blank. With ten lines and both sections the help ends in row 20. Row 21: `Colours: ` and `colours_by`, cut to 23, only for a patch with a colour set offered and that name. Row 22: `Patch: ` and `patch_by`, cut to 25, if it is there. Row 23, always: the bar, ` Engine: Dean Woodyatt`, crediting the NexClash engines that every build here comes from. Anything unprintable shows as `?`.
 
 **A line.** Column 0 its key, `1` to `9`, then `0` for the tenth; its name from column 2; its value ending in column 31: `[ ON]`, `[OFF]` or `[N/A]`, or for a kind with more than one set, the chosen set's name, cut to 12, in brackets. The name is cut to leave a blank column before the value. Names are up to 25 characters, so `[ ON]` keeps its column.
 
 **What the lines are** is as before, in this order:
 
-- **Trainers**, one line each, `[OFF]` to begin with, in the file's order.
-- **The main line,** `INF1`'s `fix_label`, or `Colour clash fix` without one. `[ ON]` to begin with: on, the rebuilt NexClash `.nex`; off, the player's own game, with any trainers. Wherever this document says the clash fix, it means this line. **In a `.nex` that carries its menu, the line is shown `[ ON]` and its key does nothing,** since that file is the rebuilt game and holds no copy of the plain one: see "Reserved: the plain game in a .nex".
+- **Trainers**, one line each, `[OFF]` to begin with (in a `.nex`, where its writer left them), in the file's order.
+- **The main line,** `INF1`'s `fix_label`, or `Colour clash fix` without one. `[ ON]` to begin with: on, the rebuilt NexClash `.nex`; off, the player's own game, with any trainers. Wherever this document says the clash fix, it means this line. **In a `.nex` that carries its menu, the line is shown `[ ON]` and its key does nothing,** by definition: that file is the rebuilt game and holds no copy of the plain one.
 - **One line for each kind of set offered,** `Enhanced colours`, then `Language`. Its key steps from `[OFF]` through the kind's sets, in the file's order, and back. With one set of the kind the line is `[ ON]` or `[OFF]`; otherwise the value names the set. Only sets with the sprite build as their base are offered.
 - **One line for each toggle,** its name, `[OFF]` to begin with, its key turning it on and off.
 - With the main line off, every set's and toggle's line reads `[N/A]`, its key does nothing and nothing of it is applied; the choices come back when it is on again.
@@ -630,7 +630,9 @@ row 23   Engine: Dean Woodyatt                 ////   blue bar, yellow text, fou
 
 **The limit.** A reader states how many sets and toggles it can hold chosen at once, N: a key that would turn on one more does nothing. The dot command's N is 2. A `.nex` carrying its menu holds its N, and a writer sets it to 2, so that the two menus offer exactly the same choices.
 
-**Keys.** A line's key selects that line and acts on it as above. CAPS SHIFT with 6 or 7, the Next's cursor down and up, moves the selection a line without acting, and stops at the first and the last. The selection starts on line 1. ENTER and SPACE both start with what the menu shows. BREAK, CAPS SHIFT with SPACE, cancels: the dot command stops with `Cancelled`; a `.nex` resets the Next (NextREG 0x02 = 1), as nothing is left to return to.
+**Keys.** A line's key selects that line and acts on it as above. CAPS SHIFT with 6 or 7, the Next's cursor down and up, moves the selection a line without acting, and stops at the first and the last. The selection starts on line 1. ENTER and SPACE both start with what the menu shows. BREAK, CAPS SHIFT with SPACE, cancels.
+
+**Defined behaviour in a `.nex` that carries its menu:** the main line is fixed `[ ON]` and its key does nothing; ENTER and SPACE start the game alike; BREAK resets the Next (NextREG 0x02 = 1), as nothing is left to return to. **In the dot command:** BREAK stops with `Cancelled`; with the main line on, ENTER writes the `.nex` that carries its menu, its lines starting where they were left, and SPACE writes the bare `.nex` with the choices fixed; with the main line off, either key writes the player's own game, with any trainers, as before. The credit bar reads ` Engine: Dean Woodyatt` on every menu.
 
 **Help text** comes from `HLP1`, below, and is optional: without it, or without a line's key, the help rows are blank. A reader that does not know `HLP1` shows no help.
 
@@ -677,7 +679,9 @@ It is the bare `.nex` with nothing chosen, as `OUT1` describes it, changed only 
 
 **The description** is what `firmware/menu.asm` draws and changes, in the same form in the dot command's memory: a flags byte (bit 0: the main line is fixed `[ ON]`); N; the number of lines, 1 to 10; then zero-terminated strings: the title, the publisher, `colours_by` (empty when no colour set is offered) and `patch_by`; then each line: its kind (0 trainer, 1 the main line, 2 a kind of set, 3 a toggle), its state (0 off; for a kind of set, 0 or the chosen set from 1), the number of sets for a kind of set or 0, then zero-terminated its name, its help, and for a kind of set each set's name; then for each line, 3 bytes: where its data starts in the data, below, as an offset from the data's first byte, or 0xFFFFFF for none.
 
-**The data** starts at the first byte of M0 + 1 and runs on through the menu banks after it; without data there is only M0. For a trainer: its count of POKEs, 1 to 255, then each POKE's bank, offset (2) and value, as in `TRN1`. For each set of a kind of set, and for a toggle: its changes as runs, each a bank, an offset (2), a length (2, 1 to 16,384, not passing the bank's end) and that many bytes, in the order of its chunks, ended by a bank of 0xFF. The runs are a set's chunks decoded: a run for each stretch of set bits. Every byte is in a bank the build lists.
+**The data** starts at the first byte of M0 + 1 and runs on through the menu banks after it, the last padded with zeros to 16K; without data there is only M0. For a trainer: its count of POKEs, 1 to 255, then each POKE's bank, offset (2) and value, as in `TRN1`. For each set of a kind of set, in the file's order, and for a toggle: its chunks, decoded, in `.nex` order, each its bank, the chunk's length (2) and the chunk, the bitmap of 2,048 bytes then a byte for each bit set, exactly as `SET2` holds it once decoded; then a bank of 0xFF. Every bank is one the build lists.
+
+**The starting states.** The description's states are where the menu starts: a writer takes them from the choices it was given (`nxc.py PATCH GAME --trainer 1 --colours Enhanced` without `--bare`, or the dot command's menu when ENTER is pressed), or all off without; the main line is always on. The data does not depend on them, so the same patch, game and choices always give the same file.
 
 Sets and toggles are carried decoded, in the clear: this file is the player's own built game, which holds the rest of the game's memory in the clear already, and it is not for handing around, as a bare `.nex` is not.
 
@@ -696,9 +700,9 @@ Sets and toggles are carried decoded, in the clear: this file is the player's ow
 
 Nothing here changes a patch: `HLP1` is a new optional block, skipped by every reader before it, and old patches without it show the new menu with no help. Every existing vector is unchanged byte for byte, and so is the bare `.nex` for any choices. The default output changing is a change of the readers, not the format: a reader older than this one writes the bare `.nex`, as it always did. A menu `.nex` is a `V1.2` `.nex` that any `.nex` loader starts.
 
-### Reserved: the plain game in a .nex
+### The dot command's menu .nex
 
-A later version may carry, for the main line off, what turns the rebuilt game back into the player's snapshot: the bytes `SIT1` and `BNK1` replaced, the start state, and a start routine like NexClash's own `.z80` to `.nex` conversion. Not defined here; until then the main line in a `.nex` is fixed on.
+`firmware/nexclash.asm` writes the same file as `tools/nxc.py` for the same patch, game and starting states, byte for byte. Its menu, `firmware/menu.asm` and what builds the description, is read from the command's own file into an 8K page of its own before the menu, which also holds the stub; it takes the font from the card's `C:/MACHINES/NEXT/enNextZX.rom` (ROM 3, at 0xFD00), as a dot command cannot see the ROM, and refuses without it. After the menu it writes the bare `.nex` with nothing chosen, as before, then a part read over the game's part writes M0 and the data, decoding each set a chunk at a time, and puts the header, the stub's count of banks and the lines' offsets in place. It checks the bare part's CRC and length as before, and the whole file's length. It needs the page for the menu and three for decoding sets, beyond what the bare file needs.
 
 ## Test vectors
 
