@@ -4,11 +4,12 @@ byte for byte. See spec/NXC-FORMAT.md.
 
     nxc.py PATCH [GAME] [-o OUT] [--trainer NAME_OR_NUMBER ...] [--original] [--colours NAME]
     nxc.py make NEX GAME -o OUT [--zxdb ENTRY] [--title T] [--publisher "Ocean, 1986"] [--patch-by N] [--colours-by N]
-                 [--fix-label TEXT] [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
+                 [--fix-label TEXT] [--patch-version V] [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
     nxc.py make NEX TAPE --start START.z80 -o OUT [--tape-bank N ...] [--residual-max N] [as above]
     nxc.py add-dump PATCH KNOWN_GAME NEW_DUMP -o OUT [--file NAME] [--zxdb ENTRY] [--title TITLE]   (also add-target)
     nxc.py import-pok PATCH POK GAME -o OUT [--publisher "Ocean, 1986"] [--only "Name,Name"] [--top-bank 0-7]
     nxc.py credit PATCH GAME -o OUT [--patch-by NAME] [--colours-by NAME]
+    nxc.py version PATCH GAME VERSION -o OUT   (the patch's own version, such as 1.0, shown as v1.0; '' removes it)
     nxc.py help PATCH GAME -o OUT --line KEY=TEXT ...   (the menu's help: fix, colours, language, trainer_N, toggle_N)
     nxc.py handoff-bas -o NXCHAND.BAS
 
@@ -45,7 +46,8 @@ TOGGLE_KINDS = (KIND_TOGGLE, KIND_TOGGLE_LOGIC)
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
 TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
-FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label')   # the main line's name without INF1's fix_label
+FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version')   # the main line's name without INF1's fix_label
+VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2   # INF1's version, shown as v and it; the description's flags
 CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
@@ -642,6 +644,8 @@ def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None, 
             body = b'publisher=%s\n' % publisher.encode() + text_
             label = next((l[10:] for l in body.split(b'\n') if l.startswith(b'fix_label=')), b'')
             if not fix_label_seen(body, label.decode()): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
+            ver = next((l[8:] for l in body.split(b'\n') if l.startswith(b'version=')), b'')
+            if not fix_label_seen(body, ver.decode(), b'version'): raise Wrong('version must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
@@ -877,7 +881,9 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     info = dict(info); info.setdefault('credit', CREDIT)
     info = {**{k: info[k] for k in MENU_KEYS if k in info}, **{k: v for k, v in info.items() if k not in MENU_KEYS}}   # what the menu shows, first
     if info.get('fix_label') not in (None, ''): check_fix_label(info['fix_label'])
+    if info.get('version') not in (None, ''): check_version(info['version'])
     if not fix_label_seen(text(info), info.get('fix_label')): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
+    if not fix_label_seen(text(info), info.get('version'), b'version'): raise Wrong('version must end within the first %d bytes of INF1' % TEXT_READ)
     bl = [[b'TGT1', target_block(0, game_kind, game, nonce, master, target)], [b'INF1', text(info)], [b'PRF1', proof_text(proof)], [b'ROM1', bytes((rom,))]]
     names = [parse_trn1(t)[1] for t in trainer_blocks]
     if len(set(names)) != len(names): raise ValueError('two trainers have one name')
@@ -1514,10 +1520,11 @@ def check_fix_label(v):
     if not isinstance(v, str) or not 1 <= len(v) <= FIX_LABEL_MAX or not v.isascii() or not v.isprintable():
         raise Wrong('a fix label is 1 to %d printable ASCII characters: %r' % (FIX_LABEL_MAX, v))
 
-def fix_label_seen(body, label):
-    """Whether a loader reading the first TEXT_READ bytes of INF1 text body finds its fix_label line whole, if it has one."""
+def fix_label_seen(body, label, key=b'fix_label'):
+    """Whether a loader reading the first TEXT_READ bytes of INF1 text body finds its fix_label line (or key's) whole, if it
+    has one."""
     if not label: return True
-    line = b'fix_label=%s\n' % label.encode()
+    line = b'%s=%s\n' % (key, label.encode())
     at = (b'\n' + body).find(b'\n' + line)
     return at >= 0 and at + len(line) <= TEXT_READ
 
@@ -1528,17 +1535,30 @@ def fix_label(f):
     if not v: return FIX_LABEL
     return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:FIX_LABEL_MAX])
 
+def check_version(v):
+    if not isinstance(v, str) or not 1 <= len(v) <= VERSION_MAX or not v.isascii() or not v.isprintable() or ' ' in v or v[0] in 'vV':
+        raise Wrong('a version is 1 to %d printable ASCII characters with no spaces, without the v the menu adds: %r' % (VERSION_MAX, v))
+
+def patch_version(f):
+    """The patch's version as a loader shows it, without the v: INF1's version, its first VERSION_MAX characters with
+    anything unprintable as ?, or '' if the key is absent, empty or cut off."""
+    v = inf1_value(f, 'version') or b''
+    return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:VERSION_MAX])
+
 def credit_line(f):
     """The menu's credit rows, or None: "Colours: b" (only with a colour set, b cut to 23) above "Patch: a" (cut to 25),
-    each only if it is there, joined by a newline. Anything unprintable is ?."""
+    each only if it is there, joined by a newline. With a version, the patch row is 32 wide and ends in v and it, and a is
+    cut to leave a blank column before the v; without a, the row is the version alone. Anything unprintable is ?."""
     def name(key, n):
         v = inf1_value(f, key) or b''
         return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:CREDIT_NAME])[:n]
     rows = []
     b = name('colours_by', 23) if colour_sets(f) else ''
-    a = name('patch_by', 25)
+    ver = patch_version(f)
+    a = name('patch_by', 23 - len(ver) if ver else 25)
     if b: rows.append('Colours: ' + b)
-    if a: rows.append('Patch: ' + a)
+    if ver: rows.append(('Patch: ' + a if a else '').ljust(MENU_ROW - 1 - len(ver)) + 'v' + ver)
+    elif a: rows.append('Patch: ' + a)
     return '\n'.join(rows) or None
 
 def set_credits(f, game, patch_by=None, colours_by=None):
@@ -1558,9 +1578,26 @@ def set_credits(f, game, patch_by=None, colours_by=None):
                    line(b'colours_by', colours_by) if colours_by is not None else old[b'colours_by']]
             rest = [l for l in lines if not l.startswith((b'patch_by=', b'colours_by='))]
             first = [l for l in rest if l.startswith(b'publisher=')]
-            label = [l for l in rest if l.startswith(b'fix_label=')]   # the menu's lines first, the fix label after the names
+            label = [l for l in rest if l.startswith((b'fix_label=', b'version='))]   # the menu's lines first, the fix label and version after the names
             body = b''.join(first + new + label + [l for l in rest if l not in first and l not in label])
             if len(b''.join(first + new + label)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
+        out.append([t, body])
+    return seal(f[:CHECK_AT], out, st)
+
+def set_version(f, game, version):
+    """The patch with INF1's version set, or removed if '': the same nonce and encrypted blocks, with a new check value.
+    It goes after the menu's other lines, which must end within the first TEXT_READ bytes, or a loader would never see it."""
+    st, bl = check_key(f, game)[:2]
+    if version: check_version(version)
+    out = []
+    for t, body in bl:
+        if t == b'INF1':
+            lines = [l + b'\n' for l in body.split(b'\n') if l]
+            rest = [l for l in lines if not l.startswith(b'version=')]
+            menu = [l for l in rest if l.partition(b'=')[0].decode('latin-1') in MENU_KEYS]
+            new = [b'version=%s\n' % version.encode()] if version else []
+            body = b''.join(menu + new + [l for l in rest if l not in menu])
+            if len(b''.join(menu + new)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
@@ -1626,6 +1663,17 @@ def run(argv):
         with open(a.output, 'wb') as g: g.write(f)
         for k, v in help_texts(f).items(): print('%s: %r' % (k, v))
         return
+    if argv[:1] == ['version']:
+        ap = argparse.ArgumentParser(prog='nxc.py version', description="Set the patch's own version, in INF1, shown on the menu's Patch: row as v and it.")
+        ap.add_argument('patch'); ap.add_argument('game'); ap.add_argument('version', help="such as 1.0, up to %d characters, without the v; '' removes it" % VERSION_MAX)
+        ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
+        a = ap.parse_args(argv[1:])
+        refuse_same(a.output, a.patch, a.game, *a.also)
+        f = set_version(read_file(a.patch), game_arg(a.game, a.also), a.version)
+        with open(a.output, 'wb') as g: g.write(f)
+        print('version:', patch_version(f) or '(none)'); print('menu line:', credit_line(f)); print('wrote', a.output, len(f), 'bytes')
+        return
     if argv[:1] == ['import-pok']:
         ap = argparse.ArgumentParser(prog='nxc.py import-pok', description="Add a .pok's trainers to a patch.")
         ap.add_argument('patch'); ap.add_argument('pok'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
@@ -1668,6 +1716,7 @@ def run(argv):
         ap.add_argument('--zxdb', help='its ZXDB entry'); ap.add_argument('--title'); ap.add_argument('--publisher', help='for the menu, such as "Ocean, 1986"')
         ap.add_argument('--patch-by'); ap.add_argument('--colours-by'); ap.add_argument('--credit', help="INF1's credit; a patch from NexClash keeps the default")
         ap.add_argument('--fix-label', metavar='TEXT', help='the menu\'s name for the NexClash build\'s line, 1 to %d characters, for a game "%s" does not fit, such as Colour' % (FIX_LABEL_MAX, FIX_LABEL))
+        ap.add_argument('--patch-version', metavar='V', help="the patch's own version, such as 1.0, up to %d characters; the menu shows v1.0" % VERSION_MAX)
         ap.add_argument('--build', help="what INF1 calls the build; the .nex's own name by default")
         ap.add_argument('--rom', type=int, choices=(0, 1, 2), default=0, help='0 not stated; 1 runs on the Next\'s own ROM; 2 needs the Sinclair 48K ROM, carried in the alt ROM')
         ap.add_argument('--highest-bank', type=int, help='the highest 16K bank the build uses at run time, if above the highest it lists')
@@ -1701,7 +1750,7 @@ def run(argv):
         target = dict(file=a.file or os.path.basename(a.game), title=a.title, zxdb_entry=a.zxdb)
         if a.also: target['file'] = [target['file']] + [os.path.basename(x) for x in a.also]
         with open(a.nex, 'rb') as g: built = g.read()
-        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by, fix_label=a.fix_label,
+        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by, fix_label=a.fix_label, version=a.patch_version,
                     build=a.build or os.path.splitext(os.path.basename(a.nex))[0], nex_md5=hashlib.md5(built).hexdigest())
         if a.credit: info['credit'] = a.credit
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))
@@ -1755,6 +1804,7 @@ def run(argv):
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
     if toggles_of(f): print('toggles:', ', '.join(n + (' (changes the game logic)' if lg else '') for n, lg in toggles_of(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
+    print('version:', patch_version(f) or '(none)')
     print('needs', memory_text(dict(blocks(f)[1]).get(b'OPT1', bytes(3))[2:3][0] if len(dict(blocks(f)[1]).get(b'OPT1', b'')) == 3 else 0))
     for t in targets(f):
         print('accepts ' + ' + '.join('%s, %s, %d bytes' % (nm, KIND_NAMES.get(k_, 'unknown kind'), n_) for nm, k_, n_ in t['files']))
