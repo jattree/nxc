@@ -532,7 +532,7 @@ def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None):
     a new check value. Refuses a POKE that lands on a byte the patch changes, or on a bank the patch supplies: its target
     there is not the game's own code. Original values in the .pok are not stored.
     only: names of the trainers to import; none: all of them."""
-    with open(game_path, 'rb') as g: game = g.read()
+    game = game_path if isinstance(game_path, (bytes, FileSet)) else read_file(game_path)   # a path, or the game itself
     opened = check_key(f, game); st, bl = opened[:2]
     snap = game_snapshot(opened, game)
     header = unzx0(st.block(b'NEX1')(dict(bl)[b'NEX1']), 512); touched = patched_bytes(f, game)
@@ -1110,6 +1110,11 @@ def check_key(f, game):
             break
     if found is None:
         if isinstance(game, FileSet): raise Wrong('these are not the files this patch was made for')
+        for t, d in bl:
+            if t == b'TGT1':
+                e = parse_target(d)
+                if readable(e) and len(e['files']) > 1 and e['length'] == len(game):
+                    raise Wrong('this patch also needs %s beside it' % ', '.join(nm for nm, _, _ in e['files'][1:]))
         raise Wrong('this is not the game file this patch was made for')
     st = key_state(nonce, master)
     if check_value(f, st) != f[CHECK_AT:HEADER]: raise Wrong('this patch file is damaged')
@@ -1297,11 +1302,12 @@ def run(argv):
         ap.add_argument('patch'); ap.add_argument('pok'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
         ap.add_argument('--publisher', help='INF1 publisher line for the menu, such as "Ocean, 1986"')
         ap.add_argument('--only', help='import only these trainers, comma-separated, as the .pok names them: "Name,Name"')
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
         a = ap.parse_args(argv[1:]); notes = []
         only = [n.strip() for n in a.only.split(',')] if a.only is not None else None
-        refuse_same(a.output, a.game, a.pok)
+        refuse_same(a.output, a.game, a.pok, *a.also)
         with open(a.pok, encoding='latin-1') as g: pok = g.read()
-        f = import_pok(read_file(a.patch), a.game, pok, a.publisher, notes, only)
+        f = import_pok(read_file(a.patch), game_arg(a.game, a.also), pok, a.publisher, notes, only)
         with open(a.output, 'wb') as g: g.write(f)
         for n, why in notes: print('note: %s: %s' % (n, why))
         for k, t in enumerate(trainers(f)):
@@ -1311,11 +1317,12 @@ def run(argv):
     if argv[:1] == ['credit']:
         ap = argparse.ArgumentParser(prog='nxc.py credit', description="Set the names on the menu's credit line, in INF1.")
         ap.add_argument('patch'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
         ap.add_argument('--patch-by', help="who made the patch; an empty name removes it")
         ap.add_argument('--colours-by', help="who painted the colours, shown only if the patch has a colour set; an empty name removes it")
         a = ap.parse_args(argv[1:])
-        refuse_same(a.output, a.game)
-        f = set_credits(read_file(a.patch), read_file(a.game), a.patch_by, a.colours_by)
+        refuse_same(a.output, a.game, *a.also)
+        f = set_credits(read_file(a.patch), game_arg(a.game, a.also), a.patch_by, a.colours_by)
         with open(a.output, 'wb') as g: g.write(f)
         print('menu line:', credit_line(f)); print('wrote', a.output, len(f), 'bytes')
         return

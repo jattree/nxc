@@ -82,7 +82,7 @@ class TapeSet(unittest.TestCase):
         self.assertNotEqual(swapped[:8], nxc.WRAP_CHECK)
 
     def test_one_file_alone_or_a_wrong_second_file_unlocks_nothing(self) -> None:
-        with self.assertRaisesRegex(nxc.Wrong, "not the game file"):
+        with self.assertRaisesRegex(nxc.Wrong, "also needs side b.tzx"):
             nxc.apply(self.patch, game=self.a)
         wrong = bytearray(self.b); wrong[-3] ^= 1
         with self.assertRaisesRegex(nxc.Wrong, "not the files"):
