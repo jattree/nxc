@@ -42,24 +42,24 @@ class LoaderMenuNex(T.Base):
         return m
 
     def test_snapshot_choices(self):
-        for keys, kw in ((("enter",), {}), (("1", "enter"), dict(chosen=["1"])), (("3", "4", "enter"), dict(colours="Painted", language="Vector")),
-                         (("1", "3", "enter"), dict(chosen=["1"], colours="Painted"))):
+        for keys, kw in ((("space",), {}), (("1", "space"), dict(chosen=["1"])), (("3", "4", "space"), dict(colours="Painted", language="Vector")),
+                         (("1", "3", "space"), dict(chosen=["1"], colours="Painted"))):
             with self.subTest(keys=keys):
                 m = self.run_menu(PATCH, GAME, ["game_v3.z80"], keys)
                 self.assertEqual(bytes(m.written[NEX]), nxc.apply_menu(PATCH, GAME, **kw))
                 self.assertEqual(m.integer_vars.get(H.HANDOFF_VAR if hasattr(H, "HANDOFF_VAR") else 23, 1), 1)
 
-    def test_space_is_bare(self):
-        m = self.run_menu(PATCH, GAME, ["game_v3.z80"], ("1", "3", "space"))
+    def test_enter_is_bare(self):
+        m = self.run_menu(PATCH, GAME, ["game_v3.z80"], ("1", "3", "enter"))
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(PATCH, game=GAME, chosen=["1"], colours="Painted"))
 
     def test_tapes_and_toggles(self):
         tape = (V / "tape.tap").read_bytes()
         tset = nxc.FileSet([(V / "tapeset_a.tap").read_bytes(), (V / "tapeset_b.tzx").read_bytes()], [nxc.KIND_TAP, nxc.KIND_TZX])
-        for name, game, names, keys, kw in (("vector_tape.nxc", tape, ["tape.tap"], ("1", "enter"), dict(chosen=["1"])),
-                                            ("vector_toggle.nxc", tape, ["tape.tap"], ("2", "enter"), dict(toggles=["Smooth scrolling"])),
-                                            ("vector_label.nxc", tape, ["tape.tap"], ("enter",), {}),
-                                            ("vector_tapeset.nxc", tset, ["tapeset_a.tap", "tapeset_b.tzx"], ("enter",), {})):
+        for name, game, names, keys, kw in (("vector_tape.nxc", tape, ["tape.tap"], ("1", "space"), dict(chosen=["1"])),
+                                            ("vector_toggle.nxc", tape, ["tape.tap"], ("2", "space"), dict(toggles=["Smooth scrolling"])),
+                                            ("vector_label.nxc", tape, ["tape.tap"], ("space",), {}),
+                                            ("vector_tapeset.nxc", tset, ["tapeset_a.tap", "tapeset_b.tzx"], ("space",), {})):
             with self.subTest(name=name):
                 f = (V / name).read_bytes()
                 m = self.run_menu(f, game, names, keys)
@@ -67,18 +67,18 @@ class LoaderMenuNex(T.Base):
 
     def test_help_and_the_same_screen(self):
         f = nxc.set_help(PATCH, GAME, {"trainer_1": "Lives stay at three, whatever happens to you.", "fix": "The sprite build."})
-        m = self.run_menu(f, GAME, ["game_v3.z80"], ("caps+6", "enter"))
+        m = self.run_menu(f, GAME, ["game_v3.z80"], ("2", "2", "space"))       # the fix off and on: its help
         self.assertEqual(bytes(m.written[NEX]), nxc.apply_menu(f, GAME))
         loader = m.screens[1:-1]
-        nexm = NH.NexMachine(nxc.apply_menu(f, GAME), {}, keys=("caps+6", "enter"))
+        nexm = NH.NexMachine(nxc.apply_menu(f, GAME), {}, keys=("2", "2", "enter"))   # fixed on in a .nex
         nexm.run_to(0xC000)
         self.assertEqual(loader[0], nexm.screens[0])
-        self.assertEqual(loader[1], nexm.screens[1])
+        self.assertEqual(loader[2], nexm.screens[2])
         self.assertIn("Lives stay at three, whatever", loader[0])
-        self.assertIn("The sprite build.", loader[1])
+        self.assertIn("The sprite build.", loader[2])
 
     def test_the_same_colours(self):
-        m = self.run_menu(PATCH, GAME, ["game_v3.z80"], ("enter",))
+        m = self.run_menu(PATCH, GAME, ["game_v3.z80"], ("space",))
         nexm = NH.NexMachine(nxc.apply_menu(PATCH, GAME), {}, keys=("enter",))
         attrs = []
         real = nexm.keyboard
@@ -92,7 +92,7 @@ class LoaderMenuNex(T.Base):
 
     def test_without_the_rom_file(self):
         files = {"patch.nxc": PATCH, "game_v3.z80": GAME}
-        m = self.machine(files, keys=("enter",))
+        m = self.machine(files, keys=("space",))
         m.files.pop(H.ROM_FILE)
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed)
@@ -122,7 +122,7 @@ class RealLoaderMenuNex(T.Base):
                     keys.append(str((i + 1) % 10)); kw.setdefault("toggles", []).append(name)
                     break
             with self.subTest(patch=Path(pf).name):
-                m = self.machine({"patch.nxc": f, **files_of(game, names)}, keys=tuple(keys) + ("enter",), free_pages=200)
+                m = self.machine({"patch.nxc": f, **files_of(game, names)}, keys=tuple(keys) + ("space",), free_pages=200)
                 failed, message = m.run('"patch.nxc"', limit_seconds=600)
                 self.assertFalse(failed, message)
                 self.assertEqual(bytes(m.written[NEX]), nxc.apply_menu(f, game, **kw))

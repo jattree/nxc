@@ -65,19 +65,20 @@ The clock stops at every round.
 
 
 Patch: Jon Attree
- Engine: Dean Woodyatt      ////
+                            ////
 ```
 
-In colour: a blue bar with Spectrum stripes, yellow headings, the highlighted line in cyan, `ON` green and `OFF` red
+In colour: a blue bar with Spectrum stripes, yellow headings, `ON` green and `OFF` red
 (the help line here was added for the picture; the published patch has none yet).
 
-The keys are the line numbers; CAPS SHIFT with 6 or 7 (the cursor keys) moves the cyan highlight, and the line's help shows
+The keys are the line numbers, with no cursor or highlight; the help of the line last keyed shows
 under the keys if the patch has any. ENTER or SPACE plays; BREAK resets the Next. `--bare` writes a `.nex` without the
 menu, with the choices fixed: `--trainer NAME_OR_NUMBER`, `--colours NAME`, `--language NAME`, `--toggle NAME`.
 `--original` writes the game itself, unchecked, or with `--trainer` a checked snapshot of it with the POKEs in.
 
-**On the Next,** a dot command gives the same menu in the Browser. ENTER rebuilds the `.nex` that carries the menu from
-your game file and starts it, its menu set as you left it; SPACE rebuilds a bare one with your choices fixed. A patch can list several dumps of a game. A wrong or missing game file gets a
+**On the Next,** a dot command gives the same menu in the Browser. ENTER rebuilds the game from your game file with
+your choices fixed and starts it: its title, then the game, with no second menu. SPACE instead writes the `.nex` that carries
+the menu, set as you left it. A patch can list several dumps of a game. A wrong or missing game file gets a
 message naming the file it needs. The Next reads `.z80`, `.tap` and `.tzx`. A tape with the clash fix off becomes the
 game's start as a `.z80`, checked. Card setup, including the `browser.cfg` line, is in [firmware/README.md](firmware/README.md).
 

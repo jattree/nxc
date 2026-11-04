@@ -598,7 +598,7 @@ row  1   Imagine, 1987                             the publisher, white
 row  2
 row  3  TRAINER                                    yellow
 row  4  1 Infinite lives           [ ON]           ON green
-row  5  2 Infinite time            [OFF]           the selected line: cyan bar, blue text
+row  5  2 Infinite time            [OFF]
 row  6
 row  7  OPTIONS                                    yellow
 row  8  3 Colour clash fix         [ ON]
@@ -606,16 +606,16 @@ row  9  4 Enhanced colours         [OFF]           OFF red
 row 10
 row 11  ENTER play   BREAK exit                    green, red
 row 12
-row 13  Infinite time:                             cyan: the selected line's name
+row 13  Infinite time:                             cyan: the name of the line last keyed
 row 14  the clock stops at every round.            its help, two rows of 32
 row 21  Colours: Alberto Conde
 row 22  Patch: Jon Attree
-row 23   Engine: Dean Woodyatt                 ////   blue bar, yellow text, four stripes
+row 23                                  ////   blue bar, four stripes
 ```
 
-**Colours.** Attribute bytes, BRIGHT (0x40) in each: paper black and ink white (0x47) wherever nothing else is said; the bars 0x4E (blue paper, yellow ink); headings 0x46; `ON` 0x44, `OFF` 0x42, `N/A` and the brackets 0x47; a set's name, shown when it is on, 0x44; `ENTER play` 0x44 and `BREAK exit` 0x42; the help's first row 0x45; the selected line, its whole row, 0x69 (cyan paper, blue ink). The border is not changed. **The stripes** are the four last cells of each bar, each the same glyph, its pixels set where x + y >= 7 (x from the left, y from the top, 0 to 7: bytes 01 03 07 0F 1F 3F 7F FF), with paper and ink blue and red, red and yellow, yellow and green, green and cyan.
+**Colours.** Attribute bytes, BRIGHT (0x40) in each: paper black and ink white (0x47) wherever nothing else is said; the bars 0x4E (blue paper, yellow ink); headings 0x46; `ON` 0x44, `OFF` 0x42, `N/A` and the brackets 0x47; a set's name, shown when it is on, 0x44; `ENTER play` 0x44 and `BREAK exit` 0x42; the help's first row 0x45. No line is highlighted. The border is not changed. **The stripes** are the four last cells of each bar, each the same glyph, its pixels set where x + y >= 7 (x from the left, y from the top, 0 to 7: bytes 01 03 07 0F 1F 3F 7F FF), with paper and ink blue and red, red and yellow, yellow and green, green and cyan.
 
-**Rows.** **The title is never cut:** it has the blue bar to itself, in capitals, from column 1 to 27, before the stripes in 28 to 31. A longer one wraps at its last space within the first 27 characters (or at 27 if there is none) to a second bar row, also with its stripes; a writer keeps a title to 54 characters, two bar rows, and a reader shows no more. The publisher, `INF1`'s `publisher` as it stands, is on the row below in white, from column 1, or from column 0 when it needs all 32; it is cut only past 32. Then a blank row, unless the title took two. Then `TRAINER` and the trainers' lines, if there are any, then a blank row, then `OPTIONS` and its lines: the main line, one line for each kind of set offered, one for each toggle. A blank row, then `ENTER play` in columns 0 to 9 and `BREAK exit` in 13 to 22. A blank row, unless the help would then end past row 20, then the help: the selected line's name and `:` (cut to 31), then its help text, characters 1 to 32 and 33 to 64, if the patch gives it; otherwise those rows are blank. With ten lines and both sections the help ends in row 20. Row 21: `Colours: ` and `colours_by`, cut to 23, only for a patch with a colour set offered and that name. Row 22: `Patch: ` and `patch_by`, cut to 25, if it is there. Row 23, always: the bar, ` Engine: Dean Woodyatt`, crediting the NexClash engines that every build here comes from. Anything unprintable shows as `?`.
+**Rows.** **The title is never cut:** it has the blue bar to itself, in capitals, from column 1 to 27, before the stripes in 28 to 31. A longer one wraps at its last space within the first 27 characters (or at 27 if there is none) to a second bar row, also with its stripes; a writer keeps a title to 54 characters, two bar rows, and a reader shows no more. The publisher, `INF1`'s `publisher` as it stands, is on the row below in white, from column 1, or from column 0 when it needs all 32; it is cut only past 32. Then a blank row, unless the title took two. Then `TRAINER` and the trainers' lines, if there are any, then a blank row, then `OPTIONS` and its lines: the main line, one line for each kind of set offered, one for each toggle. A blank row, then `ENTER play` in columns 0 to 9 and `BREAK exit` in 13 to 22. A blank row, unless the help would then end past row 20, then the help: the name of the line last keyed (line 1 to begin with) and `:` (cut to 31), then its help text, characters 1 to 32 and 33 to 64, if the patch gives it; otherwise those rows are blank. With ten lines and both sections the help ends in row 20. Row 21: `Colours: ` and `colours_by`, cut to 23, only for a patch with a colour set offered and that name. Row 22: `Patch: ` and `patch_by`, cut to 25, if it is there. Row 23, always: the bar with its stripes and no text. (The engines' author is credited in each patch's `credit` field and its `.nfo`.) Anything unprintable shows as `?`.
 
 **A line.** Column 0 its key, `1` to `9`, then `0` for the tenth; its name from column 2; its value ending in column 31: `[ ON]`, `[OFF]` or `[N/A]`, or for a kind with more than one set, the chosen set's name, cut to 12, in brackets. The name is cut to leave a blank column before the value. Names are up to 25 characters, so `[ ON]` keeps its column.
 
@@ -630,9 +630,9 @@ row 23   Engine: Dean Woodyatt                 ////   blue bar, yellow text, fou
 
 **The limit.** A reader states how many sets and toggles it can hold chosen at once, N: a key that would turn on one more does nothing. The dot command's N is 2. A `.nex` carrying its menu holds its N, and a writer sets it to 2, so that the two menus offer exactly the same choices.
 
-**Keys.** A line's key selects that line and acts on it as above. CAPS SHIFT with 6 or 7, the Next's cursor down and up, moves the selection a line without acting, and stops at the first and the last. The selection starts on line 1. ENTER and SPACE both start with what the menu shows. BREAK, CAPS SHIFT with SPACE, cancels.
+**Keys.** A line's key acts on it as above, and its help shows. There is no cursor and no highlight: the number keys are the only way to change a line. ENTER and SPACE both start with what the menu shows. BREAK, CAPS SHIFT with SPACE, cancels.
 
-**Defined behaviour in a `.nex` that carries its menu:** the main line is fixed `[ ON]` and its key does nothing; ENTER and SPACE start the game alike; BREAK resets the Next (NextREG 0x02 = 1), as nothing is left to return to. **In the dot command:** BREAK stops with `Cancelled`; with the main line on, ENTER writes the `.nex` that carries its menu, its lines starting where they were left, and SPACE writes the bare `.nex` with the choices fixed; with the main line off, either key writes the player's own game, with any trainers, as before. The credit bar reads ` Engine: Dean Woodyatt` on every menu.
+**Defined behaviour in a `.nex` that carries its menu:** the main line is fixed `[ ON]` and its key does nothing; ENTER and SPACE start the game alike; BREAK resets the Next (NextREG 0x02 = 1), as nothing is left to return to. **In the dot command:** BREAK stops with `Cancelled`; with the main line on, ENTER writes the bare `.nex` with the choices fixed, so the game starts straight after its title with no second menu, and SPACE writes the `.nex` that carries its menu, its lines starting where they were left; with the main line off, either key writes the player's own game, with any trainers, as before.
 
 **Help text** comes from `HLP1`, below, and is optional: without it, or without a line's key, the help rows are blank. A reader that does not know `HLP1` shows no help.
 

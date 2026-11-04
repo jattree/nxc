@@ -109,12 +109,12 @@ class TheMenu(unittest.TestCase):
         self.assertEqual(text[9], "4 Language                 [OFF]")
         self.assertEqual(text[11], "ENTER play   BREAK exit")
         self.assertEqual(text[22], "Patch: Vector")
-        self.assertEqual(text[23], " Engine: Dean Woodyatt      ////")
+        self.assertEqual(text[23], "                            ////")
         self.assertNotIn("nexclash", m.screens[0].lower())
         a = attrs[0]
         self.assertEqual(set(a[0][:28]) | set(a[23][:28]), {0x4E})
         self.assertEqual(bytes(a[0][28:]), bytes((0x4A, 0x56, 0x74, 0x65)))
-        self.assertEqual(set(a[4]), {0x69})                 # line 1, selected
+        self.assertNotIn(0x69, set(a[4]))                    # no line highlighted
         self.assertEqual(a[3][0], 0x46)
         self.assertEqual(a[8][28:31], bytes((0x42,) * 3))   # OFF in red
         self.assertEqual(a[7][29:31], bytes((0x44,) * 2))   # ON in green
@@ -124,15 +124,15 @@ class TheMenu(unittest.TestCase):
         self.assertEqual(a[2], bytes((0x47,) * 32))
 
     def test_keys_and_rules(self):
-        m = self.screens(PATCH, GAME, ("caps+6", "caps+6", "caps+7", "3", "3", "2", "4", "1"))
+        m = self.screens(PATCH, GAME, ("3", "3", "2", "4", "1"))
         s = [x.splitlines() for x in m.screens]
         # m.screens[k]: the screen as key k is pressed, so after the keys before it
-        self.assertTrue(s[1][4].endswith("[OFF]"))
-        self.assertEqual(s[4][8], "3 Enhanced colours         [ ON]")     # one set: ON
-        self.assertEqual(s[5][8], "3 Enhanced colours         [OFF]")     # and back
-        self.assertEqual(s[6][7], "2 Colour clash fix         [ ON]")     # fixed on in a .nex
-        self.assertEqual(s[7][9], "4 Language                 [ ON]")
-        self.assertEqual(s[8][4], "1 Lives                    [ ON]")
+        self.assertTrue(s[0][4].endswith("[OFF]"))
+        self.assertEqual(s[1][8], "3 Enhanced colours         [ ON]")     # one set: ON
+        self.assertEqual(s[2][8], "3 Enhanced colours         [OFF]")     # and back
+        self.assertEqual(s[3][7], "2 Colour clash fix         [ ON]")     # fixed on in a .nex
+        self.assertEqual(s[4][9], "4 Language                 [ ON]")
+        self.assertEqual(s[5][4], "1 Lives                    [ ON]")
         self.assertEqual(m.screens[-1].splitlines()[4], "1 Lives                    [ ON]")
 
     def test_the_limit(self):
@@ -147,7 +147,7 @@ class TheMenu(unittest.TestCase):
     def test_help(self):
         f = nxc.set_help(PATCH, GAME, {"trainer_1": "Lives stay at three, whatever happens to you.", "fix": "The sprite build."})
         self.assertEqual(nxc.help_texts(f)["trainer_1"], "Lives stay at three, whatever   happens to you.")
-        m = self.screens(f, GAME, ("caps+6",))
+        m = self.screens(f, GAME, ("2",))                   # a line's key shows its help
         s0, s1 = m.screens[0].splitlines(), m.screens[1].splitlines()
         self.assertEqual(s0[13:16], ["Lives:", "Lives stay at three, whatever", "happens to you."])
         self.assertEqual(s1[13:15], ["Colour clash fix:", "The sprite build."])

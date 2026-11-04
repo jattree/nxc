@@ -6,9 +6,9 @@ Next or a Tang.**
 ## What changed
 
 - **Spec** ([NXC-FORMAT.md](../spec/NXC-FORMAT.md), "The menu", "HLP1", "A .nex that carries its menu"). The new menu,
-  mock-up A: black, a blue title bar and a credit bar with the four Spectrum stripes, yellow `TRAINER` and `OPTIONS`, the
-  selected line in cyan, `ON` green, `OFF` red, `ENTER play` green and `BREAK exit` red, a help line for the selected
-  option, `Patch: <patch_by>` and ` Engine: Dean Woodyatt` at the bottom. NexClash is not on it. Layout, colours as
+  mock-up A: black, a blue title bar and a credit bar with the four Spectrum stripes, yellow `TRAINER` and `OPTIONS`, `ON`
+  green, `OFF` red, `ENTER play` green and `BREAK exit` red, a help line for the line last keyed, `Patch: <patch_by>`
+  and a plain bar at the bottom (no highlight, no cursor keys, no engine line: the owner's calls, 2026-11-04). NexClash is not on it. Layout, colours as
   attribute bytes, the cutting rules and the keys are all specified. `HLP1` is a new optional clear block of help texts.
   The in-`.nex` menu is specified whole: the header changes, the menu banks above `OPT1`'s byte 2, the stub, its
   description and data, the stack shadow, the handoff, what is not the same (R, time, the NextREG select latch), RAM, the
@@ -46,8 +46,9 @@ Next or a Tang.**
 
 - **The same menu.** `firmware/nexclash.asm` reads `menu.asm`, with what builds its description, from its own file into a page
   of its own before the menu, and takes the font from the card's `C:/MACHINES/NEXT/enNextZX.rom` (ROM 3, 0xFD00).
-- **ENTER writes the menu `.nex`**, starting as the menu was left; SPACE the bare one; fix off, the game as before. Its writer
-  is a part read over the game's part after the bare banks.
+- **ENTER writes the bare `.nex`** with the choices fixed, so the game starts after its title with no second menu (changed
+  2026-11-04: the owner saw menu, title, menu, title, game); SPACE writes the menu `.nex`, starting as the menu was left;
+  fix off, the game as before. The menu `.nex` writer is a part read over the game's part after the bare banks.
 - **Byte-exact with `nxc.py`** on the harness: the vector with no choices, a trainer, both sets, a trainer and a set; the tape,
   tape-set, toggle and label vectors; and the published patches and NZS's in `NXC_MENU_GAMES`. **In JNext through the
   Browser, real NextZXOS and `.nexload`:** NZS's two-file patch with trainer 1 and Smooth scrolling gave `b297e48f…`, the
@@ -65,9 +66,8 @@ still check the old menu text and will need the same change when run.
 
 ## For you to decide
 
-- Decided and in the spec: the main line in a `.nex` fixed `[ ON]`; BREAK in a `.nex` resets; ` Engine: Dean Woodyatt`.
-- **The menu twice.** ENTER in the loader writes the menu `.nex`, so its menu shows again when `.nexload` starts it, already
-  set; SPACE skips that with a bare file. Keep, or should the loader's ENTER be the bare file?
+- Decided and in the spec: the main line in a `.nex` fixed `[ ON]`; BREAK in a `.nex` resets; the loader's ENTER is the
+  bare file (no menu twice); no highlight or cursor keys; no engine line on the bar (Dean is credited in `credit` and the `.nfo`).
 - **zx0.** A pure-Python compressor was considered and not written: `zx0`'s optimal parse searches every offset for every
   byte, which in Python would take minutes a bank, and matching its output byte for byte means porting its exact tie
   breaks. It stays an optional dependency for `make`; applying never needs it.

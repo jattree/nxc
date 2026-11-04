@@ -38,7 +38,7 @@ class SetLoader(T.Base):
         cls.d.cleanup()
         super().tearDownClass()
 
-    def go(self, patch=None, files=None, keys=("space",), **options):
+    def go(self, patch=None, files=None, keys=("enter",), **options):
         m = self.machine({"patch.nxc": self.patch if patch is None else patch, **(files if files is not None else {A: self.a, B: self.b})},
                          keys=keys, **options)
         failed, message = m.run('"patch.nxc"')
@@ -60,9 +60,9 @@ class SetLoader(T.Base):
         self.assertEqual(self.nex, nxc.apply(self.patch, game=self.game))
 
     def test_a_trainer_and_the_clash_fix_off(self) -> None:
-        m, failed, message = self.go(keys=["1", "space"])
+        m, failed, message = self.go(keys=["1", "enter"])
         self.made_it(m, failed, message, NEX, nxc.apply(self.patch, game=self.game, chosen=[1]))
-        for keys, chosen in ((["2", "space"], []), (["1", "2", "space"], [1])):
+        for keys, chosen in ((["2", "enter"], []), (["1", "2", "enter"], [1])):
             with self.subTest(keys=keys):
                 m, failed, message = self.go(keys=keys)
                 self.made_it(m, failed, message, Z80, nxc.original_with_pokes(self.patch, self.game, chosen))
@@ -154,7 +154,7 @@ class SetLoader(T.Base):
         ld      (need_name),a""")], files={A: self.a, B: self.b[:-1]})
         self.assertNotIn(B, m.printed.decode("latin-1"))
 
-    def control(self, replace, files=None, keys=("space",)):
+    def control(self, replace, files=None, keys=("enter",)):
         binary, symbols = H.assemble(replace)
         return self.go(files=files, keys=keys, binary=binary, symbols=symbols)
 
@@ -182,12 +182,12 @@ class TapeMemory(T.Base):
         both = bytearray(nex)
         both[512 + 16384 + 0x2050] ^= 0x5A; both[512 + 16384 + 0x2060] ^= 0x33
         self.assertEqual(nxc.apply(patch, game=tap, colours="Painted", language="Other"), bytes(both))
-        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "space"])
+        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "enter"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), bytes(both))
         self.assertEqual(m.peak_pages, 15)
-        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "space"], free_pages=14)
+        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "enter"], free_pages=14)
         failed, message = m.run('"patch.nxc"')
         self.assert_refused(m, failed, message, "Needs 120K free RAM")
 

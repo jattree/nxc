@@ -88,23 +88,24 @@ cd firmware && sjasmplus --nologo --raw=nxcstub.bin nxcstub.asm
 ## The menu
 
 The command shows the same menu, from the same `menu.asm`, as a `.nex` that carries it (the spec's "The menu"): a blue bar
-with the title and stripes, the publisher in white below, `TRAINER` and `OPTIONS` in yellow, the selected line in cyan, `ON`
-green and `OFF` red, `ENTER play` and `BREAK exit`, the selected line's help from `HLP1`, `Colours:` and `Patch:` above the bar
-naming Dean Woodyatt's engines. Before the menu the command takes one 8K page for it, reads its menu part from its own file
+with the title and stripes, the publisher in white below, `TRAINER` and `OPTIONS` in yellow, `ON`
+green and `OFF` red, `ENTER play` and `BREAK exit`, the help from `HLP1` of the line last keyed (the number keys are the only keys;
+no cursor, no highlight), `Colours:` and `Patch:` above a plain bar with the stripes. Before the menu the command takes one 8K page for it, reads its menu part from its own file
 (after the tape parts) into the page at 0xA000, with interrupts off, and builds the description there from the patch; the font
 is ROM 3's, read from the card's `C:/MACHINES/NEXT/enNextZX.rom` at 0xFD00, as a dot command cannot see the ROM (without the
 file it stops with `Needs NEXT/enNextZX.rom: no font`). It switches to layer 0 for the menu if the caller is in another, and
 back after it.
 
-**What the keys write.** With the clash fix on, **ENTER writes the `.nex` that carries its menu**, the default: the bare
-`.nex` with nothing chosen, then the menu banks, its lines starting as they were left here, byte for byte what
-`nxc.py PATCH GAME` with the same choices writes; `.nexload` then starts it, and its menu comes up again, already set, for
-ENTER. **SPACE writes the bare `.nex`** with the choices fixed in it, as before. With the fix off either key writes the
+**What the keys write.** With the clash fix on, **ENTER writes the bare `.nex`** with the choices fixed in it, so the
+game starts straight after its title with no second menu (the owner's call, 2026-11-04). **SPACE writes the `.nex` that
+carries its menu**: the bare `.nex` with nothing chosen, then the menu banks, its lines starting as they were left here, byte
+for byte what `nxc.py PATCH GAME` with the same choices writes; `.nexload` then starts it, and its menu comes up again,
+already set. With the fix off either key writes the
 player's own game, as before. BREAK stops with `Cancelled`. The menu `.nex` is written by a part read over the game's part
 once the bare banks are done; it decodes each set a chunk at a time in three pages of its own (a tape's, by then done with, or
 three more), writes M0 and the data, and puts the header, the stub's count and the lines' offsets in place by seeking back
 (the output is opened for reading too, to take the 16 bytes below the build's stack from it). A build that cannot carry a
-menu is refused with `No menu .nex: press SPACE`.
+menu is refused with `No menu .nex: press ENTER`.
 
 **Memory.** The menu's page is held from before the menu to the end, so every route needs 8K more than before; the RAM
 messages still name what the rebuild itself needs on top of it. The menu `.nex` needs no more pages than the bare one, but

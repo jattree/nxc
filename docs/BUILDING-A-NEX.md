@@ -72,7 +72,7 @@ It prints `wrote Game.nex` and the file's MD5. The same patch and game files alw
 patch offers:
 
 - the number keys turn a line on or off, or step a colour or language line through its choices;
-- CAPS SHIFT with 6 or 7 (the cursor keys) moves the cyan highlight, and the highlighted line's help shows under the keys;
+- pressing a line's number also shows that line's help under the keys;
 - ENTER or SPACE plays, with what the menu shows; BREAK resets the Next.
 
 The choices are applied to the game as it starts, and the game then starts exactly as a `.nex` built with those

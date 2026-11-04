@@ -71,7 +71,7 @@ def val(label: str, value: str) -> str:
 def screen(rows: dict[int, str]) -> str:
     """A whole menu screen, as the harness reads it: rows not given are blank; row 23 the credit bar."""
     rows = dict(rows)
-    rows.setdefault(23, " Engine: Dean Woodyatt".ljust(28) + "////")
+    rows.setdefault(23, "".ljust(28) + "////")
     return "\n".join(rows.get(r, "") for r in range(24))
 
 
@@ -254,13 +254,13 @@ class Base(unittest.TestCase):
         os.makedirs(os.environ.get("TMPDIR", "/tmp"), exist_ok=True)
         cls.binary, cls.symbols = H.assemble()
 
-    def machine(self, files: dict[str, bytes], keys=("space",), binary=None, symbols=None, **options) -> H.Machine:
+    def machine(self, files: dict[str, bytes], keys=("enter",), binary=None, symbols=None, **options) -> H.Machine:
         m = H.Machine(binary or self.binary, symbols or self.symbols, files, keys=keys, **options)
         m.set_phases(PHASES)
         m.guard_iopage()
         return m
 
-    def run_patch(self, patch: bytes, game: bytes | None, keys=("space",), game_name: str | None = "game.z80", **options):
+    def run_patch(self, patch: bytes, game: bytes | None, keys=("enter",), game_name: str | None = "game.z80", **options):
         files = {"patch.nxc": patch}
         if game is not None:
             files[game_name] = game
@@ -424,7 +424,7 @@ class Cobra(Base):
         cls.game_name = text_of(cls.shipped, b"TGT1")["file"].lower()
         cls.base_digest = hashlib.md5(cls.source).hexdigest()
 
-    def run_cobra(self, patch=None, keys=("space",), game=None, **options):
+    def run_cobra(self, patch=None, keys=("enter",), game=None, **options):
         return self.run_patch(patch if patch is not None else self.patch, self.game if game is None else game, keys,
                               game_name=self.game_name, **options)
 
@@ -451,7 +451,7 @@ class Cobra(Base):
         self.assertEqual(hashlib.md5(bytes(m.written[NEX])).hexdigest(), self.base_digest)
 
     def test_the_key_that_chose_is_not_left_pending(self) -> None:
-        for keys, written in ((["space"], NEX), (["5", "space"], Z80)):
+        for keys, written in ((["enter"], NEX), (["5", "enter"], Z80)):
             m = self.machine({"patch.nxc": self.patch, self.game_name: self.game}, keys=keys)
             m.m.memory[H.FLAGS] = 0xFF
             failed, message = m.run('"patch.nxc"')
@@ -475,7 +475,7 @@ class Cobra(Base):
                          ["Infinite lives", "Immunity", "Unlimited weaponry", "Infinite lives (alt)"])
         for chosen in ([1], [2], [3], [4], [1, 2], [1, 2, 3], [1, 4]):
             with self.subTest(chosen=chosen):
-                keys = [str(c) for c in chosen] + ["space"]
+                keys = [str(c) for c in chosen] + ["enter"]
                 m, failed, message = self.run_cobra(keys=keys)
                 self.assertFalse(failed, message)
                 self.assertEqual(m.clean(), [])
@@ -494,31 +494,23 @@ class Cobra(Base):
 
     def test_space_starts_with_what_the_menu_shows(self) -> None:
         # SPACE after a choice must not undo it: the owner lost immunity that way, it seems.
-        m, failed, message = self.run_cobra(keys=["2", "space"])
+        m, failed, message = self.run_cobra(keys=["2", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(self.patch, game=self.game, chosen=["Immunity"]))
-        m, failed, message = self.run_cobra(keys=["space"])
+        m, failed, message = self.run_cobra(keys=["enter"])
         self.assertFalse(failed, message)
         self.assertEqual(hashlib.md5(bytes(m.written[NEX])).hexdigest(), self.base_digest)
 
     def test_menu_layout_exactly(self) -> None:
         pok = "NInfinite Lives\nZ 8 36515 183 0\nNImmunity\nZ 8 37915 201 0\nY\n"
         patch = nxc.import_pok(self.shipped, str(COBRA_GAME), pok, "Ocean, 1986")
-        m, failed, message = self.run_cobra(patch, keys=["1", "space"])
+        m, failed, message = self.run_cobra(patch, keys=["1", "enter"])
         self.assertFalse(failed, message)
-        self.assertEqual(m.screens[-2], "\n".join((
-            " COBRA                        Ocean, 1986",
-            "",
-            " TRAINER",
-            "  1  Infinite lives            [ON]",
-            "  2  Immunity                  [OFF]",
-            "",
-            " NEXCLASH",
-            "  3  Colour clash fix          [ON]",
-            "",
-            " ENTER to play",
-            "")))
-        self.assertIn("[OFF]", m.screens[-3].split("\n")[3])
+        top = {0: " COBRA".ljust(28) + "////", 1: " Ocean, 1986", 3: "TRAINER", 5: row("2", "Immunity", "[OFF]"), 7: "OPTIONS",
+               8: row("3", "Colour clash fix", "[ ON]"), 10: "ENTER play   BREAK exit"}
+        self.assertEqual(m.screens[-2], screen({**top, 4: row("1", "Infinite lives", "[ ON]")}))
+        self.assertEqual(m.screens[-3], screen({**top, 4: row("1", "Infinite lives", "[OFF]")}))
+        self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, chosen=[1]))
 
     def test_credit_with_no_colour_set_has_no_colours_part(self) -> None:
         patch = nxc.set_credits(self.patch, self.game, patch_by="Jon Attree", colours_by="Someone")
@@ -526,37 +518,37 @@ class Cobra(Base):
         m, failed, message = self.run_cobra(patch)
         self.assertFalse(failed, message)
         self.assertEqual(hashlib.md5(bytes(m.written[NEX])).hexdigest(), self.base_digest)
-        self.assertEqual(m.screens[1].split("\n")[-4:], [" ENTER to play", "", "Patch: Jon Attree", ""])
+        self.assertEqual(m.screens[1], screen({
+            0: " COBRA".ljust(28) + "////", 1: " Ocean, 1986", 3: "TRAINER",
+            4: row("1", "Infinite lives", "[OFF]"), 5: row("2", "Immunity", "[OFF]"),
+            6: row("3", "Unlimited weaponry", "[OFF]"), 7: row("4", "Infinite lives (alt)", "[OFF]"),
+            9: "OPTIONS", 10: row("5", "Colour clash fix", "[ ON]"), 12: "ENTER play   BREAK exit",
+            22: "Patch: Jon Attree"}))                     # row 21, Colours:, only with a colour set offered
+        self.assertNotIn("Someone", "\n".join(m.screens))
 
     def test_menu_without_trainers_or_publisher(self) -> None:
-        m, failed, message = self.run_cobra(self.shipped, keys=["1", "space"])
+        m, failed, message = self.run_cobra(self.shipped, keys=["1", "enter"])
         self.assertFalse(failed, message)
-        self.assertEqual(m.screens[-2], "\n".join((
-            " COBRA",
-            "",
-            " NEXCLASH",
-            "  1  Colour clash fix          [OFF]",
-            "",
-            " ENTER to play",
-            "")))
+        self.assertEqual(m.screens[-2], screen({0: " COBRA".ljust(28) + "////", 3: "OPTIONS",
+                                                4: row("1", "Colour clash fix", "[OFF]"), 6: "ENTER play   BREAK exit"}))
         self.assertEqual(bytes(m.written[Z80]), self.game)
 
     def test_more_trainers_than_the_menu_holds_still_plays(self) -> None:
         pok = "".join(f"NT{n}\nZ 8 {40000 + n} 1 0\n" for n in range(10)) + "Y\n"
         patch = nxc.import_pok(self.shipped, str(COBRA_GAME), pok)
-        m, failed, message = self.run_cobra(patch, keys=["8", "9", "space"])  # the last, then the clash fix off
+        m, failed, message = self.run_cobra(patch, keys=["8", "9", "enter"])  # the last, then the clash fix off
         self.assertFalse(failed, message)
-        self.assertIn("  8  T7", m.screens[-2])
+        self.assertIn(row("8", "T7", "[ ON]"), m.screens[-2].split("\n"))
         self.assertNotIn("T8", m.screens[-2])
-        self.assertIn("  9  Colour clash fix          [OFF]", m.screens[-2])
-        self.assertIn(Z80, m.written)
+        self.assertIn(row("9", "Colour clash fix", "[OFF]"), m.screens[-2].split("\n"))
+        self.assertEqual(bytes(m.written[Z80]), nxc.original_with_pokes(patch, self.game, [8]))
 
     def test_break_cancels(self) -> None:
         m, failed, message = self.run_cobra(keys=["caps+space"])
         self.assert_refused(m, failed, message, "Cancelled")
 
     def test_original_alone_is_the_game_untouched(self) -> None:
-        m, failed, message = self.run_cobra(keys=["5", "space"])
+        m, failed, message = self.run_cobra(keys=["5", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(m.clean(), [])
         self.assertEqual(bytes(m.written[Z80]), self.game)
@@ -567,7 +559,7 @@ class Cobra(Base):
     def test_original_with_a_trainer_equals_the_reference(self) -> None:
         for chosen in ([1], [2, 3]):
             with self.subTest(chosen=chosen):
-                keys = [str(c) for c in chosen] + ["5", "space"]
+                keys = [str(c) for c in chosen] + ["5", "enter"]
                 m, failed, message = self.run_cobra(keys=keys)
                 self.assertFalse(failed, message)
                 self.assertEqual(m.clean(), [])
@@ -588,7 +580,7 @@ class Cobra(Base):
     def test_original_with_a_trainer_refuses_the_wrong_game(self) -> None:
         wrong = bytearray(self.game)
         wrong[1000] ^= 1
-        m, failed, message = self.run_cobra(keys=["1", "5", "space"], game=bytes(wrong))
+        m, failed, message = self.run_cobra(keys=["1", "5", "enter"], game=bytes(wrong))
         self.assert_refused(m, failed, message, "Wrong game file for this patch")
 
     # ---- refusals
@@ -627,10 +619,21 @@ class Cobra(Base):
             self.assert_refused(m, failed, message, "Patch needs a newer .NEXCLASH")
 
     def test_not_enough_ram(self) -> None:
-        for free in range(6):
+        # The menu's page is taken first; the rebuild's own check then wants 6 more, and says only what it needs.
+        for free in range(1, 7):
             m, failed, message = self.run_cobra(free_pages=free)
             self.assert_refused(m, failed, message, "Not enough free RAM: needs 48K")
             self.assertEqual(m.free_pages, free)
+            self.assertGreater(len(m.screens), 2)              # past the menu
+        m, failed, message = self.run_cobra(free_pages=7)
+        self.assertFalse(failed, message)
+        self.assertEqual(hashlib.md5(bytes(m.written[NEX])).hexdigest(), self.base_digest)
+
+    def test_not_enough_ram_for_the_menu(self) -> None:
+        m, failed, message = self.run_cobra(free_pages=0)
+        self.assert_refused(m, failed, message, "Not enough free RAM for the menu")
+        self.assertEqual(m.free_pages, 0)
+        self.assertEqual(m.screens[0], "\n".join(m.screen))    # no menu was shown
 
     def test_truncated_patch(self) -> None:
         for length in list(range(0, 400, 13)) + list(range(400, len(self.patch), 211)) + [len(self.patch) - 1]:
@@ -647,7 +650,7 @@ class Cobra(Base):
         for position in positions:
             bad = bytearray(self.patch)
             bad[position] ^= rng.choice((1, 0x40, 0x80, 0xFF))
-            m = self.machine({"patch.nxc": bytes(bad), self.game_name: self.game}, keys=["space"],
+            m = self.machine({"patch.nxc": bytes(bad), self.game_name: self.game}, keys=["enter"],
                              binary=binary, symbols=symbols)
             try:
                 failed, message = m.run('"patch.nxc"')
@@ -897,11 +900,11 @@ class Cobra(Base):
         for name, data in cases.items():
             with self.subTest(name):
                 patch = rekey(self.patch, self.game, lambda bl, st: bl.insert(1, [b"TRN1", data]))
-                m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "space"])
+                m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "enter"])
                 failed, message = m.run('"patch.nxc"')
                 self.assert_refused(m, failed, message, "Patch damaged: get it again")
         patch = rekey(self.patch, self.game, lambda bl, st: bl.insert(1, [b"TRN1", good]))
-        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["space"])
+        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["enter"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertEqual(m.clean(), [])
@@ -912,10 +915,10 @@ class Cobra(Base):
             bl.insert(1, [b"TRN1", nxc.trn1("Big one", pokes)])
             bl.insert(1, [b"TRN1", nxc.trn1("Big two", pokes)])
         patch = rekey(self.shipped, self.game, add)
-        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "2", "space"])
+        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "2", "enter"])
         failed, message = m.run('"patch.nxc"')
         self.assert_refused(m, failed, message, "Too many trainers on")
-        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "space"])
+        m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["1", "enter"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, chosen=[1]))
@@ -945,9 +948,8 @@ class Cobra(Base):
         "no room check in ZX0": [(""".room:  push    af
         ld      a,b""", """.room:  ret
         ld      a,b""")],
-        "no offset check in ZX0": [("""        jp      nc,.bad
+        "no offset check in ZX0": [("""        jr      nc,.bad
         ld      hl,(zx_last)""", """        nop
-        nop
         nop
         ld      hl,(zx_last)""")],
         "no site bound": [("""        ld      bc,BANK_SIZE+1
@@ -1033,7 +1035,7 @@ class Cobra(Base):
             failed, message = m.run('"patch.nxc"')
             return message != "Patch damaged: get it again" or bool(m.bad_writes)
         if name in ("POKEs forgotten", "POKEs in the CRC"):
-            m = self.machine(files, keys=["1", "space"], binary=binary, symbols=symbols)
+            m = self.machine(files, keys=["1", "enter"], binary=binary, symbols=symbols)
             failed, message = m.run('"patch.nxc"')
             out = bytes(m.written.get(NEX, b""))
             return out != nxc.apply(self.patch, game=self.game, chosen=[1])
@@ -1085,12 +1087,16 @@ class Cobra(Base):
               f"  index, header, sites {setup:,} = {setup / mhz:.3f} s\n"
               f"  decompress, CRC and write {write:,} = {write / mhz:.3f} s\n"
               f"  total {total:,} = {total / mhz:.3f} s\n"
-              f"  file {len(self.binary)} bytes: 8192, then {self.symbols['ov_size']} read after the menu; code and data end at {code_end:#06x}, variables to "
+              f"  file {len(self.binary)} bytes: 8192, then {self.symbols['ov_size']} read after the menu, tape parts "
+              f"{self.symbols['tape1_size']}, {self.symbols['tape2_size']} and {self.symbols['tape3_size']}, the menu's "
+              f"{self.symbols['mp_size']}, the menu .nex writer's {self.symbols['mnx_size']}; code and data end at {code_end:#06x}, variables to "
               f"{self.symbols['vars_end']:#06x}\n"
               f"  stack in the 8K reached {stack_low:#06x}, {0x4000 - stack_low} bytes\n"
               f"  allocated {m.peak_pages} pages = {m.peak_pages * 8}K, of which {touched} bytes changed; "
-              f"peak RAM 8K + {m.peak_pages * 8}K", flush=True)
-        self.assertEqual(len(self.binary), H.FIRST_PART + self.symbols["ov_size"])
+              f"peak RAM 8K + 8K for the menu + {m.peak_pages * 8}K", flush=True)
+        parts = ("ov_size", "tape1_size", "tape2_size", "tape3_size", "mp_size", "mnx_size")
+        self.assertEqual(len(self.binary), H.FIRST_PART + sum(self.symbols[n] for n in parts))
+        self.assertEqual(m.peak_pages, 6)
         self.assertGreater(stack_low, self.symbols["stack_floor"], "the stack reached the variables below it")
 
 
@@ -1172,7 +1178,7 @@ class Choices:
             for which in (0, 1):
                 for trainer in (False, True):
                     # With the fix off a chosen set must make no difference: choose it first, then turn the fix off.
-                    keys = ([one] if trainer else []) + [set_key] * which + ([] if fix else [fix_key]) + ["space"]
+                    keys = ([one] if trainer else []) + [set_key] * which + ([] if fix else [fix_key]) + ["enter"]
                     with self.subTest(fix=fix, which=which, trainer=trainer):
                         m, failed, message = self.run_it(keys)
                         self.assertFalse(failed, message)
@@ -1193,12 +1199,12 @@ class Choices:
     def test_space_starts_with_what_the_menu_shows(self) -> None:
         one, fix_key, set_key = self.lines()
         for keys, fix, which, trainer in (
-                (["space"], True, 0, False),
-                ([set_key, "space"], True, 1, False),
-                ([one, set_key, "space"], True, 1, True),
-                ([one, "space"], True, 0, True),
-                ([fix_key, "space"], False, 0, False),
-                ([one, fix_key, "space"], False, 0, True)):
+                (["enter"], True, 0, False),
+                ([set_key, "enter"], True, 1, False),
+                ([one, set_key, "enter"], True, 1, True),
+                ([one, "enter"], True, 0, True),
+                ([fix_key, "enter"], False, 0, False),
+                ([one, fix_key, "enter"], False, 0, True)):
             with self.subTest(keys=keys):
                 m, failed, message = self.run_it(keys)
                 self.assertFalse(failed, message)
@@ -1208,18 +1214,18 @@ class Choices:
     def test_enhanced_is_ignored_with_the_fix_off_and_the_choice_kept(self) -> None:
         one, fix_key, set_key = self.lines()
         # Its key does nothing with the fix off.
-        m, failed, message = self.run_it([fix_key, set_key, set_key, "space"])
+        m, failed, message = self.run_it([fix_key, set_key, set_key, "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[Z80]), self.game)
         self.assertEqual(m.peak_pages, 0)
         self.assertIn(val("Enhanced colours", "[N/A]"), m.screens[-2])
-        self.assertEqual(len(m.screens), 6)          # before, default, fix off, its line selected twice (the key moves it), after
+        self.assertEqual(len(m.screens), 6)          # before, default, fix off, its key twice, after
         # So back on: still off.
-        m, failed, message = self.run_it([fix_key, set_key, fix_key, "space"])
+        m, failed, message = self.run_it([fix_key, set_key, fix_key, "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 0, False))
         # A choice made first survives the fix going off and on, and is shown again.
-        m, failed, message = self.run_it([set_key, fix_key, fix_key, "space"])
+        m, failed, message = self.run_it([set_key, fix_key, fix_key, "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 1, False))
         shown = "[ ON]" if len(self.sets) == 1 else f"[{self.sets[0][:12]}]"
@@ -1230,7 +1236,7 @@ class Choices:
     def test_the_key_steps_through_what_there_is(self) -> None:
         one, fix_key, set_key = self.lines()
         turn = len(self.sets) + 1
-        m, failed, message = self.run_it([set_key] * (turn + 1) + ["space"])
+        m, failed, message = self.run_it([set_key] * (turn + 1) + ["enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 1, False))
         shown = [next(line for line in screen.split("\n") if "Enhanced colours" in line)[2:].split("colours", 1)[1].strip()
@@ -1241,7 +1247,7 @@ class Choices:
             self.assertNotIn(self.sets[0], "\n".join(m.screens))
 
     def test_the_credit_is_not_on_the_menu(self) -> None:
-        m, failed, message = self.run_it(["space"])
+        m, failed, message = self.run_it(["enter"])
         text = "\n".join(m.screens)
         self.assertNotIn("Bleugh", text)
         self.assertNotIn("SPACE", text)
@@ -1249,12 +1255,12 @@ class Choices:
     def test_not_enough_ram_for_a_set(self) -> None:
         _, _, set_key = self.lines()
         for free in (7, 9):                              # the menu's page, then the rebuild's
-            m, failed, message = self.run_it([set_key, "space"], free_pages=free)
+            m, failed, message = self.run_it([set_key, "enter"], free_pages=free)
             self.assert_refused(m, failed, message, "Needs 72K free RAM")
             self.assertEqual(m.free_pages, free)
-        m, failed, message = self.run_it(["space"], free_pages=7)
+        m, failed, message = self.run_it(["enter"], free_pages=7)
         self.assertFalse(failed, message)
-        m, failed, message = self.run_it([set_key, "space"], free_pages=10)
+        m, failed, message = self.run_it([set_key, "enter"], free_pages=10)
         self.assertFalse(failed, message)
 
     def test_flipped_bytes_in_a_set_are_refused_whatever_is_chosen(self) -> None:
@@ -1270,7 +1276,7 @@ class Choices:
             for position in [start, start + 1, start + 2, end - 1] + [rng.randrange(start, end) for _ in range(6)]:
                 bad = bytearray(self.patch)
                 bad[position] ^= rng.choice((1, 0x40, 0x80, 0xFF))
-                m, failed, message = self.run_it([set_key, "space"], patch=bytes(bad))
+                m, failed, message = self.run_it([set_key, "enter"], patch=bytes(bad))
                 self.assert_refused(m, failed, message, "Patch damaged: get it again")
                 self.assertNotIn("zx0_decode", m.phase_ticks)
 
@@ -1299,7 +1305,7 @@ class Choices:
         _, _, set_key = self.lines()
         with self.assertRaises(nxc.Wrong):
             nxc.apply(patch, game=self.game, colours=self.sets[0])
-        m, failed, message = self.run_it([set_key, "space"], patch=patch)
+        m, failed, message = self.run_it([set_key, "enter"], patch=patch)
         self.assert_refused(m, failed, message)
         self.assertIn(message, ("Patch damaged: get it again", "Rebuild failed: patch damaged"))
         self.assertEqual(m.bad_writes, [])
@@ -1380,13 +1386,13 @@ class Choices:
                 patch = rekey(self.patch, self.game, with_data(data))
                 with self.assertRaises(nxc.Wrong):
                     nxc.apply(patch, game=self.game)
-                m, failed, message = self.run_it(["space"], patch=patch)
+                m, failed, message = self.run_it(["enter"], patch=patch)
                 self.assert_refused(m, failed, message, "Patch damaged: get it again")
                 self.assertEqual(m.screens[0], "\n".join(m.screen))    # no menu was shown
 
     def test_a_set_in_a_damaged_state_does_not_matter_until_chosen(self) -> None:
         patch = self.forge_set(stream=b"nonsense")          # and it is not read at all
-        m, failed, message = self.run_it(["space"], patch=patch)
+        m, failed, message = self.run_it(["enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 0, False))
 
@@ -1405,7 +1411,7 @@ class Choices:
         for _ in range(60):
             position = rng.randrange(start, end)
             bad = rekey_at(self.patch, self.game, position, rng.choice((1, 2, 0x40, 0x80, 0xFF)))
-            m, failed, message = self.run_it([set_key, "space"], patch=bad)
+            m, failed, message = self.run_it([set_key, "enter"], patch=bad)
             where = f"tamper at {position}"
             self.assertEqual(m.clean(), [], where)
             if failed:
@@ -1420,7 +1426,7 @@ class Choices:
             bl.append([b"SET3", b"\0\1\1\1\x03xyzjunk"])
         patch = rekey(self.patch, self.game, add)
         one, fix_key, set_key = self.lines()
-        m, failed, message = self.run_it([set_key, "space"], patch=patch)
+        m, failed, message = self.run_it([set_key, "enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 1, False))
         self.assertNotIn("xyz", "\n".join(m.screens))
@@ -1428,7 +1434,7 @@ class Choices:
     def test_write_failures_with_a_set_leave_no_file(self) -> None:
         _, _, set_key = self.lines()
         for n in (1, 2, 3):
-            m, failed, message = self.run_it([set_key, "space"], fail_write=n)
+            m, failed, message = self.run_it([set_key, "enter"], fail_write=n)
             self.assertTrue(failed)
             self.assertEqual(message, "Cannot write to /tmp")
             self.assertEqual(m.clean(), [])
@@ -1525,12 +1531,12 @@ class Choices:
         nop
         call    map_std
 """)],
-        "Space forgets the choices": [(""".route: ld      a,(mp_key)
+        "Enter forgets the choices": [(""".route: ld      a,(mp_key)
         or      a
-        ret     nz
+        ret     z
 """, """.route: ld      a,(mp_key)
         or      a
-        jr      z,.rt
+        jr      nz,.rt
         xor     a
         ld      (set_choices),a
         ret
@@ -1560,35 +1566,35 @@ class Choices:
             return m, failed, message
 
         if name in ("the set never applied", "the CRC run before the set", "the index taken as 0", "a chunk's stream not its bank's"):
-            m, failed, message = go([set_key, "space"], self.reindexed())
+            m, failed, message = go([set_key, "enter"], self.reindexed())
             return failed or bytes(m.written.get(NEX, b"")) != nxc.apply(self.reindexed(), game=self.game, colours=self.sets[0])
         if name == "the output's CRC not checked":
-            m, failed, message = go([set_key, "space"], self.forge_set([], crc=zlib.crc32(base) ^ 1))
+            m, failed, message = go([set_key, "enter"], self.forge_set([], crc=zlib.crc32(base) ^ 1))
             return not failed
         if name == "the key taken with the fix off":
-            m, failed, message = go([fix_key, set_key, fix_key, "space"])
+            m, failed, message = go([fix_key, set_key, fix_key, "enter"])
             return bytes(m.written.get(NEX, b"")) != base
         if name == "a set applied to the plain game":
-            m, failed, message = go([one, set_key, fix_key, "space"])
+            m, failed, message = go([one, set_key, fix_key, "enter"])
             return m.peak_pages != 6
         no_bank = next(b for b in nxc.ORDER if not base[18 + b])
         a_bank = next(b for b in nxc.ORDER if base[18 + b])
         if name == "a chunk left over is passed":
-            m, failed, message = go([set_key, "space"], self.forge_set([(no_bank, chunk_of((0, b"xx")))]))
+            m, failed, message = go([set_key, "enter"], self.forge_set([(no_bank, chunk_of((0, b"xx")))]))
             return not failed
         if name == "a set not checked before the file is made":
             # Refused all the same, but only as the file is being made.
-            m, failed, message = go([set_key, "space"], self.forge_set([(a_bank, chunk_of((3, b"x"))[:-1] + b"")]))
+            m, failed, message = go([set_key, "enter"], self.forge_set([(a_bank, chunk_of((3, b"x"))[:-1] + b"")]))
             return NEX in m.opened
         if name == "a chunk's bit count unchecked":
             # More bits than bytes: the bytes after it are read from whatever lies past the chunk.
-            m, failed, message = go([set_key, "space"], self.forge_set([(a_bank, chunk_of((3, b"xyz"))[:-2])]))
+            m, failed, message = go([set_key, "enter"], self.forge_set([(a_bank, chunk_of((3, b"xyz"))[:-2])]))
             return message != "Patch damaged: get it again"
-        if name == "Space forgets the choices":
-            m, failed, message = go([set_key, "space"])
+        if name == "Enter forgets the choices":
+            m, failed, message = go([set_key, "enter"])
             return bytes(m.written.get(NEX, b"")) != self.want(True, 1, False)
         if name == "the choice lost with the fix":
-            m, failed, message = go([set_key, fix_key, fix_key, "space"])
+            m, failed, message = go([set_key, fix_key, fix_key, "enter"])
             return bytes(m.written.get(NEX, b"")) != self.want(True, 1, False)
         raise AssertionError(name)
 
@@ -1606,7 +1612,7 @@ class Choices:
     def test_the_block_says_its_stream(self) -> None:
         patch = self.reindexed()
         _, _, set_key = self.lines()
-        m, failed, message = self.run_it([set_key, "space"], patch=patch)
+        m, failed, message = self.run_it([set_key, "enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, colours=self.sets[0]))
 
@@ -1664,14 +1670,14 @@ class MadeUpChoices(Choices, Base):
                                   ("v2 48K", snapshot_paged(b48, 23, 0), b48), ("v3 128K", snapshot_paged(b128, 54, 4), b128)):
             with self.subTest(name), tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
                 patch, _ = self.build(Path(d), game, banks, rng, ["Only"])
-                for keys, chosen, colours in ((["2", "space"], None, None), (["1", "3", "space"], [1], "Only"),
-                                              (["1", "2", "space"], [1], None)):
-                    if keys == ["2", "space"]:
+                for keys, chosen, colours in ((["2", "enter"], None, None), (["1", "3", "enter"], [1], "Only"),
+                                              (["1", "2", "enter"], [1], None)):
+                    if keys == ["2", "enter"]:
                         m = self.machine({"patch.nxc": patch, "game.z80": game}, keys=keys)
                         self.assertFalse(m.run('"patch.nxc"')[0])
                         self.assertEqual(bytes(m.written[Z80]), game)
                         continue
-                    if keys == ["1", "2", "space"]:
+                    if keys == ["1", "2", "enter"]:
                         m = self.machine({"patch.nxc": patch, "game.z80": game}, keys=keys)
                         self.assertFalse(m.run('"patch.nxc"')[0])
                         self.assertEqual(bytes(m.written[Z80]), nxc.original_with_pokes(patch, game, [1]))
@@ -1698,7 +1704,7 @@ class MadeUpChoices(Choices, Base):
             for i in range(16000):                       # all but the trainer's byte: past two pages of the table
                 big[at + i] ^= rng.randrange(1, 256)
             patch = self.big_set_patch(Path(d), bytes(big))
-            for keys in (["3", "space"], ["3", "1", "space"]):
+            for keys in (["3", "enter"], ["3", "1", "enter"]):
                 m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=keys)
                 failed, message = m.run('"patch.nxc"')
                 self.assertFalse(failed, message)
@@ -1729,7 +1735,7 @@ class MadeUpChoices(Choices, Base):
         self.assertGreaterEqual(stats["sets"][0]["decoded"], 128 * 1024)
         self.assertLessEqual(stats["sets"][0]["largest"], nxc.SET_CHUNK_MAX)
         self.assertEqual(nxc.apply(patch, game=self.game, colours="Big"), big)
-        for keys, want in ((["2", "space"], big), (["space"], plain)):
+        for keys, want in ((["2", "enter"], big), (["enter"], plain)):
             m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=keys)
             failed, message = m.run('"patch.nxc"')
             self.assertFalse(failed, message)
@@ -1747,7 +1753,7 @@ class MadeUpChoices(Choices, Base):
                 big[i] ^= rng.randrange(1, 256)
             tmp = Path(d)
             patch = self.big_set_patch(tmp, bytes(big))
-            m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=["3", "space"])
+            m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=["3", "enter"])
             failed, message = m.run('"patch.nxc"')
             self.assertFalse(failed, message)
             self.assertEqual(m.clean(), [])
@@ -1760,7 +1766,7 @@ class MadeUpChoices(Choices, Base):
     def test_memory_on_a_1mb_next(self) -> None:
         """1MB reports 96 8K pages. A big set needs the same 9 pages as a small one, and refuses by name below that."""
         for free, refused in ((10, False), (9, True), (7, True)):       # the menu's page is one of them
-            m = self.machine({"patch.nxc": self.patch, "game.z80": self.game}, keys=["3", "space"], total_pages=96, free_pages=free)
+            m = self.machine({"patch.nxc": self.patch, "game.z80": self.game}, keys=["3", "enter"], total_pages=96, free_pages=free)
             failed, message = m.run('"patch.nxc"')
             self.assertEqual(failed, refused, message)
             if refused:
@@ -1775,18 +1781,18 @@ class MadeUpChoices(Choices, Base):
                 bl.insert(1, [b"TRN1", nxc.trn1(f"T{8 - n}", [(2, 15000 + n, 1)])])
         patch = rekey(self.patch, self.game, lambda bl, st: (bl.__setitem__(slice(None), [e for e in bl if e[0] != b"TRN1"]), add(bl, st)))
         # Nine trainers here: the menu holds eight, then the fix on 9 and enhanced on 0.
-        m, failed, message = self.run_it(["0", "space"], patch=patch)
+        m, failed, message = self.run_it(["0", "enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(m.clean(), [])
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, colours=self.sets[0]))
         screen = m.screens[-2].split("\n")
         self.assertEqual(screen[4 + 8 + 2], row("9", "Colour clash fix", "[ ON]"))
         self.assertEqual(screen[4 + 8 + 3], row("0", "Enhanced colours", "[First]"))
-        m, failed, message = self.run_it(["9", "space"], patch=patch)
+        m, failed, message = self.run_it(["9", "enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[Z80]), self.game)
         # With one trainer fewer than ten lines, 0 is no line at all.
-        m, failed, message = self.run_it(["0", "space"])
+        m, failed, message = self.run_it(["0", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 0, False))
 
@@ -1804,11 +1810,11 @@ class MadeUpChoices(Choices, Base):
 
     def tail(self, patch: bytes) -> list[str]:
         """What the menu shows in its credit rows, 21 and 22, the ones there."""
-        m, failed, message = self.run_it(["space"], patch=patch)
+        m, failed, message = self.run_it(["enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(m.clean(), [])
         lines = m.screens[1].split("\n")
-        self.assertEqual(lines[23], " Engine: Dean Woodyatt".ljust(28) + "////")
+        self.assertEqual(lines[23], "".ljust(28) + "////")
         return [x for x in lines[21:23] if x]
 
     def assert_credit(self, patch: bytes, shown: str | None) -> None:
@@ -1846,7 +1852,7 @@ class MadeUpChoices(Choices, Base):
                 patch = self.with_info(names(a, b))
                 self.assert_credit(patch, shown)
                 # And after a redraw, which works on the same description.
-                m, failed, message = self.run_it(["1", "1", "space"], patch=patch)
+                m, failed, message = self.run_it(["1", "1", "enter"], patch=patch)
                 self.assertFalse(failed, message)
                 self.assertIn(shown, m.screens[-2])
 
@@ -1881,21 +1887,21 @@ class MadeUpChoices(Choices, Base):
 .no_patch:""")], self.with_info(b"patch_by=" + b"A" * 30 + b"\n"))):
             with self.subTest(name):
                 binary, symbols = H.assemble(replace)
-                m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["space"], binary=binary, symbols=symbols)
+                m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["enter"], binary=binary, symbols=symbols)
                 failed, message = m.run('"patch.nxc"')
                 got = [x for x in m.screens[1].split("\n")[21:23] if x]
                 want = nxc.credit_line(patch)
                 self.assertNotEqual(got, [] if want is None else want.split("\n"), f"a loader with {name} passed")
 
     def test_layout_with_and_without_sets(self) -> None:
-        m, failed, message = self.run_it(["space"])
+        m, failed, message = self.run_it(["enter"])
         self.assertFalse(failed, message)
         top = {0: " MADE UP".ljust(28) + "////", 1: " Tester, 2026", 3: "TRAINER", 4: row("1", "Infinite lives", "[OFF]"), 6: "OPTIONS",
                7: row("2", "Colour clash fix", "[ ON]")}
         self.assertEqual(m.screens[-2], screen({**top, 8: row("3", "Enhanced colours", "[OFF]"), 10: "ENTER play   BREAK exit"}))
-        self.assertEqual(set(m.menu_attrs[-1][4]), {0x69})                      # line 1, selected
+        self.assertNotIn(0x69, set(m.menu_attrs[-1][4]))                         # no line highlighted
         without = rekey(self.patch, self.game, lambda bl, st: bl.__setitem__(slice(None), [e for e in bl if e[0] != b"SET2"]))
-        m, failed, message = self.run_it(["3", "space"], patch=without)    # no such line
+        m, failed, message = self.run_it(["3", "enter"], patch=without)    # no such line
         self.assertFalse(failed, message)
         self.assertEqual(m.screens[-2], screen({**top, 9: "ENTER play   BREAK exit"}))
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(without, game=self.game))
@@ -1922,43 +1928,32 @@ class Jetpac(Choices, Base):
         cls.enhanced = (JETPAC_DIR / "jetpac_sprites_painted.nex").read_bytes()
 
     def test_the_outputs_are_the_builds_themselves(self) -> None:
-        m, failed, message = self.run_it(["space"])
+        m, failed, message = self.run_it(["enter"])
         self.assertFalse(failed, message)
         self.assertEqual(hashlib.md5(bytes(m.written[NEX])).digest(), hashlib.md5(self.base).digest())
-        m, failed, message = self.run_it(["3", "space"])
+        m, failed, message = self.run_it(["3", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(hashlib.md5(bytes(m.written[NEX])).digest(), hashlib.md5(self.enhanced).digest())
 
     def test_the_menu_exactly(self) -> None:
-        m, failed, message = self.run_it(["1", "3", "2", "2", "space"])
+        m, failed, message = self.run_it(["1", "3", "2", "2", "enter"])
         self.assertFalse(failed, message)
-        self.assertEqual(m.screens[1], "\n".join((
-            " JETPAC                    Ultimate, 1983",
-            "",
-            " TRAINER",
-            "  1  Infinite lives            [OFF]",
-            "",
-            " NEXCLASH",
-            "  2  Colour clash fix          [ON]",
-            "  3  Enhanced colours          [OFF]",
-            "",
-            " ENTER to play",
-            "",
-            "Patch: Jon Attree  Colours: Alberto Conde",
-            "")))
-        self.assertIn("  1  Infinite lives            [ON]", m.screens[2])
-        self.assertIn("  3  Enhanced colours          [ON]", m.screens[3])
-        self.assertIn("  2  Colour clash fix          [OFF]", m.screens[4])
-        self.assertIn("  3  Enhanced colours          [N/A]", m.screens[4])
-        self.assertIn("  3  Enhanced colours          [ON]", m.screens[5])
-        self.assertIn("Patch: Jon Attree  Colours: Alberto Conde", m.screens[4])
+        self.assertEqual(len(m.screens), 7)      # before, default, one for each key, after
+        top = {0: " JETPAC".ljust(28) + "////", 1: " Ultimate, 1983", 3: "TRAINER", 6: "OPTIONS", 10: "ENTER play   BREAK exit",
+               22: "Patch: Jon Attree"}           # no Colours: row, as the patch names no painter
+        for shown, (trainer, fix, enhanced) in zip(m.screens[1:6], (("[OFF]", "[ ON]", "[OFF]"), ("[ ON]", "[ ON]", "[OFF]"),
+                                                                    ("[ ON]", "[ ON]", "[ ON]"), ("[ ON]", "[OFF]", "[N/A]"),
+                                                                    ("[ ON]", "[ ON]", "[ ON]"))):
+            self.assertEqual(shown, screen({**top, 4: row("1", "Infinite lives", trainer), 7: row("2", "Colour clash fix", fix),
+                                            8: row("3", "Enhanced colours", enhanced)}))
+        self.assertNotIn("Colours:", "\n".join(m.screens))
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(self.patch, game=self.game, colours="Spec256", chosen=[1]))
 
     def test_credit_and_trainer_as_built(self) -> None:
         credit = text_of(self.patch, b"INF1")["credit"]
         self.assertIn("Inspired by Bleugh.biz's nexclash", credit)
-        self.assertIn("Alberto Conde", credit)
-        self.assertEqual(nxc.inf1_value(self.patch, "colours_by"), b"Alberto Conde")
+        self.assertIn("painter not established", credit)                # changed on purpose, 2026-11-03
+        self.assertIsNone(nxc.inf1_value(self.patch, "colours_by"))
         self.assertEqual(nxc.inf1_value(self.patch, "patch_by"), b"Jon Attree")
         self.assertEqual([t[1] for t in nxc.trainers(self.patch)], ["Infinite lives"])
 
@@ -1975,7 +1970,7 @@ class Jetpac(Choices, Base):
             self.assertTrue(proof[key])
 
     def test_measure_with_a_set(self) -> None:
-        m = H.Machine(self.binary, self.symbols, {"patch.nxc": self.patch, self.game_name: self.game}, keys=["3", "space"])
+        m = H.Machine(self.binary, self.symbols, {"patch.nxc": self.patch, self.game_name: self.game}, keys=["3", "enter"])
         m.set_phases(["work_begin", "done"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
@@ -2007,7 +2002,7 @@ class BombJack(Choices, Base):
 
     def test_the_outputs_are_the_builds_themselves(self) -> None:
         folder = EVIDENCE / "format-study" / "bomb_jack"
-        for keys, name in ((["space"], "rebuilt_default.nex"), (["3", "space"], "rebuilt_arcade.nex")):
+        for keys, name in ((["enter"], "rebuilt_default.nex"), (["3", "enter"], "rebuilt_arcade.nex")):
             if not (folder / name).exists():
                 self.skipTest("the study's rebuilt files are not here")
             m, failed, message = self.run_it(keys)
@@ -2150,22 +2145,27 @@ class LargeSets(Base):
             trainers = min(len(nxc.trainers(f)), 8)
             key = str((trainers + 2) % 10)
             self.assertEqual(nxc.colour_sets(f), ["Enhanced"])
-            for keys, want, pages in ((["space"], base, 6), ([key, "space"], enhanced, 9)):
+            for keys, want, pages in ((["enter"], base, 6), ([key, "enter"], enhanced, 9)):
                 with self.subTest(name, keys=keys):
-                    m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=keys, total_pages=96, free_pages=pages)
+                    # exactly enough: the menu's page, then what the rebuild needs
+                    m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=keys, total_pages=96, free_pages=pages + 1)
                     failed, message = m.run('"patch.nxc"')
                     self.assertFalse(failed, message)
                     self.assertEqual(m.clean(), [])
                     self.assertEqual(bytes(m.written[NEX]), want.read_bytes())
                     self.assertEqual(m.peak_pages, pages)
-                    self.assertIn("Enhanced colours          [OFF]", m.screens[1])
+                    self.assertIn(row(key, "Enhanced colours", "[OFF]"), m.screens[1].split("\n"))
                     if key in keys:
-                        self.assertIn("Enhanced colours          [ON]", m.screens[-2])
-                    print(f"\n{name}: {'enhanced' if key in keys else 'default'}: {m.ticks / (28_000_000):.2f} s at 28 MHz with no file I/O, {pages * 8}K", flush=True)
-            m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=[key, "space"], total_pages=96, free_pages=8)
-            failed, message = m.run('"patch.nxc"')
-            self.assertEqual(message, "Needs 72K free RAM")
-            self.assertEqual(m.free_pages, 8)
+                        self.assertIn(row(key, "Enhanced colours", "[ ON]"), m.screens[-2].split("\n"))
+                    print(f"\n{name}: {'enhanced' if key in keys else 'default'}: {m.ticks / (28_000_000):.2f} s at 28 MHz with no file I/O, "
+                          f"8K for the menu + {pages * 8}K", flush=True)
+            # one page short, either way: refused after the menu, naming what the rebuild needs
+            for keys, free, said in ((["enter"], 6, "Not enough free RAM: needs 48K"), ([key, "enter"], 9, "Needs 72K free RAM")):
+                with self.subTest(name, keys=keys, free=free):
+                    m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=keys, total_pages=96, free_pages=free)
+                    failed, message = m.run('"patch.nxc"')
+                    self.assert_refused(m, failed, message, said)
+                    self.assertEqual(m.free_pages, free)
 
 
 if __name__ == "__main__":

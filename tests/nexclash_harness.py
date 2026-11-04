@@ -110,7 +110,7 @@ class Machine:
         KEYS[str(_i + 6)] = (0xEF, 4 - _i)
     KEYS["0"] = (0xEF, 0)
 
-    def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("space",),
+    def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("enter",),
                  free_pages: int = 90, fail_read: int | None = None, os_mode: int = 0,
                  fail_write: int | None = None, fail_create: bool = False, cwd: str = "/",
                  total_pages: int | None = 224) -> None:

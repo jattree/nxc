@@ -88,7 +88,7 @@ class Case(T.Base):
                                 colours=colours, trainer_blocks=[nxc.trn1("Lives", [(2, 16000, 0xAB)])], more_dumps=extra)
             return patch, nex
 
-    def go(self, patch=None, game=None, keys=("space",), name="patch.nxc", argument=None, other_files=None, **options):
+    def go(self, patch=None, game=None, keys=("enter",), name="patch.nxc", argument=None, other_files=None, **options):
         files = {name: self.patch if patch is None else patch}
         if game is not False:
             files["game.z80"] = self.game if game is None else game
@@ -103,7 +103,7 @@ class Case(T.Base):
         m, failed, said = self.go(patch)
         self.assert_refused(m, failed, said, message)
 
-    def control(self, replace, patch=None, keys=("space",), game=None, **options):
+    def control(self, replace, patch=None, keys=("enter",), game=None, **options):
         """A run on a loader with the given source changes."""
         binary, symbols = H.assemble(replace)
         return self.go(patch, game, keys, binary=binary, symbols=symbols, **options)
@@ -125,7 +125,7 @@ class OutputCannotDestroyAnInput(Case):
 
     def test_a_game_that_is_an_output_name_is_refused(self) -> None:
         # By its fall-back name: a patch in /tmp called NEXCLASH.nxc wants /tmp/NEXCLASH.z80.
-        for keys in (["space"], ["2", "space"], ["1", "2", "space"]):
+        for keys in (["enter"], ["2", "enter"], ["1", "2", "enter"]):
             m = self.machine({"/tmp/nexclash.nxc": self.patch, "/tmp/nexclash.z80": self.game}, keys=keys)
             failed, message = m.run('"/tmp/nexclash.nxc"')
             self.assert_refused(m, failed, message, ALIAS)
@@ -163,7 +163,7 @@ class OutputCannotDestroyAnInput(Case):
         self.assertEqual((failed, message), (True, ALIAS))
 
     def test_only_an_output_made_is_deleted(self) -> None:
-        for keys in (["space"], ["2", "space"], ["1", "2", "space"]):
+        for keys in (["enter"], ["2", "enter"], ["1", "2", "enter"]):
             m, failed, message = self.go(keys=keys, fail_create=True)
             self.assertEqual((failed, message), (True, "Cannot write to /tmp"))
             self.assertEqual(m.deleted, [])
@@ -562,7 +562,7 @@ class Keying(Case):
         nop
         nop
         inc     hl
-        djnz    .cmp""")], bytes(bad), keys=["1", "space"])
+        djnz    .cmp""")], bytes(bad), keys=["1", "enter"])
         self.assertFalse(failed, "a loader with no keyed check refused the forgery, so this test proves nothing")
 
 
@@ -586,7 +586,7 @@ class RealGame(T.Base):
             bad[nxc.CHECK_AT + i] ^= difference[i]
         with self.assertRaises(nxc.Wrong):
             nxc.apply(bytes(bad), game=game)
-        m = self.machine({"patch.nxc": bytes(bad), name: game}, keys=["1", "space"])
+        m = self.machine({"patch.nxc": bytes(bad), name: game}, keys=["1", "enter"])
         failed, message = m.run('"patch.nxc"')
         self.assert_refused(m, failed, message, DAMAGED)
 
@@ -643,10 +643,10 @@ class SeveralDumps(Case):
     def test_the_clash_fix_off_is_each_players_own_file(self) -> None:
         for name, data in self.forms.items():
             with self.subTest(name):
-                m = self.machine({"patch.nxc": self.many, name: data}, keys=["2", "space"])
+                m = self.machine({"patch.nxc": self.many, name: data}, keys=["2", "enter"])
                 self.assertFalse(m.run('"patch.nxc"')[0])
                 self.assertEqual(bytes(m.written[Z80]), data)
-                m = self.machine({"patch.nxc": self.many, name: data}, keys=["1", "2", "space"])
+                m = self.machine({"patch.nxc": self.many, name: data}, keys=["1", "2", "enter"])
                 self.assertFalse(m.run('"patch.nxc"')[0])
                 self.assertEqual(bytes(m.written[Z80]), nxc.original_with_pokes(self.many, data, [1]))
 
@@ -911,21 +911,21 @@ class Sets(Case):
                 with self.subTest(colours=colours, language=language):
                     want = self.want(colours, language)
                     self.assertEqual(nxc.apply(self.patch2, game=self.game, colours=colours, language=language), want)
-                    m, failed, message = self.go(self.patch2, keys=["3"] * n + ["4"] * n2 + ["space"])
+                    m, failed, message = self.go(self.patch2, keys=["3"] * n + ["4"] * n2 + ["enter"])
                     self.assertFalse(failed, message)
                     self.assertEqual(m.clean(), [])
                     self.assertEqual(bytes(m.written[NEX]), want)
                     self.assertEqual(m.peak_pages, 6 + 3 * bool(n) + 3 * bool(n2))
 
     def test_with_a_trainer_on_top(self) -> None:
-        m, failed, message = self.go(self.patch2, keys=["1", "3", "4", "space"])
+        m, failed, message = self.go(self.patch2, keys=["1", "3", "4", "enter"])
         self.assertFalse(failed, message)
         out = bytes(m.written[NEX])
         self.assertEqual(out, nxc.apply(self.patch2, game=self.game, colours="Red", language="Deutsch", chosen=[1]))
         self.assertEqual(out[self.offs[2] + 16000], 0xAB)
 
     def test_the_menu_steps_through_the_names(self) -> None:
-        m, failed, message = self.go(self.patch2, keys=["3", "3", "3", "4", "4", "space"])
+        m, failed, message = self.go(self.patch2, keys=["3", "3", "3", "4", "4", "enter"])
         self.assertFalse(failed, message)
         line = lambda s, label: next(x for x in s.split("\n") if label in x)  # noqa: E731
         self.assertEqual([line(s, "Enhanced colours").split("colours")[1].strip() for s in m.screens[1:5]], ["[OFF]", "[Red]", "[Blue]", "[OFF]"])
@@ -934,12 +934,12 @@ class Sets(Case):
         self.assertEqual(bytes(m.written[NEX]), self.want(None, "Espanol"))
 
     def test_with_the_fix_off_each_line_is_not_available_and_comes_back(self) -> None:
-        m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "3", "4", "2", "space"])
+        m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "3", "4", "2", "enter"])
         self.assertFalse(failed, message)
         self.assertIn(T.row("4", "Language", "[N/A]"), m.screens[4])
         self.assertIn(T.row("3", "Enhanced colours", "[N/A]"), m.screens[4])
         self.assertEqual(bytes(m.written[NEX]), self.want("Red", "Deutsch"))
-        m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "space"])
+        m, failed, message = self.go(self.patch2, keys=["3", "4", "2", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[Z80]), self.game)
         self.assertEqual(m.peak_pages, 0)
@@ -947,7 +947,7 @@ class Sets(Case):
     def test_one_set_of_colours_says_on_and_off_and_a_long_name_fits(self) -> None:
         longer = dict(self.changes, **{"A language of 25 letters!": self.changes["Deutsch"]})
         patch = self.two_kinds(self.variant, colours=("Red",), languages=("A language of 25 letters!",), changes=longer)
-        m, failed, message = self.go(patch, keys=["3", "4", "space"])
+        m, failed, message = self.go(patch, keys=["3", "4", "enter"])
         self.assertFalse(failed, message)
         self.assertIn(T.row("3", "Enhanced colours", "[ ON]"), m.screens[-2])
         self.assertIn(T.row("4", "Language", "[ ON]"), m.screens[-2])
@@ -959,7 +959,7 @@ class Sets(Case):
             for n in range(8):
                 bl.insert(1, [b"TRN1", nxc.trn1(f"T{7 - n}", [(2, 15000 + n, 1)])])
         patch = T.rekey(self.patch2, self.game, lambda bl, st: (bl.__setitem__(slice(None), [e for e in bl if e[0] != b"TRN1"]), eight(bl, st)))
-        m, failed, message = self.go(patch, keys=["9", "0", "space"])
+        m, failed, message = self.go(patch, keys=["9", "0", "enter"])
         self.assertFalse(failed, message)
         screen = m.screens[-2]
         self.assertIn("7 T6", screen)
@@ -993,11 +993,11 @@ class Sets(Case):
         forged = self.forged_overlap()
         with self.assertRaisesRegex(nxc.Wrong, "same bytes"):
             nxc.apply(forged, game=self.game, colours="Red", language="Deutsch")
-        m, failed, message = self.go(forged, keys=["3", "4", "space"])
+        m, failed, message = self.go(forged, keys=["3", "4", "enter"])
         self.assert_refused(m, failed, message, DAMAGED)
         self.assertNotIn(NEX, m.opened)
         # Blue does not touch those bytes, so that selection passes the overlap check and meets its CRC instead.
-        m, failed, message = self.go(forged, keys=["3", "3", "space"])
+        m, failed, message = self.go(forged, keys=["3", "3", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want("Blue"))
 
@@ -1011,7 +1011,7 @@ class Sets(Case):
         forged = T.rekey(self.patch2, self.game, edit)
         with self.assertRaisesRegex(nxc.Wrong, "same bytes"):
             nxc.apply(forged, game=self.game, colours="Red", language="Deutsch")
-        m, failed, message = self.go(forged, keys=["3", "4", "space"])
+        m, failed, message = self.go(forged, keys=["3", "4", "enter"])
         self.assert_refused(m, failed, message, DAMAGED)
         self.assertNotIn(NEX, m.opened)
 
@@ -1028,7 +1028,7 @@ class Sets(Case):
                 forged = T.rekey(self.patch2, self.game, edit)
                 with self.assertRaises(nxc.Wrong):
                     nxc.apply(forged, game=self.game, colours="Red")
-                m, failed, message = self.go(forged, keys=["3", "space"])
+                m, failed, message = self.go(forged, keys=["3", "enter"])
                 self.assert_refused(m, failed, message, DAMAGED)
                 self.assertNotIn(NEX, m.opened)
 
@@ -1040,18 +1040,18 @@ class Sets(Case):
                     plain = nxc.set_use(st, 0, nxc.SET_CRC_INDEX)(x[1][fixed:fixed + 4])
                     x[1] = x[1][:fixed] + nxc.set_use(st, 0, nxc.SET_CRC_INDEX)(bytes((plain[0] ^ 1,)) + plain[1:]) + x[1][fixed + 4:]
         forged = T.rekey(self.patch2, self.game, edit)
-        for keys, colours, language in ((["3", "space"], "Red", None), (["3", "4", "space"], "Red", "Deutsch")):
+        for keys, colours, language in ((["3", "enter"], "Red", None), (["3", "4", "enter"], "Red", "Deutsch")):
             with self.assertRaises(nxc.Wrong):
                 nxc.apply(forged, game=self.game, colours=colours, language=language)
             m, failed, message = self.go(forged, keys=keys)
             self.assert_refused(m, failed, message, "Rebuild failed: patch damaged")
-        m, failed, message = self.go(forged, keys=["4", "space"])
+        m, failed, message = self.go(forged, keys=["4", "enter"])
         self.assertFalse(failed, message)                                    # a set not chosen is not read
 
     def test_a_retired_set1_block_is_skipped_as_unknown(self) -> None:
         patch = T.rekey(self.patch2, self.game, lambda bl, st: bl.append([b"SET1", b"\0\1\1\1\x03oldnonsense"]))
         self.assertEqual(nxc.colour_sets(patch), ["Red", "Blue"])
-        m, failed, message = self.go(patch, keys=["space"])
+        m, failed, message = self.go(patch, keys=["enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want())
 
@@ -1060,7 +1060,7 @@ class Sets(Case):
         for offset in (0, 1, 2, 3, 4, 5, 8, 12):
             bad = bytearray(self.patch2)
             bad[at + offset] ^= 0x10
-            m, failed, message = self.go(bytes(bad), keys=["4", "space"])
+            m, failed, message = self.go(bytes(bad), keys=["4", "enter"])
             self.assert_refused(m, failed, message)
             self.assertNotIn("zx0_decode", m.phase_ticks)
 
@@ -1070,7 +1070,7 @@ class Sets(Case):
                 bl.append([b"SET2", bytes((index, kind, 1, base, len(name))) + name + b"anything"])
         patch = T.rekey(self.patch2, self.game, add)
         self.assertEqual(nxc.languages(patch), ["Deutsch", "Espanol"])
-        m, failed, message = self.go(patch, keys=["4", "space"])
+        m, failed, message = self.go(patch, keys=["4", "enter"])
         self.assertFalse(failed, message)
         for name in ("Other kind", "Plain base", "No kind"):
             self.assertNotIn(name, "\n".join(m.screens))
@@ -1081,7 +1081,7 @@ class Sets(Case):
     def test_a_language_alone_gets_its_line(self) -> None:
         patch = self.two_kinds(self.variant, colours=(), languages=("Deutsch",))
         self.assertIsNone(nxc.inf1_value(patch, "colours_by"))
-        m, failed, message = self.go(patch, keys=["3", "space"])
+        m, failed, message = self.go(patch, keys=["3", "enter"])
         self.assertFalse(failed, message)
         self.assertIn(T.row("3", "Language", "[ ON]"), m.screens[-2])
         self.assertNotIn("Enhanced", m.screens[-2])
@@ -1100,7 +1100,7 @@ class Sets(Case):
         self.assertEqual(sorted(e["stream"] for e in nxc.sets(self.patch2)), [0, 1, 2, 3])
 
     def test_not_enough_ram(self) -> None:
-        for free, keys, said in ((8, ["3", "space"], "Needs 72K free RAM"), (11, ["3", "4", "space"], "Needs 96K free RAM")):
+        for free, keys, said in ((8, ["3", "enter"], "Needs 72K free RAM"), (11, ["3", "4", "enter"], "Needs 96K free RAM")):
             m, failed, message = self.go(self.patch2, keys=keys, free_pages=free)
             self.assert_refused(m, failed, message, said)
             self.assertEqual(m.free_pages, free)
@@ -1119,7 +1119,7 @@ class Sets(Case):
         inc     hl
         inc     de
         dec     bc
-""")], forged, keys=["3", "4", "space"])
+""")], forged, keys=["3", "4", "enter"])
         self.assertIn(NEX, m.opened, "a loader with no overlap check passed")
         def edit(bl, st):
             for x in bl:
@@ -1134,7 +1134,7 @@ class Sets(Case):
         nop
         nop
         nop
-""")], unordered, keys=["3", "space"])
+""")], unordered, keys=["3", "enter"])
         self.assertIn(NEX, m.opened, "a loader with no check of order passed")
         # The CRC of a combination taken from the first set alone would be wrong for two.
         m, failed, message = self.control([("""        ld      hl,want
@@ -1144,7 +1144,7 @@ class Sets(Case):
         jr      nz,.past
         ld      hl,want
         ld      de,tmp5
-""")], self.patch2, keys=["3", "4", "space"])
+""")], self.patch2, keys=["3", "4", "enter"])
         self.assertEqual(message, "Rebuild failed: patch damaged", "a loader that leaves a set out of the CRC passed")
 
 
@@ -1186,10 +1186,10 @@ class Memory(Case):
         m, failed, message = self.go(self.with_bank(111), total_pages=224)
         self.assertFalse(failed, message)
         # With the fix off it is the player's own game, which never needed it.
-        m, failed, message = self.go(needs_more, keys=["2", "space"], total_pages=96)
+        m, failed, message = self.go(needs_more, keys=["2", "enter"], total_pages=96)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[Z80]), self.game)
-        m, failed, message = self.go(needs_more, keys=["1", "2", "space"], total_pages=96)
+        m, failed, message = self.go(needs_more, keys=["1", "2", "enter"], total_pages=96)
         self.assertFalse(failed, message)
         self.assertIn(Z80, m.written)
 
@@ -1263,7 +1263,7 @@ class MakeCommand(Case):
         target = nxc.targets(f)[0]
         self.assertEqual((target["file"], target["title"]), ("game.z80", b"Made Up"))
         self.assertIn(b"zxdb_entry=0000001\n", target["text"])
-        m, failed, message = self.go(f, keys=["2", "space"])
+        m, failed, message = self.go(f, keys=["2", "enter"])
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), bytes(painted))
 
@@ -1364,7 +1364,7 @@ class LoadingScreen(Case):
     def test_with_a_set_and_a_trainer(self) -> None:
         patch, nex, screen = self.with_screen(0x01)
         self.assertEqual(nxc.colour_sets(patch), ["Painted"])
-        m, failed, message = self.go(patch, keys=["1", "3", "space"])
+        m, failed, message = self.go(patch, keys=["1", "3", "enter"])
         self.assertFalse(failed, message)
         out = bytes(m.written[NEX])
         self.assertEqual(out, nxc.apply(patch, game=self.game, colours="Painted", chosen=[1]))

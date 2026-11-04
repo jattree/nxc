@@ -6773,11 +6773,12 @@ mp_chosen:
         pop     bc
         inc     c
         djnz    .atg
-; ENTER with the clash fix on: the .nex that carries its menu, which starts with these choices,
-; over a build with none. SPACE, or the fix off: as before, the choices fixed in what is written.
+; ENTER, or the fix off: the choices fixed in what is written, so the game starts straight after
+; its title, with no second menu. SPACE with the clash fix on: the .nex that carries its menu,
+; starting with these choices, over a build with none (a file to keep, not to play from here).
 .route: ld      a,(mp_key)
         or      a
-        ret     nz
+        ret     z
         ld      a,(ver_original)
         or      a
         ret     nz
@@ -7605,7 +7606,7 @@ mnx_put:
         pop     hl
         jp      write_out
 
-msg_no_menu:    db "No menu .nex: press SPAC", 'E' | $80
+msg_no_menu:    db "No menu .nex: press ENTE", 'R' | $80
 mnx_v12:        db "V1.2"
         db      "NXQ1"
 mnx_end_code:

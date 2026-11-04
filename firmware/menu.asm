@@ -40,7 +40,6 @@ A_HEAD          equ $46
 A_ON            equ $44
 A_OFF           equ $42
 A_HELP          equ $45
-A_SEL           equ $69                 ; paper cyan, ink blue
 M_DEBOUNCE      equ 3000
 
 ; HL: the description, DE: the font. Carry on return: BREAK; otherwise A is 0
@@ -61,10 +60,6 @@ menu_run:
         jr      z,.go
         cp      1
         jr      z,.brk
-        cp      'U'
-        jr      z,.up
-        cp      'D'
-        jr      z,.down
         sub     '1'                     ; '1' to '9': lines 0 to 8; '0' the tenth
         jr      nc,.d
         ld      a,9
@@ -76,21 +71,6 @@ menu_run:
         ld      a,c
         ld      (MV_SEL),a
         call    md_act
-        jr      .draw
-.up:    ld      a,(MV_SEL)
-        or      a
-        jr      z,.wait
-        dec     a
-        ld      (MV_SEL),a
-        jr      .draw
-.down:  ld      a,(MV_SEL)
-        inc     a
-        ld      c,a
-        call    md_count
-        cp      c
-        jr      z,.wait
-        ld      a,c
-        ld      (MV_SEL),a
         jr      .draw
 .go:    sub     13                      ; A: 0 ENTER, not 0 SPACE
         push    af
@@ -435,7 +415,7 @@ menu_draw:
         call    puts_max
         pop     bc
         djnz    .help
-; The credits: colours, the patch's maker, and the bar naming Dean's engines.
+; The credits: colours and the patch's maker, above a plain bar with the stripes.
 .credits:
         ld      a,A_TEXT
         ld      (MV_ATTR),a
@@ -472,16 +452,10 @@ menu_draw:
         call    puts_max
 .no_patch:
         ld      a,23
-        call    bar
-        ld      a,23
-        ld      c,0
-        call    at
-        ld      hl,s_engine
-        ld      b,27
-        jp      puts_max
+        jp      bar
 
 ; The line whose record is at HL, at MV_ROW: its key, its name, its value; the
-; whole row cyan if it is the selected one.
+; keys are its number only, so no line is highlighted.
 draw_line:
         ld      (MV_REC),hl
         ld      a,(MV_ROW)
@@ -547,14 +521,7 @@ draw_line:
 .close: ld      a,A_TEXT
         ld      (MV_ATTR),a
         ld      a,']'
-        call    putc
-        ld      a,(MV_LINE)
-        ld      hl,MV_SEL
-        cp      (hl)
-        ret     nz
-        ld      a,(MV_ROW)
-        ld      e,A_SEL
-        jp      row_attr
+        jp      putc
 
 ; A: 0 OFF, 1 ON, 2 N/A, 3 a set's name (HL at it, B its length, cut to 12), for
 ; the record at MV_REC.
@@ -789,8 +756,7 @@ menu_release:
         jr      nz,.loop
         ret
 
-; A: 0 none, 13 ENTER, ' ' SPACE, 1 BREAK, 'D' and 'U' for CAPS SHIFT with 6
-; and 7, or '0' to '9'.
+; A: 0 none, 13 ENTER, ' ' SPACE, 1 BREAK (CAPS SHIFT with SPACE), or '0' to '9'.
 menu_key:
         ld      bc,$bffe
         in      a,(c)
@@ -835,15 +801,6 @@ menu_key:
         rra
         ld      a,1
         ret     nc
-        ld      bc,$effe
-        in      a,(c)
-        bit     4,a
-        ld      a,'D'
-        ret     z
-        in      a,(c)
-        bit     3,a
-        ld      a,'U'
-        ret     z
         xor     a
         ret
 
@@ -853,7 +810,6 @@ s_enter:        db "ENTER play",0
 s_break:        db "BREAK exit",0
 s_colours:      db "Colours: "
 s_patch:        db "Patch: "
-s_engine:       db " Engine: Dean Woodyatt",0
 s_values:       db A_OFF,"OFF",A_ON," ON",A_TEXT,"N/A"
 s_stripes:      db $4a,$56,$74,$65      ; blue|red, red|yellow, yellow|green, green|cyan
 g_stripe:       db $01,$03,$07,$0f,$1f,$3f,$7f,$ff
