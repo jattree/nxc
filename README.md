@@ -140,7 +140,7 @@ a loading screen shown by the build's own start-up code all belong in the build,
 
 ```sh
 python tools/nxc.py make Game.nex Game.z80 -o Game.nxc --title "Game" --zxdb 0000123 \
-    --publisher "Ocean, 1986" --patch-by "Your Name" --rom 1 \
+    --publisher "Ocean, 1986" --patch-by "Your Name" --patch-version 1.0 --rom 1 \
     --proof "replay=IDENTICAL on 2 recordings" --proof replay_when=2026-11-03 --proof hardware=none
 ```
 
@@ -196,8 +196,12 @@ python tools/nxc.py add-target Game.nxc "Game (1989)(Ocean).tap" "Game (1989)(Oc
 ```sh
 python tools/nxc.py import-pok Game.nxc Game.pok Game.z80 -o Out.nxc --publisher "Ocean, 1986"
 python tools/nxc.py credit Game.nxc Game.z80 -o Out.nxc --patch-by "Your Name" --colours-by "Their Name"
+python tools/nxc.py version Game.nxc Game.z80 1.1 -o Out.nxc
 python tools/nxc.py help Game.nxc Game.z80 -o Out.nxc --line "trainer_1=Lives stay at three." --line "fix=The sprite build."
 ```
+
+`version` sets the patch's own version, up to 8 characters such as `1.1`, which the menu shows as `v1.1` at the right
+of its `Patch:` row; give it a new one each time you change a published patch. `''` removes it.
 
 `help` sets the menu's help line for each option (`fix`, `colours`, `language`, `trainer_N`, `toggle_N`), up to two rows
 of 32 characters, wrapped at a space.
