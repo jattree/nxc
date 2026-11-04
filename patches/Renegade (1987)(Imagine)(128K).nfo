@@ -37,9 +37,9 @@
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
-  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
-              later); Enhanced colours from the MVV package's older Spec256
-              conversion, painter not established
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours from the
+              MVV package's older Spec256 conversion, painter not established
   Original    Imagine, 1987, by its original authors. All rights to the game
               remain theirs.
 

@@ -37,9 +37,10 @@
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Dean Woodyatt
-  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
-              later); enhanced colours from an older Spec256 conversion (the
-              MVV package), painter not established
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); enhanced colours from an
+              older Spec256 conversion (the MVV package), painter not
+              established
   Original    A'n'F, 1983, by its original authors. All rights to the game
               remain theirs.
 

@@ -33,9 +33,10 @@
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Dean Woodyatt
-  Engine      Inspired by Bleugh.biz's nexclash (bleughb/nexclash, GPL-3.0-or-
-              later); enhanced colours from an older Spec256 conversion (the
-              EmuZWin games package), painter not established
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); enhanced colours from an
+              older Spec256 conversion (the EmuZWin games package), painter
+              not established
   Original    Mikro-Gen, 1985, by its original authors. All rights to the game
               remain theirs.
 
