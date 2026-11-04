@@ -130,8 +130,8 @@ class SpecAgainstVectors(unittest.TestCase):
                 self.assertLess(path.stat().st_size, 200_000, path.name)
         self.assertEqual(sorted(p.name for p in VECTORS.iterdir() if p.is_file()),
                          ["game_v1.z80", "game_v3.z80", "make_tape_vectors.py", "make_vectors.py", "tape.tap", "tape.tzx", "tape_start.z80",
-                          "tapeset_a.tap", "tapeset_b.tzx", "vector.nxc", "vector_tape.nxc", "vector_tapeset.nxc", "vectors.json", "vectors_tape.json",
-                          "vectors_tapeset.json"])
+                          "tapeset_a.tap", "tapeset_b.tzx", "vector.nxc", "vector_tape.nxc", "vector_tapeset.nxc", "vector_toggle.nxc", "vectors.json",
+                          "vectors_tape.json", "vectors_tapeset.json", "vectors_toggle.json"])
 
 
 # A tape walker and bank builder written from the spec's words and tables alone, with nothing from the tool.
@@ -281,6 +281,23 @@ def spec_set_start_snapshot(tapes: list, table: bytes) -> bytes:
     assert i == len(table)
     pages = [(3 + b, b) for b in range(8)] if is128 else [(8, 5), (4, 2), (5, 0)]
     return header + b"".join(b"\xff\xff" + bytes((p,)) + bytes(banks[b]) for p, b in pages)
+
+
+class ToggleSpecAgainstVectors(unittest.TestCase):
+    """The toggle vector, read from the spec: a SET2 of kind 3, its chunk a bitmap and the bytes for each bit set."""
+
+    def test_the_toggle(self) -> None:
+        v = json.loads((VECTORS / "vectors_toggle.json").read_text())
+        patch = (VECTORS / "vector_toggle.nxc").read_bytes()
+        self.assertEqual(hashlib.md5(patch).hexdigest(), v["patch_md5"])
+        at = patch.index(b"SET2") + 8
+        self.assertEqual(patch[at + 1], 3)                                   # kind 3: a display toggle
+        self.assertEqual(patch[at + 5:at + 5 + patch[at + 4]], b"Smooth scrolling")
+        (bank, chunk), = v["chunks"]
+        chunk = bytes.fromhex(chunk)
+        offsets = [o for o in range(16384) if chunk[o >> 3] & (0x80 >> (o & 7))]
+        self.assertEqual((bank, offsets, chunk[2048:]), (2, [0x2100, 0x2101, 0x2180], bytes((0x11, 0x22, 0x33))))
+        self.assertNotEqual(v["expected"]["off"], v["expected"]["on"])
 
 
 class TapeSetSpecAgainstVectors(unittest.TestCase):

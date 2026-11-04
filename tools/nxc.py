@@ -37,7 +37,9 @@ TRAINER_NAME_MAX = 25; TRAINER_POKES_MAX = 255; TRAINERS_SHOWN = 8; POKES_HELD =
 SET_NAME_MAX = 25; SETS_MAX = 256
 SET_TAG = b'SET2'; SET_STREAM = b'SEB'; SET_CRC_INDEX = 255   # a set's streams: tag SEB and its index; index its bank, or 255 for its CRC
 BITMAP = BANK // 8; SET_CHUNK_MAX = BITMAP + BANK; SET_CHUNK_HEAD = 3   # a bank's chunk: a bit for each byte, then the bytes whose bits are set
-KIND_COLOURS = 1; KIND_LANGUAGE = 2; KIND_NAMES_SET = {KIND_COLOURS: 'colours', KIND_LANGUAGE: 'language'}
+KIND_COLOURS = 1; KIND_LANGUAGE = 2; KIND_TOGGLE = 3; KIND_TOGGLE_LOGIC = 4; TOGGLES_MAX = 4
+KIND_NAMES_SET = {KIND_COLOURS: 'colours', KIND_LANGUAGE: 'language', KIND_TOGGLE: 'toggle', KIND_TOGGLE_LOGIC: 'toggle'}
+TOGGLE_KINDS = (KIND_TOGGLE, KIND_TOGGLE_LOGIC)
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
 TEXT_READ = 252; MENU_COLUMNS = 41; CREDIT_NAME = 32  # what a loader reads of INF1, shows, and keeps of a name
@@ -719,7 +721,7 @@ def targets(f):
 def proof_text(proof):
     """PRF1's text: only the keys the format defines. Nothing merged: a replay is not an emulator run, and neither is hardware."""
     for k in proof or ():
-        if k not in PROOF_KEYS: raise ValueError('%s is not a PRF1 key' % k)
+        if k not in PROOF_KEYS and not re.match(r'toggle_[0-9]{1,3}\Z', k): raise ValueError('%s is not a PRF1 key' % k)
     return text(proof or {})
 
 def seal(head, bl, st):
@@ -748,6 +750,7 @@ def language_info(game_language=None, codes=(), text_by=None, sets=()):
     return out
 
 def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colours=None, trainer_blocks=(), master=None, more_dumps=(), languages=None, highest_bank=None,
+         toggles=None,
          start=None, tape_banks=(), residual_max=None, tape_summary=None):
     """A patch from a game file (.z80, .sna, .tap or .tzx) and the .nex built from it. colours and languages: {name: path of
     the .nex with it, or (path, choice)}. more_dumps: (path, target fields) of others accepted. Before anything is returned,
@@ -810,12 +813,17 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     # Sets: changes to the finished banks, each with the CRC of the whole file with it alone.
     screen_of_out = nex_screen(out)
     chosen = [(KIND_COLOURS, n, v) for n, v in (colours or {}).items()] + [(KIND_LANGUAGE, n, v) for n, v in (languages or {}).items()]
+    toggles = toggles or {}                          # {name: (path, logic)}
+    if len(toggles) > TOGGLES_MAX: raise ValueError('a patch can have at most %d toggles' % TOGGLES_MAX)
+    for n, (path, logic) in toggles.items():
+        chosen.append((KIND_TOGGLE_LOGIC if logic else KIND_TOGGLE, n, path))
     if len(chosen) > SETS_MAX: raise ValueError('a patch can have at most %d sets' % SETS_MAX)
-    made = []; next_choice = {}; sizes = []
+    made = []; next_choice = {}; sizes = []; choice_of = {}
     for stream_index, (kind, name, source) in enumerate(chosen):
         path, choice = source if isinstance(source, tuple) else (source, None)
         next_choice[kind] = next_choice.get(kind, 0) + 1
         choice = next_choice[kind] if choice is None else choice
+        choice_of[(kind, name)] = choice
         with open(path, 'rb') as g: painted = g.read()
         if painted[:512] != out[:512] or len(painted) != len(out) or nex_screen(painted) != screen_of_out:
             raise ValueError('a set must only change banks of the same build')
@@ -831,11 +839,21 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
         made.append((kind, name, sorted(ranges)))
         body = bytes((stream_index, kind, choice, BASE_SPRITE, len(label))) + label + set_use(st, stream_index, SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(painted))) + frames
         bl.append([SET_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges})))
-    for one in made:
-        for other in made:
-            if one[0] < other[0]:
+    for i, one in enumerate(made):
+        for other in made[i + 1:]:
+            if one[0] != other[0] or one[0] in TOGGLE_KINDS:     # toggles go with everything, even each other
                 clash = first_overlap(one[2], other[2])
                 if clash: raise ValueError('sets %r and %r can be chosen together but both change bank %d offset %d' % (one[1], other[1], clash[0], clash[1]))
+    toggled = [e for e in made if e[0] in TOGGLE_KINDS]
+    for t in trainer_blocks:                         # and with every trainer
+        for b, o, v in parse_trn1(t)[2]:
+            for e in toggled:
+                if first_overlap(e[2], [(b, o, o + 1)]): raise ValueError('trainer %r writes a byte toggle %r changes' % (parse_trn1(t)[1], e[1]))
+    if len({e[1].lower() for e in toggled}) != len(toggled): raise ValueError('two toggles have one name')
+    for kind, name, _ in toggled:
+        if kind == KIND_TOGGLE_LOGIC:
+            choice = choice_of[(kind, name)]
+            if not (proof or {}).get('toggle_%d' % choice): raise ValueError('toggle %r changes the game logic: PRF1 needs a toggle_%d line saying what and how it was checked' % (name, choice))
     if len({(e[0], e[1]) for e in made}) != len(made): raise ValueError('two sets of one kind have one name')
     screen = nex_screen(out)
     for k in range(0, len(screen), SCREEN_CHUNK):
@@ -1060,6 +1078,11 @@ def colour_sets(f):
     """The names of a patch's colour sets, readable without the game."""
     return [e['name'].decode('ascii', 'replace') for e in offered(f, KIND_COLOURS)]
 
+def toggles_of(f):
+    """The names of a patch's toggles a loader offers, in file order, and whether each changes the game logic."""
+    on = [e for e in sets(f) if e['kind'] in TOGGLE_KINDS and e['base'] == BASE_SPRITE][:TOGGLES_MAX]
+    return [(e['name'].decode('ascii', 'replace'), e['kind'] == KIND_TOGGLE_LOGIC) for e in on]
+
 def languages(f):
     """The names of a patch's language sets, readable without the game."""
     return [e['name'].decode('ascii', 'replace') for e in offered(f, KIND_LANGUAGE)]
@@ -1146,7 +1169,7 @@ def read_screen(bl, st, header):
     if len(parts) != chunks: raise Wrong('a screen block is missing')
     return b''.join(parts[k] for k in range(chunks))
 
-def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, language=None):
+def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, language=None, toggles=()):
     """The .nex, from the patch and the player's snapshot; raises Wrong otherwise.
     Nothing is decompressed or written until the key and the keyed check pass, which is
     what keeps a damaged file away from a decompressor with no bounds checks.
@@ -1176,10 +1199,17 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
         found = [e for e in offered(f, kind) if e['name'] == wanted.encode()]
         if not found: raise Wrong('this patch has no %s set called %s' % (KIND_NAMES_SET[kind], wanted))
         selected.append(read_set(st, found[0]))
-    if len(selected) == 2:
-        other = dict(selected[1][1])
-        for b, chunk in selected[0][1]:
-            if b in other and any(x & y for x, y in zip(chunk[:BITMAP], other[b][:BITMAP])): raise Wrong('two sets chosen together change the same bytes')
+    on = offered(f, KIND_TOGGLE) + offered(f, KIND_TOGGLE_LOGIC)
+    on = sorted(on, key=lambda e: [x['stream'] for x in sets(f)].index(e['stream']))[:TOGGLES_MAX]
+    for wanted in toggles or ():
+        found = [e for e in on if e['name'] == wanted.encode()]
+        if not found: raise Wrong('this patch has no toggle called %s' % wanted)
+        selected.append(read_set(st, found[0]))
+    for i, one in enumerate(selected):
+        for two in selected[i + 1:]:
+            other = dict(two[1])
+            for b, chunk in one[1]:
+                if b in other and any(x & y for x, y in zip(chunk[:BITMAP], other[b][:BITMAP])): raise Wrong('two sets chosen together change the same bytes')
     if banks is None:
         snap = game_snapshot(opened, game); banks = snap.banks
         if any(not header[18 + b] for b in getattr(snap, 'extra', ())): raise Wrong('a tape table writes a bank the .nex does not list')
@@ -1209,8 +1239,12 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
             if b not in offs: raise Wrong('a set is out of range')
             for place, o in enumerate(chunk_offsets(chunk), BITMAP): out[offs[b] + o] = chunk[place]
     if zlib.crc32(bytes(out)) != expected: raise Wrong('the rebuilt .nex fails its checksum')
+    written = {}
+    for _, chunks in selected[len(selected) - len(toggles or ()):]:
+        for b, chunk in chunks: written[b] = chunk
     for b, o, v in chosen_pokes(f, chosen):
         if b not in offs: raise Wrong('a trainer POKE is in a bank the build does not have')
+        if b in written and written[b][o >> 3] & (0x80 >> (o & 7)): raise Wrong('a trainer and a toggle chosen together change the same byte')
         out[offs[b] + o] = v
     return bytes(out)
 
@@ -1351,6 +1385,8 @@ def run(argv):
         ap.add_argument('--proof-file', help='PRF1 fields, as lines of KEY=VALUE')
         ap.add_argument('--colours', action='append', default=[], metavar='NAME=NEX', help='a colour set: the same build with it applied; repeatable')
         ap.add_argument('--language', action='append', default=[], metavar='NAME=NEX', help='a language set, the same way; repeatable')
+        ap.add_argument('--toggle', action='append', default=[], metavar='NAME=NEX', help='a toggle that changes only what is shown: the same build with it on; repeatable, at most %d' % TOGGLES_MAX)
+        ap.add_argument('--toggle-logic', action='append', default=[], metavar='NAME=NEX', help='a toggle that changes the game logic, as a bug fix does; needs a toggle_N proof line')
         ap.add_argument('--game-language', metavar='CODE', help="the language the game itself is in, as an ISO 639 code such as en")
         ap.add_argument('--language-code', action='append', default=[], metavar='NAME=CODE', help="a language set's ISO 639 code; repeatable")
         ap.add_argument('--text-by', help='who translated the text; kept in INF1, not on the menu')
@@ -1381,7 +1417,9 @@ def run(argv):
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))
         tape_banks = [int(x, 0) for item in a.tape_bank for x in item.split(',') if x.strip()]; summary = {}
         if a.start: refuse_same(a.output, a.start)
-        f, made = make([a.game] + a.also if a.also else a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank,
+        tog = {n: (p_, False) for n, p_ in named(a.toggle).items()}
+        tog.update({n: (p_, True) for n, p_ in named(a.toggle_logic).items()})
+        f, made = make([a.game] + a.also if a.also else a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank, toggles=tog,
                        start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary)
         if summary:
             print('tape: %d data blocks; %d copies take %d bytes of the start state from it; %d bytes in %d sites are not on it; table %d bytes'
@@ -1414,12 +1452,14 @@ def run(argv):
     ap.add_argument('patch'); ap.add_argument('game', nargs='?'); ap.add_argument('-o', '--output')
     ap.add_argument('--colours', help='a colour set by name; omit for the default; has no effect with --original')
     ap.add_argument('--language', help='a language set by name; has no effect with --original')
+    ap.add_argument('--toggle', action='append', default=[], help='a toggle by name, on; repeatable; no effect with --original')
     ap.add_argument('--trainer', action='append', help='a trainer by number from 1 or by name; repeatable')
     ap.add_argument('--original', action='store_true', help='no patch: write the game itself, or with trainers a snapshot of it with them in; for a tape, the start state as a .z80')
     ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a patch that wants a set of tapes; repeatable, in order')
     a = ap.parse_args(argv); f = read_file(a.patch)
     print('colour sets:', ', '.join(['(default)'] + colour_sets(f)))
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
+    if toggles_of(f): print('toggles:', ', '.join(n + (' (changes the game logic)' if lg else '') for n, lg in toggles_of(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
     print('needs', memory_text(dict(blocks(f)[1]).get(b'OPT1', bytes(3))[2:3][0] if len(dict(blocks(f)[1]).get(b'OPT1', b'')) == 3 else 0))
     for t in targets(f):
@@ -1431,7 +1471,7 @@ def run(argv):
         refuse_same(output, a.patch, a.game, *a.also)
         game = game_arg(a.game, a.also)
         if a.original: d = original_with_pokes(f, game, a.trainer)
-        else: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language)
+        else: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
         with open(output, 'wb') as g: g.write(d)
         print('wrote', output, hashlib.md5(d).hexdigest())
 

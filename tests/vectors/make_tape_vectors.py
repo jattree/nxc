@@ -89,6 +89,7 @@ def main() -> None:
     (HERE / "vectors_tape.json").write_text(json.dumps(vectors, indent=1) + "\n")
     print("patch", len(patch), "bytes; vectors", (HERE / "vectors_tape.json").stat().st_size, "bytes")
     tape_set(blocks, banks, nex, extra, z80)
+    toggle(blocks, nex, extra, z80, tap)
 
 
 def tzx10(blocks) -> bytes:
@@ -127,6 +128,30 @@ def tape_set(blocks, banks, nex, extra, z80) -> None:
                    expected={"base": digest(nxc.apply(patch, game=game)), "fix off": digest(nxc.original_with_pokes(patch, game, []))})
     (HERE / "vectors_tapeset.json").write_text(json.dumps(vectors, indent=1) + "\n")
     print("set patch", len(patch), "bytes")
+
+
+def toggle(blocks, nex, extra, z80, tap) -> None:
+    """The tape patch with one display toggle (kind 3), writing three bytes of bank 2."""
+    on = bytearray(nex)
+    for o, v in ((0x2100, 0x11), (0x2101, 0x22), (0x2180, 0x33)):
+        on[512 + 16384 + o] = v
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        for n, data in (("tape.tap", tap), ("tape_start.z80", z80), ("o.nex", nex), ("t.nex", bytes(on))): (tmp / n).write_bytes(data)
+        patch, _ = nxc.make(str(tmp / "tape.tap"), str(tmp / "o.nex"), dict(title="Toggle Vector", file="tape.tap"),
+                            dict(publisher="Nobody, 2026", build="synthetic"), nonce=NONCE, master=MASTER, rom=1,
+                            proof=dict(replay="none: synthetic", hardware="none"), start=str(tmp / "tape_start.z80"), tape_banks=extra,
+                            toggles={"Smooth scrolling": (str(tmp / "t.nex"), False)})
+    (HERE / "vector_toggle.nxc").write_bytes(patch)
+    e = next(x for x in nxc.sets(patch) if x["kind"] == nxc.KIND_TOGGLE)
+    st = nxc.key_state(NONCE, MASTER)
+    crc, chunks = nxc.read_set(st, e)
+    vectors = dict(comment="Made by make_tape_vectors.py from synthetic bytes: a toggle. Nothing here comes from any game.",
+                   patch_md5=hashlib.md5(patch).hexdigest(), set_head=dict(stream=e["stream"], kind=e["kind"], choice=e["choice"],
+                   base=e["base"], name=e["name"].decode()), crc_alone="%08x" % crc, chunks=[[b, c.hex()] for b, c in chunks],
+                   expected={"off": digest(nxc.apply(patch, game=tap)), "on": digest(nxc.apply(patch, game=tap, toggles=["Smooth scrolling"]))})
+    (HERE / "vectors_toggle.json").write_text(json.dumps(vectors, indent=1) + "\n")
+    print("toggle patch", len(patch), "bytes")
 
 
 if __name__ == "__main__":
