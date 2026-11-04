@@ -1,6 +1,7 @@
 """INF1's version through tools/nxc.py, on the made-up tape game: where a writer puts it, what a writer refuses, what a
 reader takes, the setter (which keeps the key and refuses the wrong game), that credit and import-pok keep it, the
-credit row, and the command line. Needs the zx0 compressor (NXC_ZX0_DIR)."""
+description it adds to (and leaves as it was without it), the credit row, and the command line. Needs the zx0
+compressor (NXC_ZX0_DIR)."""
 from __future__ import annotations
 
 import os
@@ -19,6 +20,11 @@ nxc = T.nxc
 ROOT = T.ROOT
 TMP = os.environ.get("TMPDIR")
 INFO = dict(publisher="Ocean, 1989", patch_by="Jon Attree", fix_label="Colour")
+
+
+def strings(desc: bytes, n: int) -> list[bytes]:
+    """The first n zero-terminated strings of a description, after its three bytes."""
+    return desc[3:].split(b"\0")[:n]
 
 
 @TT.needs
@@ -84,6 +90,21 @@ class Version(unittest.TestCase):
         self.assertTrue(dict(nxc.blocks(f)[1])[b"INF1"].startswith(b"publisher=Ocean, 1989\npatch_by=Someone Else\nfix_label=Colour\nversion=1.0\n"))
         f = nxc.import_pok(self.patch, self.tap, "NInfinite lives\nZ  8 32784 0 0\nY\n", publisher="Ocean, 1990")
         self.assertEqual(nxc.patch_version(f), "1.0")
+
+    def test_the_description(self) -> None:
+        old, data = nxc.menu_description(self.plain)
+        new, data2 = nxc.menu_description(self.patch)
+        self.assertEqual(data, data2)
+        self.assertEqual(old[0], nxc.DESC_FIXED)                                           # without one: as it was
+        self.assertEqual(new[0], nxc.DESC_FIXED | nxc.DESC_VERSION)
+        self.assertEqual(strings(new, 5)[3:], [b"Jon Attree", b"1.0"])
+        at = 3
+        for _ in range(4):
+            at = new.index(b"\0", at) + 1
+        end = new.index(b"\0", at) + 1
+        self.assertEqual(bytes((nxc.DESC_FIXED,)) + new[1:at] + new[end:], old)            # only the string and the flag differ
+        cut = nxc.menu_description(L.with_inf1(self.patch, self.tap, b"version=" + b"9" * 12 + b"\n"))[0]
+        self.assertEqual(strings(cut, 5)[4], b"9" * 8)
 
     def test_the_credit_row(self) -> None:
         for info, want in ((dict(patch_by="Jon Attree", version="1.0"), "Patch: Jon Attree           v1.0"),

@@ -1880,11 +1880,9 @@ class MadeUpChoices(Choices, Base):
         or      a
         jr      .col
 """)], self.with_info(b"colours_by=Bob\n", False)),
-                ("a name cut short", [("""        ld      b,25
-        call    puts_max
-.no_patch:""", """        ld      b,20
-        call    puts_max
-.no_patch:""")], self.with_info(b"patch_by=" + b"A" * 30 + b"\n"))):
+                ("a name cut short", [("""        ld      a,25                    ; patch_by: cut to 25 without one
+""", """        ld      a,20
+""")], self.with_info(b"patch_by=" + b"A" * 30 + b"\n"))):
             with self.subTest(name):
                 binary, symbols = H.assemble(replace)
                 m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["enter"], binary=binary, symbols=symbols)

@@ -11,9 +11,10 @@
 ; The includer defines MENU_RAM, 13 bytes for the module's variables.
 ;
 ; The description, at HL for menu_run (spec, "The description"):
-;   flags (bit 0: the main line is fixed ON), N (most sets and toggles on at
-;   once), the number of lines (1 to 10); zero-terminated: the title, the
-;   publisher, colours_by (empty: none), patch_by (empty: none); then each
+;   flags (bit 0: the main line is fixed ON; bit 1: a version follows patch_by),
+;   N (most sets and toggles on at once), the number of lines (1 to 10);
+;   zero-terminated: the title, the publisher, colours_by (empty: none),
+;   patch_by (empty: none), and with flags bit 1 the version; then each
 ;   line: kind (0 trainer, 1 main line, 2 a kind of set, 3 a toggle), state,
 ;   the number of sets (kind 2) or 0, then zero-terminated its name, its help,
 ;   and for kind 2 each set's name. The states are changed in place.
@@ -34,6 +35,8 @@ MV_VTYPE        equ MENU_RAM + 12
 MENU_LINES_MAX  equ 10
 MENU_TITLE_ROW  equ 27                  ; a title's characters in a bar row, before the stripes
 MENU_HELP_ROW   equ 18                  ; the help's first row, at the latest
+MENU_VERSION    equ 8                   ; a version's characters, after its v
+MD_VERSION      equ 1                   ; the flags' bit: a version follows patch_by
 A_TEXT          equ $47                 ; BRIGHT, paper black, ink white
 A_BAR           equ $4e                 ; paper blue, ink yellow
 A_HEAD          equ $46
@@ -216,6 +219,11 @@ md_line:
         call    md_skipz
         call    md_skipz
         call    md_skipz
+        push    hl
+        ld      hl,(MV_DESC)
+        bit     MD_VERSION,(hl)
+        pop     hl
+        call    nz,md_skipz             ; the version
         inc     b
 .l:     dec     b
         ret     z
@@ -437,18 +445,47 @@ menu_draw:
         call    puts_max
 .no_col:
         call    md_skipz                ; patch_by
+        push    hl
+        call    md_skipz                ; the version, if the flags say so, ending in column 31
+        ld      de,(MV_DESC)
+        ld      a,(de)
+        and     1 << MD_VERSION
+        jr      z,.no_ver
+        push    hl
+        ld      b,MENU_VERSION
+        call    len_max
+        pop     hl
+.no_ver:
+        ld      e,a                     ; E: its length, 0 for none
+        or      a
+        ld      a,25                    ; patch_by: cut to 25 without one
+        jr      z,.pby
+        ld      a,31                    ; the v in column 31 - E
+        sub     e
+        ld      c,a
+        ld      a,22
+        call    at
+        ld      a,'v'
+        call    putc
+        ld      b,e
+        call    puts_max
+        ld      a,23                    ; with one: cut to 23 - E, a blank column before the v
+        sub     e
+.pby:   pop     hl
+        ld      b,a
         ld      a,(hl)
         or      a
         jr      z,.no_patch
         push    hl
+        push    bc
         ld      a,22
         ld      c,0
         call    at
         ld      hl,s_patch
         ld      b,7
         call    puts_max
+        pop     bc
         pop     hl
-        ld      b,25
         call    puts_max
 .no_patch:
         ld      a,23

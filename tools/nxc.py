@@ -1430,9 +1430,11 @@ def menu_description(f, st=None, presets=None):
     title = next((t['title'] for t in targets(f) if t.get('title')), b'') or b''
     pub = inf1_value(f, 'publisher') or b''
     colours = (inf1_value(f, 'colours_by') or b'') if colour_sets(f) else b''
-    d = bytearray((1, MENU_HOLD, len(lines)))
+    ver = inf1_value(f, 'version') or b''
+    d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0), MENU_HOLD, len(lines)))
     for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), MENU_TITLE), (pub, MENU_ROW), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
         d += menu_text(v, n) + b'\0'
+    if ver: d += menu_text(ver, VERSION_MAX) + b'\0'       # only with its flag, so a patch without one has the description it had
     data = bytearray(); where = []
     for i, (kind, name, key, payload) in enumerate(lines):
         d += bytes((kind, 1 if kind == 1 else (presets or {}).get(i, 0), len(payload) if kind == 2 else 0))

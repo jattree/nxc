@@ -2529,6 +2529,7 @@ key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
 key_fix_label:  db "fix_label=",0
 key_colours_by: db "colours_by=",0
+key_version:    db "version=",0
 ext_z80:        db ".z80",0
 str_fix:        db "Colour clash fix",0
 str_enhanced:   db "Enhanced colours",0
@@ -6383,6 +6384,7 @@ MENU_TITLE      equ 54                      ; two bar rows of 27
 MENU_TEXT       equ 32                      ; a publisher, a name in the credits
 HELP_MAX        equ 64
 NAME_MAX        equ 25
+VERSION_MAX     equ 8                       ; INF1's version, shown after a v
 
         disp    MP_AT
 mp_start:
@@ -6534,6 +6536,7 @@ mp_main:
         call    mp_inf
 .pby:   ld      hl,key_patch_by
         call    mp_inf
+        call    mp_version
 ; Each line: kind, state, sets, name, help, the sets' names.
         ld      a,(trainer_count)
         or      a
@@ -6848,6 +6851,24 @@ mp_inf: ex      de,hl
 .none:  xor     a
         ld      (de),a
         inc     de
+        ret
+
+; INF1's version, if it has one: at most VERSION_MAX characters at DE, then a zero, DE
+; past it, and the description's flags bit 1 set; nothing without one, or with it empty.
+mp_version:
+        push    de
+        ld      de,key_version
+        call    text_find
+        pop     de
+        ret     c
+        ld      a,b
+        or      c
+        ret     z
+        ld      a,VERSION_MAX
+        call    copy_text
+        inc     de
+        ld      hl,MP_DESC
+        set     1,(hl)
         ret
 
 ; BC bytes at HL as a name, at most NAME_MAX, at DE; DE past its zero.
@@ -7221,7 +7242,7 @@ mnx_write_m0:
         ld      (ix+5),a
         ld      a,(mnx_shadow)
         ld      (ix+7),a
-        ld      (ix+8),1                    ; the description's flags: the main line fixed on
+        set     0,(ix+8)                    ; the description's flags: the main line fixed on
         or      a
         jr      z,.w
         ld      hl,(mnx_lo)
