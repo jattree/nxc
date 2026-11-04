@@ -9,13 +9,13 @@ needs, what it changes, its cheats, credits and how it was tested.
 The patches carry none of the games' code. You need your own copy of each
 game, with exactly the file name and MD5 given in its .nfo.
 
-On the Next
------------
-1. Install the loader once: NEXCLASH in C:/DOT/, NXCHAND.BAS in C:/NEXTZXOS/,
-   and the .nxc line in C:/NEXTZXOS/BROWSER.CFG (see the nxc repo's
-   firmware/README.md).
-2. Copy a game's folder to the card and put your game file in it, beside
-   the .nxc.
+On the Next (NextZXOS 2.09 or later)
+------------------------------------
+1. Set the card up once: run tools/setup_card.py with the card's top folder,
+   or copy the repo's sdcard/ folder to the card and add the browser.cfg
+   line by hand (see the repo's README.md, "One-time card setup").
+2. Copy a game's folder into /nxc on the card and put your game file in it,
+   beside the .nxc.
 3. Choose the .nxc in the Browser. A menu shows the cheats and colour sets;
    ENTER builds the game and runs it.
 
@@ -31,4 +31,6 @@ publishers.
 
 Status
 ------
-Tested in the JNext emulator only. See each .nfo for what was checked.
+Tested in the JNext emulator. See each .nfo for what was checked. The loader
+has also run on a NextNano (a Tang Nano 20K FPGA build of the Next) with
+NextZXOS v2.09; it has not yet run on an official Next board.

@@ -1,90 +1,134 @@
 # .nxc
 
-A patch format for ZX Spectrum Next games. By Jon Attree. Built with NexClash by Dean Woodyatt
-(Bleugh.biz, [bleughb/nexclash](https://github.com/bleughb/nexclash), GPL-3.0-or-later).
+Colour-clash-free Spectrum games for the ZX Spectrum Next, from your own copy of the game.
 
-NexClash turns Spectrum games into `.nex` files whose figures are hardware sprites, removing colour
-clash. A `.nex` contains the game, so it can't be freely shared. A `.nxc` holds what the build adds,
-with the game's own banks left out, and only the player's own copy of the game unlocks it. What it adds
-includes sprite data derived from the game's graphics, held encrypted, and some of it is readable to
-anyone: names, credits, cheats. [The format](spec/NXC-FORMAT.md) says exactly what.
+[NexClash](https://github.com/bleughb/nexclash), by Dean Woodyatt (Bleugh.biz), rebuilds Spectrum games so that
+their moving figures are Next hardware sprites, which keep their own colours. Its builds contain the game, so they
+can't be shared. A `.nxc` patch holds only what the build adds. You put it beside your own copy of the game, and the
+Next rebuilds the game with the clash fixed, plus any cheats or colour sets the patch offers.
 
-Anyone who owns the game can read a patch, or forge one. This is not cryptographic strength: a patch is
-code from whoever made it.
-
-With the patch and the right game file, you get back exactly the `.nex` that was built, byte for byte.
+The format and tools are by Jon Attree. Built with NexClash by Dean Woodyatt (Bleugh.biz,
+[bleughb/nexclash](https://github.com/bleughb/nexclash), GPL-3.0-or-later).
 
 ## Status
 
-**Draft.** Not reviewed by Dean Woodyatt, and not run on a Next or a NextTang. No patches have
-circulated, so it may still change.
+**Early.** Everything has been tested in the JNext emulator. On real hardware so far, the loader has run on Jon's
+NextNano (a Tang Nano 20K FPGA build of the Next) with NextZXOS v2.09, and nothing beyond that. It has not yet run on
+an official Next board. The format may still change.
+
+# Part 1: Play a patch on your Next
+
+## What you need
+
+- A ZX Spectrum Next, or a compatible machine, running **NextZXOS 2.09 or later**. Older versions are untested.
+- Its SD card, in a PC (Windows, macOS or Linux).
+- This repository: `git clone https://github.com/jattree/nxc.git`, or download it as a zip.
+- Your own copy of each game you want to play, as the exact file its patch asks for.
+
+## One-time card setup
+
+**The easy way.** With [Python 3](https://www.python.org/) installed, run this from the repository's folder, giving
+the card's top folder:
+
+```sh
+py tools\setup_card.py E:\                    # Windows
+python3 tools/setup_card.py /Volumes/NEXT      # macOS
+python3 tools/setup_card.py /media/you/NEXT    # Linux
+```
+
+Add `--dry-run` first to see what it would do. It checks the card is a NextZXOS card, copies two files, keeps a copy
+of `browser.cfg` as `browser.cfg.bak-pre-nxc`, adds one line to `browser.cfg`, and makes the `nxc` folder. Run it again
+any time, for example after updating this repository: it changes only what is out of date.
+
+**By hand.** Copy what is in [`sdcard/`](sdcard/) to the top of the card: `dot/NEXCLASH`, `nextzxos/NXCHAND.BAS` and
+the `nxc` folder. Then add this line to `nextzxos/browser.cfg`, just before the first line that starts `Z80,SNA`:
+
+```
+NXC:clear 65367:load "<7F>snapload.bas":f$="c:/tmp/nexclash.z80":adj=0:merge "<7F>nxchand.bas":.nexclash "|":cd "c:/tmp":goto 0
+```
+
+Each `<7F>` is one byte, 0x7F, not four characters, and the file uses Windows (CRLF) line endings. The simplest way to
+get both right is to copy the first `Z80,SNA` line, which already has those bytes, and edit the copy. Keep a copy of
+the original file first.
+
+## Play a game
+
+1. Copy the game's folder from [`patches/`](patches/) into `nxc/` on the card, for example
+   `nxc/Jet Pac (1983)(Ultimate Play The Game)(16K)/`.
+2. Put your copy of the game in that folder, beside the `.nxc`. Its `.nfo` gives the exact file name and MD5 it
+   needs. Rename your file to that name if you have to; the MD5 must match.
+3. On the Next, open the Browser, go to the folder and choose the `.nxc`.
+
+The patch's menu comes up: its cheats under `TRAINER`, and under `OPTIONS` the clash fix and any colour sets. Press a
+line's number to turn it on or off. Press ENTER. `Patching...` flashes while the game is rebuilt, which can take a few
+seconds. Then the game's title screen shows, if it has one, and the game starts. BREAK cancels.
+
+With the clash fix turned off, ENTER plays your own game as it is, with any cheats chosen.
+
+## If it refuses
+
+The loader stops with a message:
+
+| Message | What to do |
+|---|---|
+| `Game not beside the patch` | Put your game file in the same folder as the `.nxc`. |
+| `Wrong game file for this patch` | Your file is a different dump. Check its MD5 against the `.nfo`. |
+| `Needs this game file:` and a name | Name your file exactly as shown, in the patch's folder. |
+| `Game file is damaged` | Copy the game to the card again. |
+| `Patch damaged: get it again` or `Not a .nxc file` | Copy the `.nxc` again. |
+| `Patch needs a newer .NEXCLASH` | Update this repository and run the card setup again. |
+| `NEXCLASH cut or mixed: recopy it` | Run the card setup again. |
+| `Needs NEXT/enNextZX.rom: no font` | The card is missing `machines/next/enNextZX.rom`. Use a standard NextZXOS card. |
+| `Cannot write to /tmp` | The card needs a `tmp` folder at its top, and room for the game. |
+| `Needs more RAM: turn fix off` | The rebuilt game needs more memory than this Next has. With the clash fix off, the original game still plays. |
+| `Needs 72K free RAM` and the like | Not enough memory is free for the rebuild. Restart the Next and try again. |
+| `No menu .nex: press ENTER` | SPACE, which saves a `.nex` with the menu in it, can't be used for this game. Press ENTER. |
+
+If the Browser doesn't start the loader when you choose a `.nxc`, the `browser.cfg` line is missing: run the card
+setup again.
+
+## Or make a .nex on a PC
+
+You can also build the game as a `.nex` file on a PC, with only Python 3, and run it on any Next or in an emulator:
+
+```sh
+python3 tools/nxc.py PATCH.nxc YOUR_GAME.z80 -o Game.nex
+```
+
+The `.nex` carries the patch's menu, so you choose cheats and colours when it starts. `--bare` builds one without the
+menu, with your choices fixed. [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md) has every step. A `.nex` contains the
+game, so it is for your own use: share the `.nxc`, never the `.nex`.
+
+## The patches
+
+[`patches/`](patches/) holds the patches made so far, one folder per game, each played through the real loader in
+JNext. Each has a `.nfo` naming the exact game file it needs, what it changes, its cheats, its credits and how it
+was tested. None of them carries game code.
+
+# Part 2: Make a patch
+
+`tools/nxc.py` packages a finished NexClash build as a `.nxc`, adds cheats, colour sets, languages, help text and
+credits to it, and applies it. [The format](spec/NXC-FORMAT.md) says exactly what a patch holds; the loader in
+[`firmware/`](firmware/README.md) and the tool must match it byte for byte.
+
+A `.nxc` holds what the build adds, with the game's own banks left out, and only the player's own copy of the game
+unlocks it. What it adds includes sprite data derived from the game's graphics, held encrypted, and some of it is
+readable to anyone: names, credits, cheats. Anyone who owns the game can read a patch, or forge one. This is not
+cryptographic strength: a patch is code from whoever made it. With the patch and the right game file, you get back
+exactly the `.nex` that was built, byte for byte; `make` proves that before it writes anything.
+
+Each patch records how it was proven in its `INF1` fields, shown in its `.nfo`: replays of recorded play checked
+against the original game, emulator runs, coverage, and hardware runs where there are any. Credits go in the
+patch too: `patch_by` and `colours_by` on the menu, and the full `credit` (NexClash and Dean Woodyatt always) in the
+`.nfo`.
 
 | | |
 |---|---|
 | PC tool | Tested |
-| Next loader | Tested on a Z80 emulator and in JNext on NextZXOS v2.09, the new menu and the menu `.nex` included |
+| Next loader | Tested on a Z80 emulator and in JNext on NextZXOS v2.09; run on a NextNano with NextZXOS v2.09 |
 | A `.nex` with its menu | Tested on a Z80 emulator and in JNext 1.1.104 |
-| Real Next or NextTang | **Not run** |
+| Official Next board | **Not run** |
 | Review by Dean Woodyatt | **Not yet** |
-
-This repository holds no game data, and no patches from any game.
-
-## Using a patch
-
-**On a PC,** which writes the finished `.nex` ([docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md) has every step):
-
-```sh
-python3 tools/nxc.py Game.nxc Game.z80 -o Game.nex
-```
-
-The game can be any file the patch lists: `.z80`, `.sna`, `.tap` or `.tzx`; for a game on two tapes, add `--also` and the
-second file. **The `.nex` carries the patch's menu:** when it starts, on any Next or emulator that runs a `.nex`, it shows
-every cheat, colour set, language and toggle the patch has, applies your choices, and starts the game exactly as a `.nex`
-built with those choices would. Nothing of ours is needed to run it.
-
-```
- RENEGADE     Imagine, 1987 ////
-
-TRAINER
-1 Infinite lives           [ ON]
-2 Infinite time            [OFF]
-3 No death                 [OFF]
-4 Easy fight, one-hit falls[OFF]
-5 Start at level 2         [OFF]
-6 Start at level 3         [OFF]
-7 Start at level 4         [OFF]
-
-OPTIONS
-8 Colour clash fix         [ ON]
-9 Enhanced colours         [OFF]
-
-ENTER play   BREAK exit
-
-Infinite time:
-The clock stops at every round.
-
-
-Patch: Jon Attree
-                            ////
-```
-
-In colour: a blue bar with Spectrum stripes, yellow headings, `ON` green and `OFF` red
-(the help line here was added for the picture; the published patch has none yet).
-
-The keys are the line numbers, with no cursor or highlight; the help of the line last keyed shows
-under the keys if the patch has any. ENTER or SPACE plays; BREAK resets the Next. `--bare` writes a `.nex` without the
-menu, with the choices fixed: `--trainer NAME_OR_NUMBER`, `--colours NAME`, `--language NAME`, `--toggle NAME`.
-`--original` writes the game itself, unchecked, or with `--trainer` a checked snapshot of it with the POKEs in.
-
-**On the Next,** a dot command gives the same menu in the Browser. ENTER rebuilds the game from your game file with
-your choices fixed and starts it: its title, then the game, with no second menu. SPACE instead writes the `.nex` that carries
-the menu, set as you left it. A patch can list several dumps of a game. A wrong or missing game file gets a
-message naming the file it needs. The Next reads `.z80`, `.tap` and `.tzx`. A tape with the clash fix off becomes the
-game's start as a `.z80`, checked. Card setup, including the `browser.cfg` line, is in [firmware/README.md](firmware/README.md).
-
-## Patches
-
-[`patches/`](patches/) holds the patches made so far and played through the real loader in JNext, one folder per game. Each patch has a `.nfo` beside it naming the exact game file it needs, what it changes, its cheats, its credits and how it was tested. None of them carries game code: you need your own copy of each game. Nothing has run on a real Next yet.
 
 ## Making a patch
 
@@ -205,9 +249,9 @@ checking another implementation.
 - [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md): building a .nex from a patch on a PC, step by step
 - [spec/NXC-FORMAT.md](spec/NXC-FORMAT.md): the format
 - [firmware/README.md](firmware/README.md): the loader and its setup
+- [tools/setup_card.py](tools/setup_card.py): the one-time card setup
 - [backgrounds/README.md](backgrounds/README.md): a picture behind any game, an experiment that has only run in JNext
 - [docs/TAP1-NOTES.md](docs/TAP1-NOTES.md): tape targets, how to make one, and what was tested
-- [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md): making a `.nex` from a patch on a PC, step by step
 - [docs/MENU-NOTES.md](docs/MENU-NOTES.md): the menu round: the new menu, a `.nex` that carries it, and what was tested
 
 ## Credits and licence

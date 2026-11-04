@@ -8,7 +8,8 @@ Dean Woodyatt (Bleugh.biz, `bleughb/nexclash`, GPL-3.0-or-later); this command i
 derived from dzx0_standard by Einar Saukas and Urusergi (BSD-3-Clause).
 
 **Status. It has run on a Z80 emulator with NextZXOS faked, and in JNext on real NextZXOS v2.09 from a copy of an SD
-image. It has not run on a Next or on the Tang.**
+image. On real hardware it has run on Jon's NextNano (a Tang Nano 20K FPGA build of the Next) with NextZXOS v2.09, and
+nothing beyond that. It has not run on an official Next board.**
 
 The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card. It reads sets as `SET2`; a patch made with `SET1` plays with no enhanced line, and has to be made again.
 
@@ -37,6 +38,9 @@ or 0.19 s for the `.z80`, in 9 pages. In JNext on NextZXOS v2.09, through the Br
 run on a Next.
 
 ## Card setup
+
+`../sdcard/` holds these files laid out as a card's root, and `../tools/setup_card.py SDCARD_ROOT` does every step below
+(the top-level README, "One-time card setup", has both ways). By hand:
 
 - `NEXCLASH` goes in `C:/DOT/`, `NXCHAND.BAS` in `C:/NEXTZXOS/`. `C:/TMP/` must exist, as it does on the standard card.
 - The patch goes beside the player's game, named `NAME.nxc`. The game is looked for under each name in the patch's `TGT1`

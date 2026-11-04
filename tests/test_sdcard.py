@@ -45,8 +45,9 @@ class Binaries(unittest.TestCase):
         self.assertIn("one folder per game", (SDCARD / "nxc" / "README.txt").read_text())
 
     def test_the_line_is_the_one_documented(self):
-        documented = re.search(r"^NXC:.*$", (ROOT / "firmware" / "README.md").read_text(), re.M).group(0)
-        self.assertEqual(documented.replace("<7F>", "\x7f").encode(), setup_card.NXC_LINE)
+        for doc in (ROOT / "firmware" / "README.md", ROOT / "README.md"):
+            documented = re.search(r"^NXC:.*$", doc.read_text(), re.M).group(0)
+            self.assertEqual(documented.replace("<7F>", "\x7f").encode(), setup_card.NXC_LINE, doc)
 
 
 class SetupCard(unittest.TestCase):
