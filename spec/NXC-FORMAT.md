@@ -272,7 +272,7 @@ An optional set of byte replacements, on the menu: a colour set, a language. One
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | Stream index, in the clear. **Unique among all `SET2` blocks**, of any kind or base, or two would use one stream. A repeat is damage |
-| 1 | 1 | Kind: 1 colours, 2 language. Others are reserved |
+| 1 | 1 | Kind: 1 colours, 2 language, 3 a toggle that changes only what is shown or heard, 4 a toggle that changes the game's logic. Others are reserved |
 | 2 | 1 | Choice ID: which choice this is within its kind. It stays the same when a patch is remade, and is shared by the versions of one choice on different bases. A writer keeps kind, choice and base unique together |
 | 3 | 1 | Base: 1 the sprite build, 2 the plain game (reserved: see "Snapshot output") |
 | 4 | 1 | Length of the name, 1 to 25 |
@@ -319,6 +319,25 @@ A reader that does not know a kind or a base checks the block's shape and index,
 **Memory.** A loader needs one bitmap and its bytes for each set chosen, for one bank at a time, as well as `SIT1`: `firmware/nexclash.asm` keeps three 8K pages for each, so 72K for one set and 96K for two, the same whatever the size of the set, and says so if it cannot get them. A 1MB Next has 96 8K pages of ZX memory, so this is well within it. What a build needs to run is separate, and is in `OPT1`.
 
 **A set can change how a game starts.** It cannot change the header, but it can change any byte of any listed bank, and those banks hold the start-up code and hooks. An unchanged header says nothing about that. A set from a stranger is code, as the rest of a patch is.
+
+### Toggles: SET2 kinds 3 and 4
+
+A **toggle** is a set of its own kind, on its own menu line, for a bug fix or an extra such as smooth scrolling. It is a `SET2` block exactly as above (stream index, choice, base, name, CRC, chunks), with kind 3 or 4:
+
+- **Kind 3, display only.** It changes what the player sees or hears, never the game's logic: the game's memory and registers, outside what the toggle's own code keeps, are as without it. Its proof says so by replay: `PRF1`'s `replay` states the game logic was IDENTICAL with it on, and how its own layer was checked.
+- **Kind 4, changes the logic**, as a bug fix does. It cannot be proven identical to the original, and is not. Its proof states what it changes and how that was checked instead: `PRF1` key `toggle_<choice>` (the toggle's choice ID in decimal), one line saying what the toggle does, what was replayed or tested with it on, and against what. A writer refuses a kind 4 toggle without that line. The menu does not show the difference: the name says what it is.
+
+**What a toggle may change.** Bytes, code or data, in banks the base build already lists, as any set; the base build reserves the room (a toggle's hook code lives in pages the base already has, and its chunks fill them). It cannot add a bank, change the header, or change the length of the output.
+
+**Choice and name.** Each toggle is one choice: its choice ID is unique among the toggles of its kind and stays the same when a patch is remade. Its name, 1 to 25 characters, is its menu line. A writer keeps names unique among all toggles.
+
+**Together.** Any toggles may be on together, and with one colour set, one language and any trainers. So a writer refuses a patch where any two toggles, or a toggle and any set of another kind, or a toggle and any trainer's POKE, could write the same byte, even the same value; and a reader that finds such an overlap among what is chosen, comparing the chunks' bitmaps as for two sets and each chosen POKE against them, refuses the patch as damaged before it makes any file. Several toggles combine in the CRC as several sets do: one term each.
+
+**Limits.** A patch has at most 4 toggles of the sprite build. A reader that finds a fifth offers the first 4 and ignores the rest, as a writer never makes one.
+
+**Compatibility.** A reader that does not know kinds 3 and 4 checks the block's shape and index as for any `SET2`, offers no line, and the game plays without it. So toggles raise no level and set no flag in `OPT1`. Patches and vectors made before toggles are unchanged byte for byte.
+
+**Memory.** A chosen toggle is held as a chosen set is: one chunk at a time. `firmware/nexclash.asm` keeps three 8K pages for each chosen set or toggle, and can hold two at once: with more on it refuses, before reading anything but the menu, with `Too many options: turn one off`.
 
 ### Reserved: snapshot output
 
@@ -588,7 +607,22 @@ Patch: Jon Attree  Colours: Alberto Conde
 - **Colour clash fix.** On, the rebuilt NexClash `.nex`. Off, the player's own game, with any trainers.
 - **One line for each kind of set offered,** after the clash fix: `Enhanced colours`, then `Language`. Its key steps from `[OFF]` through the kind's sets, in the file's order, and back. Only sets with the sprite build as their base are offered. With one colour set the line is `[ON]` or `[OFF]`, not its name. Otherwise it shows the name, cut to 17 characters, ending in the last column. A loader with no room to step may offer the first alone and must say so in its documentation: this one has room. With the fix off each line reads `[N/A]`, its key does nothing and no set is applied, and the choice is back when the fix is turned on.
 - **The credit line.** `Patch: <patch_by>     Colours: <colours_by>`, under the rest, showing only the parts present, the colours only for a patch with a colour set, and no line if neither. It starts in the first column and fits 41. A name is cut to 32 characters, and with both the gap of 5 closes to 2 before a name is cut: the first then keeps at least 11 characters and the second what is left. So `Patch: Jon Attree     Colours: Alberto Conde`, at 44 columns, shows with a gap of 2. Anything unprintable shows as `?`. Dean's credit is not on this line; it stays in usage and documentation.
-- Lines are numbered from 1 and the keys match, so the tenth line is on key 0. Ten lines are all there are keys for: 8 trainers with the fix and one kind, or 7 trainers with the fix and two.
+- **One line for each toggle,** after the sets' lines, in the file's order: its name, then `[OFF]` or `[ON]`, off to begin with, its key turning it on and off. With the fix off it reads `[N/A]` and does nothing, as a set's line does.
+- Lines are numbered from 1 and the keys match, so the tenth line is on key 0. Ten lines are all there are keys for: the fix, one line for each kind of set offered and one for each toggle come first, and trainers fill what is left, at most 8. So 8 trainers with the fix and one kind, 7 with the fix and two, and with two kinds and 4 toggles, 3.
+
+```text
+ THE NEW ZEALAND STORY           Ocean, 1989
+
+ TRAINER
+  1  Infinite lives            [OFF]
+  2  No enemies                [OFF]
+
+ NEXCLASH
+  3  Colour clash fix          [ON]
+  4  Smooth scrolling          [OFF]
+
+ ENTER to play
+```
 - ENTER and SPACE both start with what the menu shows. BREAK cancels.
 
 The set a patch makes its NexClash look is its base build.
