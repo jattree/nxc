@@ -174,6 +174,8 @@ Every entry in a patch must rebuild the same banks. A writer checks that, by reb
 
 Keys: `publisher` (for the menu, such as `Ocean, 1986`; a loader may show the first 16 characters), `patch_by` and `colours_by` (optional, for the menu's credit line), `build`, `nex_md5`, `nexclash`, `credit`, and for languages, all optional and not needed to play: `game_language`, the ISO 639 code of the language the game itself is in; `language_codes`, each language set's code as `Name=code`, comma-separated, such as `Espanol=es`; and `text_by`, who translated it, kept here and not on the menu. A writer always includes `credit`, and a patch from NexClash carries "Inspired by Bleugh.biz's nexclash". Anything derived from its GPL-3.0-or-later code keeps those terms as well. `credit` lives here and in the project's documentation, including who painted a colour set: a loader need not show it on its menu or play screens. `nxc.py credit PATCH GAME -o OUT --patch-by NAME --colours-by NAME` sets the two menu names, right after `publisher`, and refuses if they would end past the first 252 bytes.
 
+**`fix_label`**, optional: the menu's name for its main line, the rebuilt NexClash game on or off, for a game where "Colour clash fix" is the wrong words, such as `Colour` for a game that never had clash. It is 1 to 25 printable ASCII characters, as a toggle's name is, so `[ON]` keeps its column. A writer refuses a longer one, or one that would end past the first 252 bytes, and writes it after `publisher`, `patch_by` and `colours_by`. A reader that finds it longer shows the first 25, with anything unprintable as `?`. **Absent, the line reads `Colour clash fix`**: a patch without the key, or with it cut off at 252 bytes, shows the menu it always did, and a reader that does not know the key shows that too. It names the line and nothing else: what the line does, its `[ON]` and `[OFF]`, and the `[N/A]` of the lines after it with it off, are the clash fix's. `nxc.py make --fix-label TEXT` sets it.
+
 ### PRF1
 
 What has been shown about this build, with each kind of proof separate and never merged. Any may be left out, and leaving one out says nothing was recorded. Each has a `_when` giving the date it was true.
@@ -604,7 +606,7 @@ A loader offers the same choices for every game, with trainers off, the clash fi
 Patch: Jon Attree  Colours: Alberto Conde
 ```
 
-- **Colour clash fix.** On, the rebuilt NexClash `.nex`. Off, the player's own game, with any trainers.
+- **Colour clash fix,** or `INF1`'s `fix_label` if the patch has one. On, the rebuilt NexClash `.nex`. Off, the player's own game, with any trainers. Wherever this document says the clash fix, it means this line, whatever it is called.
 - **One line for each kind of set offered,** after the clash fix: `Enhanced colours`, then `Language`. Its key steps from `[OFF]` through the kind's sets, in the file's order, and back. Only sets with the sprite build as their base are offered. With one colour set the line is `[ON]` or `[OFF]`, not its name. Otherwise it shows the name, cut to 17 characters, ending in the last column. A loader with no room to step may offer the first alone and must say so in its documentation: this one has room. With the fix off each line reads `[N/A]`, its key does nothing and no set is applied, and the choice is back when the fix is turned on.
 - **The credit line.** `Patch: <patch_by>     Colours: <colours_by>`, under the rest, showing only the parts present, the colours only for a patch with a colour set, and no line if neither. It starts in the first column and fits 41. A name is cut to 32 characters, and with both the gap of 5 closes to 2 before a name is cut: the first then keeps at least 11 characters and the second what is left. So `Patch: Jon Attree     Colours: Alberto Conde`, at 44 columns, shows with a gap of 2. Anything unprintable shows as `?`. Dean's credit is not on this line; it stays in usage and documentation.
 - **One line for each toggle,** after the sets' lines, in the file's order: its name, then `[OFF]` or `[ON]`, off to begin with, its key turning it on and off. With the fix off it reads `[N/A]` and does nothing, as a set's line does.
@@ -618,11 +620,13 @@ Patch: Jon Attree  Colours: Alberto Conde
   2  No enemies                [OFF]
 
  NEXCLASH
-  3  Colour clash fix          [ON]
+  3  Colour                    [ON]
   4  Smooth scrolling          [OFF]
 
  ENTER to play
 ```
+Here the patch's `fix_label` is `Colour`: the game never had clash, so the line says what it turns on.
+
 - ENTER and SPACE both start with what the menu shows. BREAK cancels.
 
 The set a patch makes its NexClash look is its base build.
@@ -631,7 +635,7 @@ The loader is the dot command `firmware/nexclash.asm`. It writes to `/tmp` and l
 
 ## Test vectors
 
-`tests/vectors/` holds a whole patch, the game files it accepts and the intermediate states, all made from synthetic bytes by `tests/vectors/make_vectors.py`; and a tape patch, its `.tap`, its `.tzx`, the `.z80` it starts from and its table, made by `tests/vectors/make_tape_vectors.py`, which also makes a patch for one target of two files, `tapeset_a.tap` and `tapeset_b.tzx`, with its table. Nothing there comes from any real game.
+`tests/vectors/` holds a whole patch, the game files it accepts and the intermediate states, all made from synthetic bytes by `tests/vectors/make_vectors.py`; and a tape patch, its `.tap`, its `.tzx`, the `.z80` it starts from and its table, made by `tests/vectors/make_tape_vectors.py`, which also makes a patch for one target of two files, `tapeset_a.tap` and `tapeset_b.tzx`, with its table. `vector_toggle.nxc` adds a display toggle, and `vector_label.nxc` a `fix_label`. Nothing there comes from any real game.
 
 ## Limits of version 1
 
