@@ -2330,6 +2330,7 @@ menu:   ld      hl,BANK_ALLOC
         call    load_part
         call    MP_AT
         push    af
+        call    nc,menu_busy                ; not after BREAK
         rst     $08
         db      M_GETHANDLE
         ld      hl,file_overlay_at
@@ -2344,7 +2345,7 @@ menu:   ld      hl,BANK_ALLOC
         jp      c,fail_hl
         call    check_ram
         call    toggles_to_slots
-        jp      mode_off
+        ret                                 ; the menu stays up, saying so, until finish puts the display back
 
 file_menu_at:   dd FILE_MENU_AT
 file_overlay_at: dd FIRST_PART
@@ -6964,6 +6965,38 @@ mp_help:
         ret
 
         include "menu.asm"
+
+; After ENTER or SPACE, while the menu is still up: its keys' row, found by its green ENTER (the only
+; row whose first cell is A_ON), says the rebuild has started, flashing, as some take a few seconds.
+; The ULA's own FLASH keeps it going while the command is busy with interrupts off.
+A_BUSY          equ $c6                     ; FLASH, BRIGHT, paper black, ink yellow
+menu_busy:
+        ld      hl,$5800
+        ld      de,32
+        ld      b,0
+.find:  ld      a,(hl)
+        cp      A_ON
+        jr      z,.got
+        add     hl,de
+        inc     b
+        ld      a,b
+        cp      24
+        jr      c,.find
+        ret
+.got:   ld      a,b
+        ld      c,0
+        call    at
+        ld      a,A_BUSY
+        ld      (MV_ATTR),a
+        ld      hl,s_patching
+        ld      a,(ver_original)
+        or      a
+        jr      z,.say
+        ld      hl,s_loading
+.say:   ld      b,23
+        jp      puts_max
+s_patching:     db "Patching...            ",0
+s_loading:      db "Loading...             ",0
 
 mp_stub:        incbin "nxcstub.bin"
 MP_STUB_LEN     equ $ - mp_stub

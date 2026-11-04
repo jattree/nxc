@@ -65,6 +65,26 @@ class LoaderMenuNex(T.Base):
                 m = self.run_menu(f, game, names, keys)
                 self.assertEqual(bytes(m.written[NEX]), nxc.apply_menu(f, game, **kw))
 
+    def test_patching_flashes_after_enter(self):
+        # The owner: some games take a moment, so the keys' row says the rebuild has started, flashing,
+        # with the menu still up (layer 0) until the command is done.
+        for keys, word in ((("enter",), "Patching..."), (("2", "enter"), "Loading...")):     # fix off: the game itself
+            with self.subTest(keys=keys):
+                files = {"patch.nxc": PATCH, **files_of(GAME, ["game_v3.z80"])}
+                m = self.machine(files, keys=keys)
+                seen = []
+                m.callbacks["chosen"] = lambda: seen.append((m.ula_text().splitlines(), m.ula_attrs(), m.layer))
+                m.set_phases(["chosen"])
+                failed, message = m.run('"patch.nxc"')
+                self.assertFalse(failed, message)
+                self.assertEqual(m.clean(), [])
+                text, attrs, layer = seen[0]
+                row = next(r for r, line in enumerate(text) if line.startswith(word))
+                self.assertEqual(text[row], word)
+                self.assertEqual(set(attrs[row][:23]), {0xC6})                   # FLASH, BRIGHT, yellow on black
+                self.assertNotIn("ENTER play", "\n".join(text))
+                self.assertEqual(layer, (0, 0))
+
     def test_help_and_the_same_screen(self):
         f = nxc.set_help(PATCH, GAME, {"trainer_1": "Lives stay at three, whatever happens to you.", "fix": "The sprite build."})
         m = self.run_menu(f, GAME, ["game_v3.z80"], ("2", "2", "space"))       # the fix off and on: its help

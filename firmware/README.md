@@ -101,7 +101,9 @@ game starts straight after its title with no second menu (the owner's call, 2026
 carries its menu**: the bare `.nex` with nothing chosen, then the menu banks, its lines starting as they were left here, byte
 for byte what `nxc.py PATCH GAME` with the same choices writes; `.nexload` then starts it, and its menu comes up again,
 already set. With the fix off either key writes the
-player's own game, as before. BREAK stops with `Cancelled`. The menu `.nex` is written by a part read over the game's part
+player's own game, as before. Either way the keys' row then flashes `Patching...` (`Loading...` with the fix off),
+by the ULA's own FLASH, and the menu stays up until the command finishes, as some games take a few seconds (the owner's
+suggestion, 2026-11-04). BREAK stops with `Cancelled`. The menu `.nex` is written by a part read over the game's part
 once the bare banks are done; it decodes each set a chunk at a time in three pages of its own (a tape's, by then done with, or
 three more), writes M0 and the data, and puts the header, the stub's count and the lines' offsets in place by seeking back
 (the output is opened for reading too, to take the 16 bytes below the build's stack from it). A build that cannot carry a
