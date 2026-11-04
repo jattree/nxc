@@ -23,6 +23,10 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    Harry gets a brown hat, skin and a blue-and-white outfit; the
+              hens and the caged duck turn bright yellow. Source: enhanced
+              colours from an older Spec256 conversion (the MVV package),
+              painter not established.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -23,6 +23,11 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    The knight, wizard and serf, and most monsters, in fuller colour
+              with more detail; the knight gets a red hat and green tunic. A
+              few monsters turn a duller brown. Source: enhanced colours from
+              an older Spec256 conversion (the MVV package), painter not
+              established.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

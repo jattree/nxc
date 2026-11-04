@@ -23,6 +23,11 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    Characters painted as people: Wally in a light-blue jacket and
+              blue trousers with a grey cap and pink face, others with their
+              own hair, skin and clothes colours. Source: enhanced colours
+              from an older Spec256 conversion (the EmuZWin games package),
+              painter not established.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

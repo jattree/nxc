@@ -23,6 +23,9 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    Figures in fuller colour with black outlines, and a dirt ground
+              layer behind the jungle that scrolls with the terrain. A painted
+              set, colourist not named.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -23,6 +23,10 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    Jetman, the aliens, the rocket parts and the fuel in fuller
+              multicolour. Source: enhanced colours from an older Spec256
+              conversion (Spectrum Magic's jetpac_.zip), painter not
+              established.
 
   Note        Coloured build (not Dean's Jetpac build).
 

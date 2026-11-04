@@ -23,6 +23,9 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    The fighters, bikers and gang members in fuller colour with more
+              detail. Source: Enhanced colours from the MVV package's older
+              Spec256 conversion, painter not established.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
