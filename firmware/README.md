@@ -10,7 +10,7 @@ derived from dzx0_standard by Einar Saukas and Urusergi (BSD-3-Clause).
 **Status. It has run on a Z80 emulator with NextZXOS faked, and in JNext on real NextZXOS v2.09 from a copy of an SD
 image. It has not run on a Next or on the Tang.**
 
-The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card.
+The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card. It reads sets as `SET2`; a patch made with `SET1` plays with no enhanced line, and has to be made again.
 
 ## Building
 
@@ -70,7 +70,7 @@ folder in one form on NextZXOS, tried in JNext for `/tmp/x`, `c:/tmp/x`, `C:\TMP
 
  ENTER to play
 
-Patch: Jon Attree  Colours: Alberto Conde
+Patch: Jon Attree  Colours: Jane Painter
 ```
 
 The number keys work a line. Trainers start off, the clash fix on, the sets off, and trainers combine with any of it. Each kind of
@@ -107,18 +107,22 @@ Copy the three files as above with the game and `Cobra.nxc` into one folder, sel
 ## Memory
 
 8K for the command, loaded in two steps, then variables, buffers and a 192-byte stack. NextZXOS loads the file's first
-8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,733 bytes, with 2,332 bytes used only up
-to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the rest of the file, 4,974 bytes, is read in over what
+8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,581 bytes, with 2,490 bytes used only up
+to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the rest of the file, 5,112 bytes, is read in over what
 was only for the menu. A short or mismatched file gets a message and does nothing. Resident and second part end at
-0x3A33, and the variables start at 0x3A5E, so 43 bytes are left: more code means a second overlay, or a shorter path buffer. Plus six 8K pages
+0x3A25, and the variables start at 0x3A4F, so 42 bytes are left: more code means a second overlay, or a shorter path buffer. Plus six 8K pages
 from `IDE_BANK`, paged at MMU3 to MMU5 with interrupts off and the stack in the 8K: two for the bank being built, one for
-the file buffer and tables, three for the site table, and three more for the table of each set chosen,
+the file buffer and tables, three for the site table, and three more for each set chosen,
 so 48K, or 72K with one set, or 96K with two. MMU6 and MMU7 are never changed, and nothing given to the OS lies above `0xC000`. A bank at a
 time goes to the card, so the `.nex` is never all in RAM.
+
+**A set is held a bank at a time, so its size makes no difference to any of that.** Its three pages hold one chunk, at most 18,432 bytes, decoded when needed. Every chunk of a chosen set is decoded and checked before any file is made, then again as its bank is written, so a damaged set is refused with nothing written, and a set adds both passes to the time: in JNext, from Enter to the finished file, Everyone's a Wally (393,728 bytes) takes 6.1 s without its 43,389-byte set and 7.9 s with it, and Sabre Wulf (164,352 bytes) 3.2 s and 4.7 s.
 
 Variables used only before the menu lie in the key state's memory, which is made after it, those needing no clearing below
 the stack, and those used only with the I/O page mapped in that page. In JNext on NextZXOS the stack stayed within 64 bytes
 of the top in the runs measured; on the Z80 harness 30, with several dumps and with a loading screen too.
+
+**Sets refuse by name.** Without its pages a choice stops, before reading anything but the file's check, with `Needs 72K free RAM` or `Needs 96K free RAM`, and all pages are given back. JNext, whose machine is 2MB, showed 9 pages allocated for one set and 12 for two in a real run, with the stack within 64 bytes of the top; the Z80 harness has passed the real sets with 96 pages reported and 9 free, and refused them with 8. A small dot command, run from the same Browser line in JNext, could allocate 199 of the 224 pages; if NextZXOS keeps the same 25 on a 1MB Next, 71 of its 96 are free, against the 12 this ever asks for. No 1MB machine has been tried.
 
 **How much memory the machine has** comes from `IDE_BANK` with reason `rc_bank_total` through `M_P3DOS`, whose total of 8K banks of ZX memory is compared with `OPT1`'s highest bank when ENTER is pressed with the clash fix on. In JNext it answers 224. Its refusal has only run on the Z80 harness, since JNext has no 1MB machine to try: what a real 1MB Next or a Tang answers is unverified.
 

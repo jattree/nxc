@@ -1081,9 +1081,30 @@ class Cobra(Base):
 # ------------------------------------------------------------------ the menu's choices
 
 
-def set_table(want: bytes, entries: list[tuple[int, int, bytes]]) -> bytes:
-    return struct.pack("<I", zlib.crc32(want)) + b"".join(
-        struct.pack("<BHH", b, o, len(d)) + d for b, o, d in entries)
+def chunk_of(*changes: tuple[int, bytes]) -> bytes:
+    """A bank's chunk: the bitmap of the offsets these runs (offset, bytes) cover, then their bytes."""
+    bitmap = bytearray(nxc.BITMAP)
+    places = {}
+    for offset, data in changes:
+        for n, value in enumerate(data):
+            bitmap[(offset + n) >> 3] |= 0x80 >> ((offset + n) & 7)
+            places[offset + n] = value
+    return bytes(bitmap) + bytes(places[o] for o in sorted(places))
+
+
+def set_body(st, stream: int, crc: int, chunks: list[tuple[int, bytes]]) -> bytes:
+    """What follows a set's name: its CRC, then each (bank, plain chunk), in the order given, as someone with the game can write it."""
+    out = nxc.set_use(st, stream, nxc.SET_CRC_INDEX)(struct.pack("<I", crc))
+    for bank, chunk in chunks:
+        packed = nxc.set_use(st, stream, bank)(nxc.zx0(chunk))
+        out += struct.pack("<BH", bank, len(packed)) + packed
+    return out
+
+
+def set_frame(st, stream: int, crc: int, bank: int, packed: bytes) -> bytes:
+    """A set of one chunk whose stream is exactly these bytes."""
+    enc = nxc.set_use(st, stream, bank)(packed)
+    return nxc.set_use(st, stream, nxc.SET_CRC_INDEX)(struct.pack("<I", crc)) + struct.pack("<BH", bank, len(enc)) + enc
 
 
 def painted(nex: bytes, rng: random.Random, banks, runs: int = 30) -> bytes:
@@ -1225,7 +1246,7 @@ class Choices:
         at = nxc.HEADER
         ranges = []
         for t, d in nxc.blocks(self.patch)[1]:
-            if t == b"SET1":
+            if t == b"SET2":
                 ranges.append((at + 8, at + 8 + len(d)))
             at += 8 + len(d)
         rng = random.Random(31)
@@ -1237,14 +1258,24 @@ class Choices:
                 self.assert_refused(m, failed, message, "Patch damaged: get it again")
                 self.assertNotIn("zx0_decode", m.phase_ticks)
 
-    def forge_set(self, table: bytes | None = None, stream: bytes | None = None, index: int = 0) -> bytes:
-        """The first set with another table, and a good file CRC: what someone with the game can do."""
+    def forge_set(self, chunks=None, crc: int | None = None, stream: bytes | None = None, raw: bytes | None = None, index: int = 0) -> bytes:
+        """The first set with other chunks, and a good file CRC: what someone with the game can do. chunks: (bank, plain).
+        stream: one chunk for the first listed bank with exactly these bytes. raw: all that follows the name, unencrypted as given."""
+        base = nxc.apply(self.patch, game=self.game)
+        a_bank = next(b for b in nxc.ORDER if base[18 + b])
+        crc = zlib.crc32(base) if crc is None else crc
+
         def edit(bl, st):
             for entry in bl:
-                if entry[0] == b"SET1":
-                    body = stream if stream is not None else nxc.zx0(table)
+                if entry[0] == b"SET2":
                     fixed = entry[1][:nxc.SET_FIXED + entry[1][4]]
-                    entry[1] = bytes((index,)) + fixed[1:] + st.block(b"SET1", index)(body)
+                    if raw is not None:
+                        body = raw
+                    elif stream is not None:
+                        body = set_frame(st, index, crc, a_bank, stream)
+                    else:
+                        body = set_body(st, index, crc, chunks or [])
+                    entry[1] = bytes((index,)) + fixed[1:] + body
                     return
         return rekey(self.patch, self.game, edit)
 
@@ -1257,38 +1288,41 @@ class Choices:
         self.assertIn(message, ("Patch damaged: get it again", "Rebuild failed: patch damaged"))
         self.assertEqual(m.bad_writes, [])
 
-    def test_corrupted_set_tables(self) -> None:
+    def test_corrupted_set_chunks(self) -> None:
         base = nxc.apply(self.patch, game=self.game)
-        a_bank = next(b for b in nxc.ORDER if base[18 + b])
+        listed = [b for b in nxc.ORDER if base[18 + b]]
+        a_bank, later = listed[0], listed[1]
         no_bank = next(b for b in nxc.ORDER if not base[18 + b])
-        ok = set_table(base, [])
-        head = ok[:4]
-        e = lambda b, o, d: struct.pack("<BHH", b, o, len(d)) + d  # noqa: E731
+        good = chunk_of((100, b"xy"))
         noise = bytes(random.Random(1).randrange(256) for _ in range(30000))
+        full = chunk_of((0, noise[:16384]))
         cases = {
-            "a bank the build lacks": set_table(base, [(no_bank, 0, b"xx")]),
-            "a bank out of range": head + e(200, 0, b"xx"),
-            "the last bank out of range": head + e(255, 0, b"xx"),
-            "past the end of the bank": head + e(a_bank, 16383, b"xx"),
-            "an offset past the bank": head + e(a_bank, 0xFFFF, b"x"),
-            "a length that wraps around": head + struct.pack("<BHH", a_bank, 5, 0xFFFF) + b"xxxx",
-            "runs past the table": head + struct.pack("<BHH", a_bank, 0, 100) + b"xx",
-            "a part of an entry left over": head + e(a_bank, 0, b"x") + b"\x05",
-            "shorter than its CRC": head[:3],
-            "only one byte": b"\x01",
-            "bigger than the loader holds": head + e(a_bank, 0, noise[:16384]) + e(a_bank, 0, noise[:8300]),
-            "the wrong CRC": struct.pack("<I", zlib.crc32(base) ^ 1),
-            "out of order": head + e(a_bank, 100, b"x") + e(a_bank, 50, b"y"),
-            "overlapping itself": head + e(a_bank, 100, b"xx") + e(a_bank, 101, b"y"),
-            "an empty entry": head + e(a_bank, 100, b""),
-            "changes the CRC does not know of": ok + e(a_bank, 3, bytes((base[512 + 3] ^ 1,))),
+            "a bank the build lacks": [(no_bank, good)],
+            "a bank out of range": [(200, good)],
+            "the last bank out of range": [(255, good)],
+            "banks against .nex order": [(later, good), (a_bank, good)],
+            "a bank given twice": [(a_bank, good), (a_bank, good)],
+            "one good chunk and one for a bank the build lacks": [(a_bank, good), (no_bank, good)],
+            "a bitmap and nothing": [(a_bank, bytes(nxc.BITMAP))],
+            "a bitmap with no bits, and a byte": [(a_bank, bytes(nxc.BITMAP) + b"x")],
+            "shorter than a bitmap": [(a_bank, bytes(100))],
+            "one bit more than its bytes": [(a_bank, good[:-1])],
+            "one byte more than its bits": [(a_bank, good + b"x")],
+            "every bit set, a byte short": [(a_bank, full[:-1])],
+            "every bit set, a byte over": [(a_bank, full + b"x")],
+            "bigger than a chunk can be": [(a_bank, full + noise[:4000])],
+            "the wrong CRC": [],
+            "changes the CRC does not know of": [(a_bank, chunk_of((3, bytes((base[512 + 3] ^ 1,)))))],
         }
-        for name, table in cases.items():
+        for name, chunks in cases.items():
             with self.subTest(name):
-                self.refused_by_both(self.forge_set(table))
+                self.refused_by_both(self.forge_set(chunks, crc=zlib.crc32(base) ^ 1 if name == "the wrong CRC" else None))
 
     def test_corrupted_set_streams(self) -> None:
         noise = bytes(random.Random(2).randrange(256) for _ in range(40000))
+        base = nxc.apply(self.patch, game=self.game)
+        crc = zlib.crc32(base)
+        a_bank = next(b for b in nxc.ORDER if base[18 + b])
         cases = {
             "far too long": nxc.zx0(noise),
             "a copy from before the buffer": copy_before_start(),
@@ -1301,12 +1335,25 @@ class Choices:
         for name, stream in cases.items():
             with self.subTest(name):
                 self.refused_by_both(self.forge_set(stream=stream))
+        # The framing itself, with the check value good.
+        def framed(body):
+            return lambda st: nxc.set_use(st, 0, nxc.SET_CRC_INDEX)(struct.pack("<I", crc)) + body
+        for name, body in {"no CRC": None, "part of a CRC": 2, "part of a chunk's head": b"\5", "a head and no more": struct.pack("<BH", a_bank, 0),
+                           "a stream past the block": struct.pack("<BH", a_bank, 40) + b"zz"}.items():
+            with self.subTest(name):
+                def edit(bl, st, body=body):
+                    for entry in bl:
+                        if entry[0] == b"SET2":
+                            fixed = entry[1][:nxc.SET_FIXED + entry[1][4]]
+                            entry[1] = bytes((0,)) + fixed[1:] + (b"" if body is None else b"zz" if body == 2 else framed(body)(st))
+                            return
+                self.refused_by_both(rekey(self.patch, self.game, edit))
 
     def test_corrupted_set_blocks_are_refused_before_the_menu(self) -> None:
         def with_data(data):
             def edit(bl, st):
                 for entry in bl:
-                    if entry[0] == b"SET1":
+                    if entry[0] == b"SET2":
                         entry[1] = data
                         return
             return edit
@@ -1322,7 +1369,7 @@ class Choices:
                 self.assertEqual(m.screens[0], "\n".join(m.screen))    # no menu was shown
 
     def test_a_set_in_a_damaged_state_does_not_matter_until_chosen(self) -> None:
-        patch = self.forge_set(stream=b"nonsense")
+        patch = self.forge_set(stream=b"nonsense")          # and it is not read at all
         m, failed, message = self.run_it(["enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want(True, 0, False))
@@ -1332,8 +1379,8 @@ class Choices:
         at = nxc.HEADER
         start = end = None
         for t, d in nxc.blocks(self.patch)[1]:
-            if t == b"SET1":
-                start, end = at + 8 + nxc.SET_FIXED + d[4], at + 8 + len(d)
+            if t == b"SET2":
+                start, end = at + 8 + nxc.SET_FIXED + d[4], at + 8 + len(d)   # its CRC, then its chunks' heads and streams
                 break
             at += 8 + len(d)
         rng = random.Random(23)
@@ -1354,7 +1401,7 @@ class Choices:
 
     def test_a_later_version_of_the_block_is_skipped(self) -> None:
         def add(bl, st):
-            bl.append([b"SET2", b"\0\1\1\1\x03xyzjunk"])
+            bl.append([b"SET3", b"\0\1\1\1\x03xyzjunk"])
         patch = rekey(self.patch, self.game, add)
         one, fix_key, set_key = self.lines()
         m, failed, message = self.run_it([set_key, "enter"], patch=patch)
@@ -1376,10 +1423,12 @@ class Choices:
     ROOM = ('db "patch and your own copy.",13', 'db "p",13')     # the code nearly fills its room: a control may need more
 
     SET_BROKEN = {
-        "the set never applied": [(""".emit:  call    apply_sets
-""", """.emit:  nop
+        "the set never applied": [("""        call    apply_sets
+        ld      hl,WORK
+""", """        nop
         nop
         nop
+        ld      hl,WORK
 """)],
         "the output's CRC not checked": [("""        ld      hl,crc
         ld      de,want
@@ -1390,25 +1439,36 @@ class Choices:
         nop
         nop
 """)],
-        "the CRC run before the set": [(""".emit:  call    apply_sets
+        "the CRC run before the set": [("""        call    apply_sets
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
-""", """.emit:  ld      hl,WORK
+""", """        ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
         call    apply_sets
 """)],
         "the index taken as 0": [("""        ld      a,(cur_stream)
+        ld      (set_tag+3),a
+        ld      de,set_tag
+        ld      c,SET_CRC_INDEX
+""", """        xor     a
+        nop
+        nop
+        ld      (set_tag+3),a
+        ld      de,set_tag
+        ld      c,SET_CRC_INDEX
+""")],
+        "a chunk's stream not its bank's": [("""        ld      a,(cur_bank)
         ld      c,a
         ld      hl,blk_pos
-        ld      de,magic_set1
+        ld      de,set_tag
 """, """        xor     a
         nop
         nop
         ld      c,a
         ld      hl,blk_pos
-        ld      de,magic_set1
+        ld      de,set_tag
 """)],
         "the key taken with the fix off": [(""".step:  ld      a,(ver_original)            ; unavailable: the choice stays as it is
         or      a
@@ -1422,36 +1482,38 @@ class Choices:
         ld      (set_choices),a
         ld      (set_choices+1),a
 """, "")],
-        "a set's bank unchecked": [("""        call    header_has
-        jp      z,bad_patch
-        ld      a,(site_len)                ; no empty entry, and in rising order
-""", """        nop
+        "a chunk left over is passed": [("""        ld      hl,set_recs+4
+        call    is_zero32
+        jp      nz,bad_patch
+        ld      hl,set_recs+REC+4
+        call    is_zero32
+        jp      nz,bad_patch
+""", """        ld      hl,set_recs+4
+        call    is_zero32
         nop
         nop
         nop
+        ld      hl,set_recs+REC+4
+        call    is_zero32
         nop
         nop
-        ld      a,(site_len)                ; no empty entry, and in rising order
+        nop
 """)],
-        "a set not checked before the file is made": [("""        ld      a,$ff
-        call    table_walk_set
-        call    map_iopage
-""", """        nop
-        nop
-        nop
-        nop
-        nop
-        call    map_iopage
+        "a set not checked before the file is made": [("""        call    check_sets
+""", """        ld      a,1
+        call    sets_open
 """)],
-        "a set's entries unbounded": [("""        ld      bc,BANK_SIZE+1
-        or      a
-        sbc     hl,bc
-        jp      nc,bad_patch""", """        ld      bc,BANK_SIZE+1
-        or      a
-        sbc     hl,bc
+        "a chunk's bit count unchecked": [("""        ld      a,d
+        or      e
+        jp      nz,bad_patch
+        call    map_std
+""", """        ld      a,d
+        or      e
         nop
         nop
-        nop""")],
+        nop
+        call    map_std
+""")],
         "Space forgets the choices": [("""        cp      ' '                         ; as ENTER: with what the menu shows
         jr      z,.go
 """, """        cp      ' '                         ; as ENTER: with what the menu shows
@@ -1485,11 +1547,11 @@ class Choices:
             failed, message = m.run('"patch.nxc"')
             return m, failed, message
 
-        if name in ("the set never applied", "the CRC run before the set", "the index taken as 0"):
+        if name in ("the set never applied", "the CRC run before the set", "the index taken as 0", "a chunk's stream not its bank's"):
             m, failed, message = go([set_key, "enter"], self.reindexed())
             return failed or bytes(m.written.get(NEX, b"")) != nxc.apply(self.reindexed(), game=self.game, colours=self.sets[0])
         if name == "the output's CRC not checked":
-            m, failed, message = go([set_key, "enter"], self.forge_set(struct.pack("<I", zlib.crc32(base) ^ 1)))
+            m, failed, message = go([set_key, "enter"], self.forge_set([], crc=zlib.crc32(base) ^ 1))
             return not failed
         if name == "the key taken with the fix off":
             m, failed, message = go([fix_key, set_key, fix_key, "enter"])
@@ -1497,17 +1559,19 @@ class Choices:
         if name == "a set applied to the plain game":
             m, failed, message = go([one, set_key, fix_key, "enter"])
             return m.peak_pages != 6
-        if name == "a set's bank unchecked":
-            no_bank = next(b for b in nxc.ORDER if not base[18 + b])
-            m, failed, message = go([set_key, "enter"], self.forge_set(set_table(base, [(no_bank, 0, b"xx")])))
+        no_bank = next(b for b in nxc.ORDER if not base[18 + b])
+        a_bank = next(b for b in nxc.ORDER if base[18 + b])
+        if name == "a chunk left over is passed":
+            m, failed, message = go([set_key, "enter"], self.forge_set([(no_bank, chunk_of((0, b"xx")))]))
             return not failed
-        if name in ("a set not checked before the file is made", "a set's entries unbounded"):
-            # Past the end of the bank: its bytes would land beyond WORK, in the I/O page. Refused only as the file is
-            # being made, the first; not refused for what it is at all, the second.
-            a_bank = next(b for b in nxc.ORDER if base[18 + b])
-            forged = self.forge_set(set_table(base, []) + struct.pack("<BHH", a_bank, 16380, 8) + b"y" * 8)
-            m, failed, message = go([set_key, "enter"], forged)
-            return message != "Patch damaged: get it again" or NEX in m.deleted
+        if name == "a set not checked before the file is made":
+            # Refused all the same, but only as the file is being made.
+            m, failed, message = go([set_key, "enter"], self.forge_set([(a_bank, chunk_of((3, b"x"))[:-1] + b"")]))
+            return NEX in m.opened
+        if name == "a chunk's bit count unchecked":
+            # More bits than bytes: the bytes after it are read from whatever lies past the chunk.
+            m, failed, message = go([set_key, "enter"], self.forge_set([(a_bank, chunk_of((3, b"xyz"))[:-2])]))
+            return message != "Patch damaged: get it again"
         if name == "Space forgets the choices":
             m, failed, message = go([set_key, "space"])
             return bytes(m.written.get(NEX, b"")) != self.want(True, 1, False)
@@ -1520,11 +1584,11 @@ class Choices:
         """The patch with each set's index and stream moved, so that an index is not its place in the file."""
         def edit(bl, st):
             for entry in bl:
-                if entry[0] == b"SET1":
-                    index = entry[1][0]
+                if entry[0] == b"SET2":
+                    e = nxc.parse_set(entry[1])
+                    crc, chunks = nxc.read_set(st, e)
                     fixed = entry[1][1:nxc.SET_FIXED + entry[1][4]]
-                    plain = st.block(b"SET1", index)(entry[1][nxc.SET_FIXED + entry[1][4]:])
-                    entry[1] = bytes((index + 40,)) + fixed + st.block(b"SET1", index + 40)(plain)
+                    entry[1] = bytes((e["stream"] + 40,)) + fixed + set_body(st, e["stream"] + 40, crc, chunks)
         return rekey(self.patch, self.game, edit)
 
     def test_the_block_says_its_stream(self) -> None:
@@ -1606,64 +1670,92 @@ class MadeUpChoices(Choices, Base):
                     self.assertEqual(m.clean(), [])
                     self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=game, colours=colours, chosen=chosen))
 
-    def test_a_table_at_the_limit_across_its_pages(self) -> None:
+    def big_set_patch(self, tmp: Path, big: bytes, **more) -> bytes:
+        tmp.joinpath("game.z80").write_bytes(self.game)
+        tmp.joinpath("big.nex").write_bytes(big)
+        tmp.joinpath("out.nex").write_bytes(self.nex)
+        return nxc.make(str(tmp / "game.z80"), str(tmp / "out.nex"), dict(title="Big", file="game.z80"), dict(build="t"),
+                        colours={"Big": str(tmp / "big.nex")}, trainer_blocks=[nxc.trn1("T", [(2, 16000, 1)])], **more)[0]
+
+    def test_a_chunk_at_its_limit_across_its_pages(self) -> None:
         import tempfile
         rng = random.Random(14)
         with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
-            tmp = Path(d)
-            tmp.joinpath("game.z80").write_bytes(self.game)
             big = bytearray(self.nex)
-            entries = []
-            room = nxc.SITE_TABLE_MAX - 8
-            offset = {}
-            at = 512
-            for b in nxc.ORDER:
-                if big[18 + b]:
-                    offset[b] = at
-                    at += 16384
-            # Entries of 700 changed bytes, with runs straddling each page of the table, until exactly full.
-            for b in (5, 2, 0, 10):
-                o = 0
-                while room > 0 and o + 800 < 16384:
-                    n = min(700, room - 5)
-                    if n < 1:
-                        break
-                    for i in range(n):
-                        big[offset[b] + o + i] ^= rng.randrange(1, 256)
-                    entries.append((b, o, n))
-                    room -= 5 + n
-                    o += n + 1
-            self.assertLessEqual(room, 5)
-            tmp.joinpath("big.nex").write_bytes(bytes(big))
-            tmp.joinpath("out.nex").write_bytes(self.nex)
-            patch, _ = nxc.make(str(tmp / "game.z80"), str(tmp / "out.nex"), dict(title="Big", file="game.z80"),
-                                dict(build="t"), colours={"Big": str(tmp / "big.nex")},
-                                trainer_blocks=[nxc.trn1("T", [(2, 16000, 1)])])
-            m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=["3", "1", "enter"])
-            failed, message = m.run('"patch.nxc"')
-            self.assertFalse(failed, message)
-            self.assertEqual(m.clean(), [])
-            self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, colours="Big", chosen=[1]))
+            at = 512 + 16384 * sum(1 for b in nxc.ORDER[:nxc.ORDER.index(10)] if big[18 + b])
+            for i in range(16000):                       # all but the trainer's byte: past two pages of the table
+                big[at + i] ^= rng.randrange(1, 256)
+            patch = self.big_set_patch(Path(d), bytes(big))
+            for keys in (["3", "enter"], ["3", "1", "enter"]):
+                m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=keys)
+                failed, message = m.run('"patch.nxc"')
+                self.assertFalse(failed, message)
+                self.assertEqual(m.clean(), [])
+                self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=self.game, colours="Big", chosen=[1] if len(keys) == 3 else None))
 
-    def test_the_tool_will_not_make_a_set_a_loader_cannot_hold(self) -> None:
+    def test_a_set_of_more_than_128k_loads_holding_one_chunk_at_a_time(self) -> None:
         import tempfile
-        rng = random.Random(15)
+        rng = random.Random(16)
+        nex = bytearray(self.nex)
+        # More banks than the build here has, all changed, in .nex order: 9 banks of 16,384 changed bytes is 165,888 decoded.
+        have = [b for b in nxc.ORDER if nex[18 + b]]
+        added = [b for b in nxc.ORDER if not nex[18 + b]][:9 - min(9, len(have))]
+        keep = bytes(nex[:512]); nex = bytearray(keep)
+        nex[9] = len(have) + len(added)
+        for b in added:
+            nex[18 + b] = 1
+        made = {b: self.nex[512 + 16384 * have.index(b):][:16384] if b in have else bytes(16384) for b in have + added}
+        ordered = [b for b in nxc.ORDER if nex[18 + b]]
+        plain = bytes(nex) + b"".join(made[b] for b in ordered)
+        big = bytes(nex) + b"".join(bytes(x ^ rng.randrange(1, 256) for x in made[b]) for b in ordered)
         with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
             tmp = Path(d)
             tmp.joinpath("game.z80").write_bytes(self.game)
-            tmp.joinpath("out.nex").write_bytes(self.nex)
-            head = 512
+            tmp.joinpath("plain.nex").write_bytes(plain)
+            tmp.joinpath("big.nex").write_bytes(big)
+            patch, stats = nxc.make(str(tmp / "game.z80"), str(tmp / "plain.nex"), dict(title="Big", file="game.z80"), dict(build="t"), colours={"Big": str(tmp / "big.nex")})
+        self.assertGreaterEqual(stats["sets"][0]["decoded"], 128 * 1024)
+        self.assertLessEqual(stats["sets"][0]["largest"], nxc.SET_CHUNK_MAX)
+        self.assertEqual(nxc.apply(patch, game=self.game, colours="Big"), big)
+        for keys, want in ((["2", "enter"], big), (["enter"], plain)):
+            m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=keys)
+            failed, message = m.run('"patch.nxc"')
+            self.assertFalse(failed, message)
+            self.assertEqual(m.clean(), [])
+            self.assertEqual(bytes(m.written[NEX]), want)
+            self.assertEqual(m.peak_pages, 9 if keys[0] == "2" else 6)     # the same 72K, or 48K, as a small set
+
+    def test_any_bank_fits_however_its_changes_lie(self) -> None:
+        import tempfile
+        rng = random.Random(15)
+        with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as d:
+            # Every other byte of a bank: 8,192 runs, which as (bank, offset, length) entries would be 49,152 bytes.
             big = bytearray(self.nex)
-            for i in range(head, head + 30000, 2):
+            for i in range(512, 512 + 16384, 2):
                 big[i] ^= rng.randrange(1, 256)
-            tmp.joinpath("big.nex").write_bytes(bytes(big))
-            with self.assertRaisesRegex(ValueError, "too big"):
-                nxc.make(str(tmp / "game.z80"), str(tmp / "out.nex"), dict(title="Big", file="game.z80"), dict(build="t"),
-                         colours={"Big": str(tmp / "big.nex")})
+            tmp = Path(d)
+            patch = self.big_set_patch(tmp, bytes(big))
+            m = self.machine({"patch.nxc": patch, "game.z80": self.game}, keys=["3", "enter"])
+            failed, message = m.run('"patch.nxc"')
+            self.assertFalse(failed, message)
+            self.assertEqual(m.clean(), [])
+            self.assertEqual(bytes(m.written[NEX]), bytes(big))
             for bad in ("", "x" * 26):
                 with self.assertRaisesRegex(ValueError, "name"):
                     nxc.make(str(tmp / "game.z80"), str(tmp / "out.nex"), dict(title="Big", file="game.z80"), dict(build="t"),
                              colours={bad: str(tmp / "out.nex")})
+
+    def test_memory_on_a_1mb_next(self) -> None:
+        """1MB reports 96 8K pages. A big set needs the same 9 pages as a small one, and refuses by name below that."""
+        for free, refused in ((9, False), (8, True), (6, True)):
+            m = self.machine({"patch.nxc": self.patch, "game.z80": self.game}, keys=["3", "enter"], total_pages=96, free_pages=free)
+            failed, message = m.run('"patch.nxc"')
+            self.assertEqual(failed, refused, message)
+            if refused:
+                self.assertEqual(message, "Needs 72K free RAM")
+                self.assertEqual(m.free_pages, free)
+            else:
+                self.assertEqual(m.peak_pages, 9)
 
     def test_ten_lines_use_the_zero_key(self) -> None:
         def add(bl, st):
@@ -1696,7 +1788,7 @@ class MadeUpChoices(Choices, Base):
                 if entry[0] == b"INF1":
                     entry[1] = lines + entry[1]
             if not sets:
-                bl[:] = [e for e in bl if e[0] != b"SET1"]
+                bl[:] = [e for e in bl if e[0] != b"SET2"]
         return rekey(self.patch, self.game, edit)
 
     def tail(self, patch: bytes) -> list[str]:
@@ -1811,7 +1903,7 @@ class MadeUpChoices(Choices, Base):
             "",
             " ENTER to play",
             "")))
-        without = rekey(self.patch, self.game, lambda bl, st: bl.__setitem__(slice(None), [e for e in bl if e[0] != b"SET1"]))
+        without = rekey(self.patch, self.game, lambda bl, st: bl.__setitem__(slice(None), [e for e in bl if e[0] != b"SET2"]))
         m, failed, message = self.run_it(["3", "enter"], patch=without)    # no such line
         self.assertFalse(failed, message)
         self.assertEqual(m.screens[-2], "\n".join((
@@ -1871,21 +1963,22 @@ class Jetpac(Choices, Base):
             "",
             " ENTER to play",
             "",
-            "Patch: Jon Attree  Colours: Alberto Conde",
+            "Patch: Jon Attree",
             "")))
         self.assertIn("  1  Infinite lives            [ON]", m.screens[2])
         self.assertIn("  3  Enhanced colours          [ON]", m.screens[3])
         self.assertIn("  2  Colour clash fix          [OFF]", m.screens[4])
         self.assertIn("  3  Enhanced colours          [N/A]", m.screens[4])
         self.assertIn("  3  Enhanced colours          [ON]", m.screens[5])
-        self.assertIn("Patch: Jon Attree  Colours: Alberto Conde", m.screens[4])
+        self.assertIn("Patch: Jon Attree", m.screens[4])
+        self.assertNotIn("Colours:", m.screens[4])
         self.assertEqual(bytes(m.written[NEX]), nxc.apply(self.patch, game=self.game, colours="Spec256", chosen=[1]))
 
     def test_credit_and_trainer_as_built(self) -> None:
         credit = text_of(self.patch, b"INF1")["credit"]
         self.assertIn("Inspired by Bleugh.biz's nexclash", credit)
-        self.assertIn("Alberto Conde", credit)
-        self.assertEqual(nxc.inf1_value(self.patch, "colours_by"), b"Alberto Conde")
+        self.assertIn("painter not established", credit)
+        self.assertIsNone(nxc.inf1_value(self.patch, "colours_by"))
         self.assertEqual(nxc.inf1_value(self.patch, "patch_by"), b"Jon Attree")
         self.assertEqual([t[1] for t in nxc.trainers(self.patch)], ["Infinite lives"])
 
@@ -2052,6 +2145,47 @@ class OtherBuilds(Base):
                 with_trainers += bool(every)
                 trainers += len(every)
         print(f"\nFinished patches: {done} of {len(paths)} byte-exact, {with_trainers} with trainers, {trainers} trainers, none played", flush=True)
+
+
+BIGSET = ROOT / "build" / "bigset"
+RUNS = EVIDENCE / "pilot" / "runs"
+LARGE_SETS = {
+    # patch, game, base, enhanced; none is in this repository.
+    "Sabre Wulf": ("sabre_wulf.nxc", RUNS / "sabre_wulf/sabre_wulf.z80", RUNS / "sabre_wulf/out/sabre_wulf_sprites.nex", RUNS / "sabre_wulf/out/sabre_wulf_sprites_spec256.nex"),
+    "Underwurlde": ("underwurlde.nxc", RUNS / "underwurlde/underwurlde.z80", RUNS / "underwurlde/out/final/underwurlde_sprites.nex", RUNS / "underwurlde/out/paint/underwurlde_enhanced.nex"),
+    "Wally": ("wally.nxc", REFERENCE / "everyones_a_wally/wally.z80", EVIDENCE.parent / "2026-11-03-spec256-paint/everyones_a_wally/work/u/wally_u.nex",
+              EVIDENCE.parent / "2026-11-03-spec256-paint/everyones_a_wally/work/u/wally_u_painted.nex"),
+}
+
+
+@needs_tools
+@unittest.skipUnless(all((BIGSET / v[0]).exists() and v[1].exists() and v[2].exists() and v[3].exists() for v in LARGE_SETS.values()),
+                     "the large sets are private: build/bigset, NXC_EVIDENCE")
+class LargeSets(Base):
+    """Real sets that the single table of SET1 could not hold, as a menu option: exact either way, on a 1MB Next's numbers."""
+
+    def test_each_is_a_choice_and_exact_either_way(self) -> None:
+        for name, (patch, game, base, enhanced) in LARGE_SETS.items():
+            f, g = (BIGSET / patch).read_bytes(), game.read_bytes()
+            trainers = min(len(nxc.trainers(f)), 8)
+            key = str((trainers + 2) % 10)
+            self.assertEqual(nxc.colour_sets(f), ["Enhanced"])
+            for keys, want, pages in ((["enter"], base, 6), ([key, "enter"], enhanced, 9)):
+                with self.subTest(name, keys=keys):
+                    m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=keys, total_pages=96, free_pages=pages)
+                    failed, message = m.run('"patch.nxc"')
+                    self.assertFalse(failed, message)
+                    self.assertEqual(m.clean(), [])
+                    self.assertEqual(bytes(m.written[NEX]), want.read_bytes())
+                    self.assertEqual(m.peak_pages, pages)
+                    self.assertIn("Enhanced colours          [OFF]", m.screens[1])
+                    if key in keys:
+                        self.assertIn("Enhanced colours          [ON]", m.screens[-2])
+                    print(f"\n{name}: {'enhanced' if key in keys else 'default'}: {m.ticks / (28_000_000):.2f} s at 28 MHz with no file I/O, {pages * 8}K", flush=True)
+            m = self.machine({"patch.nxc": f, nxc.targets(f)[0]["file"].lower(): g}, keys=[key, "enter"], total_pages=96, free_pages=8)
+            failed, message = m.run('"patch.nxc"')
+            self.assertEqual(message, "Needs 72K free RAM")
+            self.assertEqual(m.free_pages, 8)
 
 
 if __name__ == "__main__":

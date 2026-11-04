@@ -133,7 +133,7 @@ def main() -> None:
     dumps = {"game_v3.z80": nxc.dump_state(NONCE, v3).base, "game_v1.z80": nxc.dump_state(NONCE, v1).base, "game.sna": nxc.dump_state(NONCE, s).base}
     for n, (name, base) in enumerate(dumps.items()):
         show(name, base, b"TGT1", n)
-    for tag, index in ((b"OUT1", 0), (b"NEX1", 0), (b"SIT1", 0), (b"BNK1", 10), (b"SCR1", 0), (b"SET1", 0), (b"SET1", 1)):
+    for tag, index in ((b"OUT1", 0), (b"NEX1", 0), (b"SIT1", 0), (b"BNK1", 10), (b"SCR1", 0), (b"SEB\0", 255), (b"SEB\0", 5), (b"SEB\1", 255), (b"SEB\1", 5)):
         show("master", master, tag, index)
     st = [list(master[0]), master[1], master[2]]
     nxc.absorb(st, b"CHK1\0")
@@ -156,7 +156,10 @@ def main() -> None:
     plain["NEX1 packed"] = k.block(b"NEX1")(d[b"NEX1"]).hex()
     plain["SIT1 table"] = nxc.unzx0(k.block(b"SIT1")(d[b"SIT1"]), nxc.SITE_TABLE_MAX).hex()
     for e in nxc.sets(patch):
-        plain["SET1 stream %d table" % e["stream"]] = nxc.unzx0(k.block(b"SET1", e["stream"])(e["data"]), nxc.SITE_TABLE_MAX).hex()
+        crc, chunks = nxc.read_set(k, e)
+        plain["SET2 stream %d crc" % e["stream"]] = "%08x" % crc
+        for bank, chunk in chunks:
+            plain["SET2 stream %d bank %d chunk" % (e["stream"], bank)] = chunk.hex()
     plain["SCR1 piece 0"] = nxc.unzx0(k.block(b"SCR1", 0)(d[b"SCR1"][3:]), 6912).hex()
     plain["BNK1 bank 10"] = nxc.unzx0(k.block(b"BNK1", 10)(d[b"BNK1"][3:]), 400).hex()
     def digest(data):

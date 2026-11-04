@@ -135,6 +135,7 @@ class Machine:
         self.marks: dict[int, int] = {}
         self.bad_writes: list[tuple[int, int, int]] = []
         self.watch_ranges: list[tuple[int, int]] = []
+        self.iopage_guard = False
         m = z80.Z80Machine()
         self.m = m
         # Everything but the dot command holds a pattern, so that stray reads are visible and writes can be found.
@@ -171,7 +172,11 @@ class Machine:
         return bytearray(((i * 7 + page * 13) ^ (i >> 8)) & 255 for i in range(PAGE))
 
     def on_write(self, addr: int, value: int) -> None:
-        self.bad_writes.append((self.m.pc, addr, value))
+        # Once the .nex is being written, only the ZX0 decoder may write at the I/O page's address, and only with a chunk of a set's
+        # own page mapped there. A site or a stray pointer landing on a table page is still found.
+        decoding = self.iopage_guard and self.mmu[5] != self.allocated[2] and self.symbols["src_copy"] <= self.m.pc < self.symbols["zx_bounds"]
+        if not (decoding and 0xA000 <= addr < 0xB000):
+            self.bad_writes.append((self.m.pc, addr, value))
         self.m.memory[addr] = value
 
     def watch_writes(self, start: int, size: int) -> None:
@@ -190,6 +195,7 @@ class Machine:
         got out of WORK lands here."""
         def check() -> None:
             if self.string(self.m.hl).lower().endswith(".nex"):
+                self.iopage_guard = True
                 self.watch_writes(0xA000, 0x1000)
         self.callbacks["create_out"] = check
         if "create_out" not in self.phases:

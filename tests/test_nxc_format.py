@@ -322,8 +322,8 @@ class OneValidationRoute(Case):
                 nxc.blocks(data)
                 nxc.targets(data)
                 nxc.check_key(data, self.game)
-        for edit in (lambda bl, st: bl.append([b"SET1", b""]), lambda bl, st: bl.append([b"SET1", b"\0"]),
-                     lambda bl, st: bl.append([b"SET1", b"\0\1\1\1\5ab"]), lambda bl, st: bl.append([b"TRN1", b""]),
+        for edit in (lambda bl, st: bl.append([b"SET2", b""]), lambda bl, st: bl.append([b"SET2", b"\0"]),
+                     lambda bl, st: bl.append([b"SET2", b"\0\1\1\1\5ab"]), lambda bl, st: bl.append([b"TRN1", b""]),
                      lambda bl, st: bl.append([b"TGT1", b""])):
             bad = T.rekey(self.patch, self.game, edit)
             with self.assertRaises(nxc.Wrong):
@@ -339,7 +339,7 @@ class OneValidationRoute(Case):
         with tempfile.TemporaryDirectory(dir=TMP) as d:
             tmp = Path(d)
             (tmp / "g.z80").write_bytes(self.game)
-            for n, data in enumerate((b"", b"NXC1", self.patch[:30], T.rekey(self.patch, self.game, lambda bl, st: bl.append([b"SET1", b""])))):
+            for n, data in enumerate((b"", b"NXC1", self.patch[:30], T.rekey(self.patch, self.game, lambda bl, st: bl.append([b"SET2", b""])))):
                 (tmp / f"{n}.nxc").write_bytes(data)
                 r = self.run_tool(str(tmp / f"{n}.nxc"), str(tmp / "g.z80"), "-o", str(tmp / "o.nex"))
                 self.assertNotEqual(r.returncode, 0)
@@ -409,12 +409,12 @@ class Policies(Case):
             self.refused_by_both(T.rekey(self.patch, self.game, add))
 
     def test_a_repeated_stream_index_would_reuse_a_stream(self) -> None:
-        one = lambda st, index, kind, name: bytes((index, kind, 1, 1, 1)) + name + st.block(b"SET1", index)(nxc.zx0(struct.pack("<I", 1)))  # noqa: E731
-        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET1", one(st, 7, 1, b"a")], [b"SET1", one(st, 7, 1, b"b")]])))
+        one = lambda st, index, kind, name: bytes((index, kind, 1, 1, 1)) + name + T.set_body(st, index, 1, [])  # noqa: E731
+        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET2", one(st, 7, 1, b"a")], [b"SET2", one(st, 7, 1, b"b")]])))
         # Across kinds too, whether or not this reader can apply the kind.
-        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET1", one(st, 7, 1, b"a")], [b"SET1", one(st, 7, 2, b"b")]])))
-        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET1", one(st, 7, 1, b"a")], [b"SET1", one(st, 7, 9, b"b")]])))
-        m, failed, message = self.go(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET1", one(st, 255, 1, b"a")], [b"SET1", one(st, 254, 1, b"b")]])))
+        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET2", one(st, 7, 1, b"a")], [b"SET2", one(st, 7, 2, b"b")]])))
+        self.refused_by_both(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET2", one(st, 7, 1, b"a")], [b"SET2", one(st, 7, 9, b"b")]])))
+        m, failed, message = self.go(T.rekey(self.patch, self.game, lambda bl, st: bl.extend([[b"SET2", one(st, 255, 1, b"a")], [b"SET2", one(st, 254, 1, b"b")]])))
         self.assertFalse(failed, message)                 # different indices are fine
 
     def test_a_site_must_be_in_a_bank_the_build_takes_from_the_game(self) -> None:
@@ -448,7 +448,7 @@ class Policies(Case):
         and     (hl)
         jp      nz,bad_patch
 """, "")], T.rekey(self.patch, self.game, lambda bl, st: bl.extend(
-                    [[b"SET1", bytes((7, 1, 1, 1, 1)) + b"a" + st.block(b"SET1", 7)(b"x")], [b"SET1", bytes((7, 1, 2, 1, 1)) + b"b" + st.block(b"SET1", 7)(b"y")]]))),
+                    [[b"SET2", bytes((7, 1, 1, 1, 1)) + b"a" + b"x"], [b"SET2", bytes((7, 1, 2, 1, 1)) + b"b" + b"y"]]))),
                 ("an unlisted bank", [("""        pop     af                          ; a BNK1 for a bank not listed is damage
         jp      nz,bad_patch
 """, """        pop     af
@@ -474,7 +474,7 @@ class Keying(Case):
         dump = nxc.dump_state(nonce, self.game)
         seen = {}
         uses = [(key, t, 0) for t in (b"OUT1", b"NEX1", b"SIT1", b"CHK1")]
-        uses += [(key, b"BNK1", n) for n in (0, 1, 112, 255)] + [(key, b"SET1", n) for n in (0, 1, 255)] + [(key, b"SCR1", n) for n in range(6)]
+        uses += [(key, b"BNK1", n) for n in (0, 1, 112, 255)] + [(key, b"SEB" + bytes((s,)), n) for s in (0, 1, 255) for n in (0, 1, 2, 111, 255)] + [(key, b"SCR1", n) for n in range(6)]
         uses += [(dump, b"TGT1", n) for n in range(32)]
         for state, tag, index in uses:
             out = state.block(tag, index)(bytes(32))
@@ -977,10 +977,9 @@ class Sets(Case):
         """A patch whose two kinds overlap: nothing that a maker would write, but someone with the game can."""
         def edit(bl, st):
             for e in bl:
-                if e[0] == b"SET1" and e[1][1:3] == bytes((2, 1)):
-                    table = struct.pack("<I", zlib.crc32(self.want(None, "Deutsch"))) + struct.pack("<BHH", 2, 100, 2) + b"zz"
+                if e[0] == b"SET2" and e[1][1:3] == bytes((2, 1)):
                     fixed = e[1][:nxc.SET_FIXED + e[1][4]]
-                    e[1] = fixed + st.block(b"SET1", e[1][0])(nxc.zx0(table))
+                    e[1] = fixed + T.set_body(st, e[1][0], zlib.crc32(self.want(None, "Deutsch")), [(2, T.chunk_of((100, b"zz")))])
         return T.rekey(self.patch2, self.game, edit)
 
     def test_overlap_is_refused_for_the_actual_selection(self) -> None:
@@ -995,28 +994,44 @@ class Sets(Case):
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.want("Blue"))
 
-    def test_entries_out_of_order_are_refused(self) -> None:
-        base = struct.pack("<I", zlib.crc32(self.plain_nex))
-        e = lambda b, o, d: struct.pack("<BHH", b, o, len(d)) + d  # noqa: E731
-        for name, table in (("offsets falling", base + e(2, 100, b"x") + e(2, 50, b"y")), ("banks falling", base + e(5, 0, b"x") + e(2, 0, b"y")),
-                            ("overlapping itself", base + e(2, 100, b"xy") + e(2, 101, b"z")), ("empty", base + e(2, 100, b""))):
+    def test_overlap_in_a_later_bank_is_refused_before_any_file_is_made(self) -> None:
+        # Red changes banks 2 and 10; this language agrees on bank 2 and meets it in bank 10, the last written.
+        def edit(bl, st):
+            for e in bl:
+                if e[0] == b"SET2" and e[1][1:3] == bytes((2, 1)):
+                    fixed = e[1][:nxc.SET_FIXED + e[1][4]]
+                    e[1] = fixed + T.set_body(st, e[1][0], zlib.crc32(self.want(None, "Deutsch")), [(2, T.chunk_of((500, b"zz"))), (10, T.chunk_of((52, b"zz")))])
+        forged = T.rekey(self.patch2, self.game, edit)
+        with self.assertRaisesRegex(nxc.Wrong, "same bytes"):
+            nxc.apply(forged, game=self.game, colours="Red", language="Deutsch")
+        m, failed, message = self.go(forged, keys=["3", "4", "enter"])
+        self.assert_refused(m, failed, message, DAMAGED)
+        self.assertNotIn(NEX, m.opened)
+
+    def test_chunks_out_of_order_are_refused(self) -> None:
+        e = T.chunk_of
+        crc = zlib.crc32(self.plain_nex)
+        for name, chunks in (("banks against .nex order", [(2, e((100, b"x"))), (5, e((100, b"y")))]), ("a bank twice", [(2, e((100, b"x"))), (2, e((200, b"y")))]),
+                             ("an unlisted bank", [(9, e((100, b"x")))]), ("no bytes", [(2, bytes(nxc.BITMAP))]), ("a bit with no byte", [(2, e((100, b"xy"))[:-1])])):
             with self.subTest(name):
-                def edit(bl, st, table=table):
+                def edit(bl, st, chunks=chunks):
                     for x in bl:
-                        if x[0] == b"SET1" and x[1][0] == 0:
-                            x[1] = x[1][:nxc.SET_FIXED + x[1][4]] + st.block(b"SET1", 0)(nxc.zx0(table))
+                        if x[0] == b"SET2" and x[1][0] == 0:
+                            x[1] = x[1][:nxc.SET_FIXED + x[1][4]] + T.set_body(st, 0, crc, chunks)
                 forged = T.rekey(self.patch2, self.game, edit)
                 with self.assertRaises(nxc.Wrong):
                     nxc.apply(forged, game=self.game, colours="Red")
                 m, failed, message = self.go(forged, keys=["3", "enter"])
                 self.assert_refused(m, failed, message, DAMAGED)
+                self.assertNotIn(NEX, m.opened)
 
     def test_a_wrong_crc_for_one_set_fails_any_combination_with_it(self) -> None:
         def edit(bl, st):
             for x in bl:
-                if x[0] == b"SET1" and x[1][0] == 0:
-                    plain = nxc.unzx0(st.block(b"SET1", 0)(x[1][nxc.SET_FIXED + x[1][4]:]), nxc.SITE_TABLE_MAX)
-                    x[1] = x[1][:nxc.SET_FIXED + x[1][4]] + st.block(b"SET1", 0)(nxc.zx0(bytes((plain[0] ^ 1,)) + plain[1:]))
+                if x[0] == b"SET2" and x[1][0] == 0:
+                    fixed = nxc.SET_FIXED + x[1][4]
+                    plain = nxc.set_use(st, 0, nxc.SET_CRC_INDEX)(x[1][fixed:fixed + 4])
+                    x[1] = x[1][:fixed] + nxc.set_use(st, 0, nxc.SET_CRC_INDEX)(bytes((plain[0] ^ 1,)) + plain[1:]) + x[1][fixed + 4:]
         forged = T.rekey(self.patch2, self.game, edit)
         for keys, colours, language in ((["3", "enter"], "Red", None), (["3", "4", "enter"], "Red", "Deutsch")):
             with self.assertRaises(nxc.Wrong):
@@ -1026,8 +1041,15 @@ class Sets(Case):
         m, failed, message = self.go(forged, keys=["4", "enter"])
         self.assertFalse(failed, message)                                    # a set not chosen is not read
 
+    def test_a_retired_set1_block_is_skipped_as_unknown(self) -> None:
+        patch = T.rekey(self.patch2, self.game, lambda bl, st: bl.append([b"SET1", b"\0\1\1\1\x03oldnonsense"]))
+        self.assertEqual(nxc.colour_sets(patch), ["Red", "Blue"])
+        m, failed, message = self.go(patch, keys=["enter"])
+        self.assertFalse(failed, message)
+        self.assertEqual(bytes(m.written[NEX]), self.want())
+
     def test_a_flipped_byte_in_a_set_is_refused_before_any_decoding(self) -> None:
-        at = find_block(self.patch2, b"SET1", 2)
+        at = find_block(self.patch2, b"SET2", 2)
         for offset in (0, 1, 2, 3, 4, 5, 8, 12):
             bad = bytearray(self.patch2)
             bad[at + offset] ^= 0x10
@@ -1038,7 +1060,7 @@ class Sets(Case):
     def test_kinds_and_bases_this_reader_cannot_apply_are_not_offered(self) -> None:
         def add(bl, st):
             for index, kind, base, name in ((200, 9, 1, b"Other kind"), (201, 2, 2, b"Plain base"), (202, 0, 1, b"No kind")):
-                bl.append([b"SET1", bytes((index, kind, 1, base, len(name))) + name + b"anything"])
+                bl.append([b"SET2", bytes((index, kind, 1, base, len(name))) + name + b"anything"])
         patch = T.rekey(self.patch2, self.game, add)
         self.assertEqual(nxc.languages(patch), ["Deutsch", "Espanol"])
         m, failed, message = self.go(patch, keys=["4", "enter"])
@@ -1078,33 +1100,30 @@ class Sets(Case):
 
     def test_controls(self) -> None:
         forged = self.forged_overlap()
-        m, failed, message = self.control([("""        call    decode_sets
-        call    check_overlap
-""", """        call    decode_sets
+        m, failed, message = self.control([("""        and     (hl)
+        jp      nz,bad_patch
+        inc     hl
+        inc     de
+        dec     bc
+""", """        and     (hl)
         nop
         nop
         nop
+        inc     hl
+        inc     de
+        dec     bc
 """)], forged, keys=["3", "4", "enter"])
         self.assertIn(NEX, m.opened, "a loader with no overlap check passed")
-        unordered = T.rekey(self.patch2, self.game, lambda bl, st: [x.__setitem__(1, x[1][:nxc.SET_FIXED + x[1][4]] + st.block(b"SET1", 0)(nxc.zx0(
-            struct.pack("<I", zlib.crc32(self.plain_nex)) + struct.pack("<BHH", 2, 100, 1) + b"x" + struct.pack("<BHH", 2, 50, 1) + b"y"))) for x in bl if x[0] == b"SET1" and x[1][0] == 0])
-        m, failed, message = self.control([("""        cp      c
-        jp      c,bad_patch
-        jr      nz,.rising
-        ld      hl,(site_off)
-        ld      de,(prev_end)
-        or      a
-        sbc     hl,de
-        jp      c,bad_patch
-""", """        cp      c
-        nop
-        nop
-        nop
-        jr      nz,.rising
-        ld      hl,(site_off)
-        ld      de,(prev_end)
-        or      a
-        sbc     hl,de
+        def edit(bl, st):
+            for x in bl:
+                if x[0] == b"SET2" and x[1][0] == 0:
+                    x[1] = x[1][:nxc.SET_FIXED + x[1][4]] + T.set_body(st, 0, zlib.crc32(self.plain_nex), [(2, T.chunk_of((100, b"x"))), (5, T.chunk_of((50, b"y")))])
+        unordered = T.rekey(self.patch2, self.game, edit)
+        m, failed, message = self.control([("""        ld      hl,set_recs+4
+        call    is_zero32
+        jp      nz,bad_patch
+""", """        ld      hl,set_recs+4
+        call    is_zero32
         nop
         nop
         nop
@@ -1115,7 +1134,7 @@ class Sets(Case):
         ld      de,tmp5
 """, """        ld      a,(cur_kind)
         or      a
-        jr      nz,.none
+        jr      nz,.past
         ld      hl,want
         ld      de,tmp5
 """)], self.patch2, keys=["3", "4", "enter"])

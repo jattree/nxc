@@ -7,6 +7,7 @@ import importlib.util
 import json
 import os
 import re
+import struct
 import sys
 import unittest
 import zlib
@@ -187,8 +188,29 @@ class ToolAgainstVectors(unittest.TestCase):
         want = self.v["expected"]
         c = {k: int(want[k]["crc32"], 16) for k in ("base", "colours", "language", "colours and language")}
         self.assertEqual(c["colours and language"], c["base"] ^ (c["colours"] ^ c["base"]) ^ (c["language"] ^ c["base"]))
-        for table in ("SET1 stream 0 table", "SET1 stream 1 table"):
-            self.assertEqual(int.from_bytes(bytes.fromhex(self.v["plaintext"][table])[:4], "little"), c["colours" if "0" in table else "language"])
+        self.assertEqual(int(self.v["plaintext"]["SET2 stream 0 crc"], 16), c["colours"])
+        self.assertEqual(int(self.v["plaintext"]["SET2 stream 1 crc"], 16), c["language"])
+
+    def test_a_set_block_as_the_spec_says(self) -> None:
+        """The chunk made by hand from the spec's words, with no help from the tool's own decoder."""
+        k = nxc.key_state(bytes.fromhex(self.v["nonce"]), bytes.fromhex(self.v["master_key"]))
+        for t, d in nxc.blocks(self.patch)[1]:
+            if t != b"SET2":
+                continue
+            stream, name_len = d[0], d[4]
+            at = 5 + name_len
+            crc = k.block(b"SEB" + bytes((stream,)), 255)(d[at:at + 4]).hex()
+            self.assertEqual(bytes.fromhex(crc)[::-1].hex(), self.v["plaintext"]["SET2 stream %d crc" % stream])
+            at += 4
+            seen = 0
+            while at < len(d):
+                bank, size = struct.unpack_from("<BH", d, at)
+                plain = nxc.unzx0(k.block(b"SEB" + bytes((stream,)), bank)(d[at + 3:at + 3 + size]), 18432)
+                self.assertEqual(plain.hex(), self.v["plaintext"]["SET2 stream %d bank %d chunk" % (stream, bank)])
+                self.assertEqual(sum(bin(c).count("1") for c in plain[:2048]), len(plain) - 2048)
+                at += 3 + size
+                seen += 1
+            self.assertGreaterEqual(seen, 1)
 
     def test_the_format_constants_are_the_specs(self) -> None:
         text = SPEC.read_text()

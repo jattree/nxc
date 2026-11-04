@@ -54,7 +54,7 @@ The game can be any file the patch lists, `.z80` or `.sna`. Add `--trainer NAME_
 
  ENTER to play
 
-Patch: Jon Attree  Colours: Alberto Conde
+Patch: Jon Attree  Colours: Jane Painter
 ```
 
 It rebuilds the `.nex` from your game file and starts it. A patch can list several dumps of a game. A
@@ -103,7 +103,7 @@ player's file at all. Get the agreement of whoever made the build.
 
 ### The details
 
-The game can be `.z80` or `.sna`. It rebuilds the `.nex` from what it wrote before keeping anything, and refuses one it can't package: a `.nex` above `V1.2`, a screen of a later version, anything past the banks, or too much changed from the game for a loader to hold. `--proof-file` takes the proof fields as lines of `KEY=VALUE`, and the [format](spec/NXC-FORMAT.md) lists them. `--colours NAME=NEX` and `--language NAME=NEX` add sets, each from the same build with it applied, and `--colours-by` credits a colour set.
+The game can be `.z80` or `.sna`. It rebuilds the `.nex` from what it wrote before keeping anything, and refuses one it can't package: a `.nex` above `V1.2`, a screen of a later version, anything past the banks, or too much changed from the game for a loader to hold in `SIT1`. A colour or language set has no such limit, and is always a choice on the menu: the plain build stays the default. `--proof-file` takes the proof fields as lines of `KEY=VALUE`, and the [format](spec/NXC-FORMAT.md) lists them. `--colours NAME=NEX` and `--language NAME=NEX` add sets, each from the same build with it applied, and `--colours-by` credits a colour set.
 
 **Memory.** A loader on a 1MB Next refuses a build that needs more, from the highest bank the `.nex` lists. If your build uses higher banks at run time than it loads, as with Layer 2 buffers, say so with `--highest-bank N`.
 
