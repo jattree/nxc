@@ -59,10 +59,32 @@ Notes for Jon, 2026-11-03. Everything here ran in JNext 1.1.104 or on the Z80 ha
   out.
 - **NZS multiload is not hooked.** The plain `.nex` starts at level 1-1 and will ask the tape for world 2, as the original does.
 
+## Sets of tape files (2026-11-04)
+
+A release on two sides is one target naming both files (spec, "TGT1", "A set of files"). The key is made over every file in
+order. A copy names its file in bits 12 to 14 of its block field, so a single file's table is unchanged byte for byte.
+
+- **The walk rule (changed for sets).** A reader walks a set's files in order, as one tape after another: each file before the
+  last one the table names is walked to its end (1,024 data blocks at most), the last named one to the highest block named in
+  it. That lets the loader walk with one file open at a time. `nxc.py` walks the same way, so both refuse the same damage.
+- **One length, one meaning.** A writer refuses a set and a single file whose first files have the same length, and two sets
+  whose first files share a length but not their further files. So the loader knows from the first file's length alone.
+- **The loader** (`firmware/nexclash.asm`). Before the menu, if no single target's file is there, it tries each set: its first
+  file, then every further file by name and length. A missing one is named ("Needs this game file:", "Game not beside the
+  patch"), a wrong length is named ("Wrong game file for this patch"). Changed or swapped files fail the key: "Wrong game file
+  for this patch". After the menu, a tape's second part is now two: the walk, then the banks and the clash fix off; each part
+  has its own copy of the routine that opens a set's file. The free-RAM refusal with a tape and two sets now says 120K, as it
+  needs (it said 96K).
+- **Tests.** `test_nexclash_tapeset.py`: the set from both files, a trainer, the clash fix off, another release, the second
+  file missing, short, changed, swapped, the first missing, the options flag, a damaged head, a third file named, controls;
+  and the 120K refusal. 338 tests pass.
+- **JNext, real loader, Browser, NextZXOS v2.09:** The New Zealand Story, `.tap` + side B and `.tzx` + side B: `/tmp/NEXCLASH.NEX`
+  `7605c46ceb7eb2a77906aa7ea79876da` both times, as `nxc.py`. World 5 entered after a game over, with no tape prompt.
+  Nothing has run on a Next.
+
 ## For you to decide
 
 - Should `szx2z80.py` go into the repo as a command (`nxc.py szx-to-z80`)?
 - Is 8,192 bytes of start state not on the tape the right default limit?
 - Tapes are an `OPT1` flag, not a level. Levels are a ladder, and level 4 is reserved for snapshot output. Is that all right?
-- With a tape and two sets, the loader needs 120K, but its refusal says 96K.
 - Send Dean the updated spec.

@@ -128,9 +128,10 @@ Copy the three files as above with the game and `Cobra.nxc` into one folder, sel
 8,192 bytes at 0x2000, and leaves the file open after them. That part is resident code, 1,589 bytes, with 2,704 bytes used only up
 to the menu after it, then padding. After the menu, with `M_GETHANDLE`, the next 5,129 bytes are read in over what
 was only for the menu: the code every route shares, then, from 0x35A4, 1,178 bytes that read a snapshot, behind a table of five
-jumps. For a tape, two parts that follow in the file are read in their turn over those 1,178 bytes: the first, 659 bytes, finds and
-checks the table; the second, 1,171 bytes, walks the tape and builds the banks. The slot holds 1,192, so the second part has 21
-bytes left and the shared code 14: more code means a third part, or a shorter path buffer. A short or mismatched file, at any
+jumps. For a tape, three parts that follow in the file are read in their turn over the snapshot's: the first, 916 bytes, finds and
+checks the table and keys a set's further files; the second, 897 bytes, walks the tape (a set's files one after another); the
+third, 571 bytes, builds the banks and writes the clash fix off. The slot holds 1,185. A set's names are kept, after its files
+are found, in the patch path's buffer, and each part opens the one it needs with gh, so only one game file is open at a time. A short or mismatched file, at any
 part, gets a message and does nothing. Plus six 8K pages
 from `IDE_BANK`, paged at MMU3 to MMU5 with interrupts off and the stack in the 8K: two for the bank being built, one for
 the file buffer and tables, three for the site table, three more for each set chosen, and three for a tape's table,

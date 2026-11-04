@@ -817,14 +817,14 @@ class SeveralDumps(Case):
 class Split(Case):
     def test_the_first_part_is_exactly_what_nextzxos_loads(self) -> None:
         self.assertGreater(len(self.binary), H.FIRST_PART)
-        sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size")]
+        sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size", "tape3_size")]
         self.assertEqual(len(self.binary), H.FIRST_PART + sum(sizes))
         at = H.FIRST_PART
-        for size in sizes:                                  # the overlay, then a tape's two parts, each ending in the tag
+        for size in sizes:                                  # the overlay, then a tape's three parts, each ending in the tag
             at += size
             self.assertEqual(self.binary[at - 4:at], b"NXQ1")
         self.assertLessEqual(self.symbols["code_end"], self.symbols["patch_path"])
-        for n in ("tape1_size", "tape2_size"):
+        for n in ("tape1_size", "tape2_size", "tape3_size"):
             self.assertLessEqual(self.symbols["z80_part_at"] + self.symbols[n], self.symbols["code_end"])
 
     def test_every_message_fits_what_nextzxos_shows(self) -> None:

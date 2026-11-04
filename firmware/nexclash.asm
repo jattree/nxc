@@ -89,6 +89,9 @@ NR_MMU5         equ $55
 
 LOADER_LEVEL    equ 2                       ; 1: .z80; 2: and a loading screen; 3 adds .sna only
 OPT_TAPE        equ 1                       ; OPT1's flag for a patch only a tape can play: this loader reads tapes
+OPT_TAPE_SET    equ 2                       ; and for one whose targets are all sets of tape files: it reads those too
+KIND_SET        equ $80                     ; a target's kind with this bit: a set of tape files, the first of that kind
+SET_FILES_MAX   equ 8
 KIND_Z80        equ 1                       ; the containers this loader reads: .z80,
 KIND_TAP        equ 3                       ; .tap
 KIND_TZX        equ 4                       ; and .tzx
@@ -160,6 +163,52 @@ stack_floor     equ $3F40                   ; 192 of stack
 rc4_s           equ $3D00                   ; aligned
 statbuf         equ smallbuf                ; read at once, and nothing else is there
 rc4_base        equ $AA00                   ; in the I/O page
+
+; File A (from 0) of the set the game is, open as gh, its length in gsize and its kind in
+; game_kind; the names are in patch_path, each ended by a zero, and the folder in game_a. One copy
+; in each tape part, as no part can call another. Closes the one open before.
+        macro   OPEN_FI name
+name:   ld      hl,cur_fi
+        cp      (hl)
+        ret     z
+        ld      (hl),a
+        push    af
+        ld      hl,gh
+        call    close_at
+        pop     af
+        push    af
+        ld      hl,patch_path
+        or      a
+        jr      z,.got
+        ld      b,a
+.skip:  push    bc
+        xor     a
+        ld      bc,PATH_SIZE
+        cpir
+        pop     bc
+        djnz    .skip
+.got:   ld      de,(game_a_file)
+.cp:    ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        inc     de
+        or      a
+        jr      nz,.cp
+        ld      hl,game_a
+        call    try_open
+        ld      hl,msg_game_bad
+        jp      c,fail_hl
+        pop     af
+        ld      b,a
+        inc     b
+        ld      a,(set_kinds)
+.k:     rrca
+        djnz    .k
+        ld      a,KIND_TAP
+        adc     a,0
+        ld      (game_kind),a
+        ret
+        endm
 
 ; Variables, downwards from the key state, cleared at the start.
         macro   VAR vname, vsize
@@ -273,6 +322,14 @@ game_kind       equ target_kinds
         VAR     tapes_listed, 4             ; a bit for each tape target
         VAR     tapes_served, 4             ; and for each a TAP1 names
         VAR     tap_streams, 32             ; a bit for each TAP1 stream index
+        VAR     single_seen, 1              ; a target of one game file this loader reads
+        VAR     set_seen, 1                 ; a target that is a set of tapes
+        VAR     set_key, 8                  ; "file_K=", for a set's Kth file
+        VAR     set_tab, 1 + 5 * (SET_FILES_MAX - 1) ; a set's n, then each further file's kind and length
+        VAR     set_len1, 4                 ; its first file's length
+        VAR     set_kind1, 1                ; and kind, with KIND_SET
+        VAR     text_at, 4                  ; where its text starts in the patch
+        VAR     set_cmp, 4                  ; a name being compared: where, how long
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -290,6 +347,10 @@ var_at          =   $3F00
         VAR     src_end_hi, 1
         VAR     base_i, 1
         VAR     base_j, 1
+        VAR     set_n, 1                    ; the game is a set of this many tapes; 0: one file
+        VAR     set_kinds, 1                ; a bit for each file of the set that is a .tzx
+        VAR     cur_fi, 1                   ; which of them gh has open
+        VAR     readable_kind, 1            ; KIND_Z80; the set's kind once a set is the game
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -337,7 +398,8 @@ load_part:
 
 ; Z when A is a kind this loader reads.
 kind_readable:
-        cp      KIND_Z80
+        ld      hl,readable_kind            ; .z80, or once a set is the game, that set's kind
+        cp      (hl)
         ret     z
         cp      KIND_TAP
         ret     z
@@ -1131,6 +1193,10 @@ start_menu:
         pop     af
         ld      (interrupts),a
         ld      (entry_sp),sp
+        xor     a                           ; one game file, until a set is found
+        ld      (set_n),a
+        ld      a,KIND_Z80
+        ld      (readable_kind),a
         ld      a,h
         or      l
         jp      z,usage
@@ -1188,7 +1254,7 @@ start_menu:
         call    walk_first
         call    build_game_b
         call    next_game
-        call    c,refuse_game
+        call    c,set_game
         call    menu
         jp      after_menu
 
@@ -1323,6 +1389,16 @@ walk_first:
         and     OPT_TAPE
         jp      z,bad_patch
 .flag_ok:
+        ld      a,(set_seen)                ; only sets: OPT1 must say that too
+        or      a
+        jr      z,.sets_ok
+        ld      a,(single_seen)
+        or      a
+        jr      nz,.sets_ok
+        ld      a,(opt_flags)
+        and     OPT_TAPE_SET
+        jp      z,bad_patch
+.sets_ok:
         ld      a,(target_kinds)            ; targets, and none this loader can read
         or      a
         ret     nz
@@ -1409,6 +1485,411 @@ bit_at: push    bc
         djnz    .r
         pop     bc
         ret
+; ------------------------------------------------------------ sets of tapes (before the menu)
+
+; A set's head, after its fixed part: n, 2 to SET_FILES_MAX, then each further file's kind (a
+; tape) and length, into set_tab; the first file's kind (in A, with KIND_SET) must be a tape too.
+; Its length is taken off blk_len, so that the text comes next. Anything else is damage.
+set_head:
+        ld      (set_kind1),a
+        and     $7f
+        call    is_tape_kind
+        ld      hl,smallbuf+2
+        ld      de,set_len1
+        call    copy4
+        ld      hl,blk_len                  ; n, at least
+        ld      bc,0
+        ld      de,1
+        call    below32
+        jp      c,bad_patch
+        ld      hl,set_tab
+        ld      bc,1
+        call    read_patch
+        ld      a,(set_tab)
+        sub     2
+        cp      SET_FILES_MAX - 1
+        jp      nc,bad_patch
+        inc     a                           ; n - 1
+        ld      b,a
+        add     a,a
+        add     a,a
+        add     a,b
+        ld      c,a                         ; 5(n - 1)
+        ld      b,0
+        push    bc
+        ld      d,b
+        ld      e,c
+        inc     de
+        ld      hl,blk_len
+        push    de
+        ld      bc,0
+        call    below32
+        jp      c,bad_patch
+        pop     de
+        ld      hl,work32
+        ld      (hl),e
+        inc     hl
+        ld      (hl),d
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+        pop     bc
+        ld      hl,set_tab+1
+        push    bc
+        call    read_patch
+        pop     bc
+        ld      a,(set_tab)
+        dec     a
+        ld      b,a
+        ld      hl,set_tab+1
+.k:     ld      a,(hl)
+        call    is_tape_kind
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .k
+        ret
+
+; A kind of tape, 3 or 4, or damage.
+is_tape_kind:
+        cp      KIND_TAP
+        jp      c,bad_patch
+        cp      KIND_TZX + 1
+        jp      nc,bad_patch
+        ret
+
+; DE at the key for file K (A, from 2) of a set: "file_K=".
+set_key_for:
+        ld      hl,set_key
+        ld      de,key_file
+        ld      bc,4
+        ex      de,hl
+        ldir
+        ex      de,hl
+        ld      (hl),'_'
+        inc     hl
+        add     a,'0'
+        ld      (hl),a
+        inc     hl
+        ld      (hl),'='
+        inc     hl
+        ld      (hl),0
+        ld      de,set_key
+        ret
+
+; Each further file of a set, named in its text (as read): a name as file's, no two alike
+; whatever the case. Nothing for one file.
+set_names:
+        ld      a,(set_tab)
+        or      a
+        ret     z
+        ld      b,a
+        ld      a,2
+.f:     push    af
+        push    bc
+        call    set_key_for
+        call    text_find
+        jp      c,bad_patch
+        push    hl
+        push    bc
+        call    check_name
+        pop     bc
+        pop     hl
+        pop     de                          ; D: files left, E: unused
+        pop     af
+        push    af
+        push    de
+        call    name_twice                  ; against file and each before it
+        pop     bc
+        pop     af
+        inc     a
+        cp      b
+        jr      c,.f
+        jr      z,.f
+        ret
+
+; HL, BC: the name of file A (from 2). Damage if file or file_2 .. file_(A-1) is the same name.
+name_twice:
+        ld      (set_cmp),hl
+        ld      (set_cmp+2),bc
+        dec     a
+        ld      b,a                         ; how many before it
+.e:     push    bc
+        ld      a,b
+        ld      de,key_file
+        cp      1
+        call    nz,set_key_for
+        call    text_find
+        jp      c,bad_patch
+        ld      a,(set_cmp+2)           ; lengths: below 128, so one byte says it
+        cp      c
+        jr      nz,.diff
+        ld      de,(set_cmp)
+.c:     ld      a,(de)
+        call    lower
+        ld      (set_cmp+3),a               ; the length's high byte is 0: names are short
+        ld      a,(hl)
+        call    lower
+        push    hl
+        ld      hl,set_cmp+3
+        cp      (hl)
+        pop     hl
+        jr      nz,.diff
+        inc     hl
+        inc     de
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.c
+        jp      bad_patch
+.diff:  pop     bc
+        djnz    .e
+        ret
+
+lower:  cp      'A'
+        ret     c
+        cp      'Z' + 1
+        ret     nc
+        or      $20
+        ret
+
+; Seek the patch to the set's text and read it again: opening a file uses the small buffer.
+set_text:
+        ld      hl,text_at
+        call    seek_patch
+        jp      read_text
+
+; No target of one file had its file there. Try each set: its first file there, with its length,
+; then every other with its own; the first that is all there is the game, its first file left
+; open as gh. Without sets, as before. A set's further file missing or of another length is
+; refused, naming it; no set's first file there is refused as for one file, naming the first set's.
+set_game:
+        ld      a,(set_seen)
+        or      a
+        jp      z,refuse_game
+        call    walk_begin
+.next:  call    walk_next
+        jp      z,.none
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.next
+        ld      hl,pos                      ; where the walk goes on from
+        ld      de,scan_pos
+        call    copy4
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        bit     7,a
+        jp      z,.again
+        call    set_head
+        ld      hl,blk_pos                  ; the text: after the fixed part and the head
+        ld      de,text_at
+        call    copy4
+        ld      a,(set_tab)
+        dec     a
+        ld      b,a
+        add     a,a
+        add     a,a
+        add     a,b
+        add     a,TARGET_FIXED + 1
+        ld      hl,work32
+        ld      (hl),a
+        inc     hl
+        xor     a
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        inc     hl
+        ld      (hl),a
+        ld      hl,text_at
+        ld      de,work32
+        call    add32
+        ld      de,key_file                 ; its first file
+        call    set_open
+        jp      c,.again
+        ld      hl,gsize
+        ld      de,set_len1
+        call    same_tag
+        jr      z,.first
+        ld      a,1
+        ld      (seen_wrong),a
+        ld      hl,gh
+        call    close_at
+        jp      .again
+.first: ld      hl,gh
+        call    close_at
+        ld      a,(set_tab)                 ; each other file: there, with its length
+        ld      b,a
+        dec     b
+        ld      a,2
+        ld      hl,set_tab+2
+.f:     push    af
+        push    bc
+        push    hl
+        call    set_key_for
+        call    set_open
+        ld      a,1
+        ld      (need_name),a
+        ld      hl,msg_no_game
+        jp      c,fail_hl
+        pop     hl
+        push    hl
+        ld      de,gsize
+        call    same_tag
+        ld      hl,msg_wrong_game
+        jp      nz,fail_hl
+        xor     a
+        ld      (need_name),a
+        ld      hl,gh
+        call    close_at
+        pop     hl
+        ld      de,5
+        add     hl,de
+        pop     bc
+        pop     af
+        inc     a
+        djnz    .f
+        jp      .found
+.again: ld      hl,scan_pos
+        ld      de,pos
+        call    copy4
+        jp      .next
+.found: ld      a,(set_tab)                 ; the game: its kinds, and the names after the menu
+        ld      (set_n),a
+        ld      b,a
+        dec     b
+        ld      hl,set_tab+1
+        ld      c,0
+        ld      d,2                         ; bit for file 1
+.kb:    ld      a,(hl)
+        cp      KIND_TZX
+        jr      nz,.kt
+        ld      a,c
+        or      d
+        ld      c,a
+.kt:    sla     d
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        djnz    .kb
+        ld      a,(set_kind1)
+        and     $7f
+        cp      KIND_TZX
+        jr      nz,.k0
+        set     0,c
+.k0:    ld      a,c
+        ld      (set_kinds),a
+        xor     a
+        ld      (cur_fi),a
+        call    set_list                    ; the names, over patch_path
+        ld      de,key_file                 ; and the first file open again, as the game
+        call    set_open_listed
+        ld      a,(set_kind1)               ; from now on that set's kind is one this loader reads
+        ld      (readable_kind),a
+        or      a
+        ret
+.none:  ld      a,(single_seen)             ; no set there: as for one file, or naming the first set's
+        or      a
+        jp      nz,refuse_game
+        call    walk_begin
+.n1:    call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.n1
+        call    target_fixed
+        ld      a,(smallbuf+1)
+        call    set_head
+        call    read_text
+        ld      de,key_file
+        call    text_find
+        call    build_game_a
+        ld      a,1
+        ld      (need_name),a
+        ld      a,(seen_wrong)
+        or      a
+        ld      hl,msg_no_game
+        jp      z,fail_hl
+        ld      hl,msg_wrong_game
+        jp      fail_hl
+
+; The set's file named by the key at DE, beside the patch: open as gh, its length in gsize, and
+; never an output's name. Carry when it is not there.
+set_open:
+        push    de
+        call    set_text
+        pop     de
+        call    text_find
+        jp      c,bad_patch
+        call    build_game_a
+        ld      hl,game_a
+        call    try_open
+        ret     c
+        ld      hl,game_a
+        call    check_alias
+        or      a
+        ret
+
+; The first file again, from the names now in patch_path (the folder is still in game_a).
+set_open_listed:
+        ld      hl,patch_path
+        ld      de,(game_a_file)
+.c:     ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        inc     de
+        or      a
+        jr      nz,.c
+        ld      hl,game_a
+        call    try_open
+        ld      hl,msg_no_game
+        jp      c,fail_hl
+        ret
+
+; Every name of the set, each ended by a zero, over patch_path (no longer needed once the files
+; are found): what opens them after the menu. Too long for it is refused, as a long path is.
+set_list:
+        ld      de,patch_path
+        ld      a,1
+.n:     push    af
+        push    de
+        ld      de,key_file
+        cp      1
+        call    nz,set_key_for
+        push    de
+        call    set_text
+        pop     de
+        call    text_find
+        pop     de
+        push    hl
+        ld      hl,patch_path + PATH_SIZE - 1
+        or      a
+        sbc     hl,de
+        sbc     hl,bc
+        pop     hl
+        jp      c,.long
+        ldir
+        xor     a
+        ld      (de),a
+        inc     de
+        pop     af
+        inc     a
+        ld      hl,set_tab
+        cp      (hl)
+        jr      c,.n
+        jr      z,.n
+        ret
+.long:  ld      hl,msg_long
+        jp      fail_hl
+
 ; Exactly 3 bytes: a level this loader has, no flags, the highest 16K bank needed.
 first_opt1:
         ld      hl,blk_len
@@ -1424,7 +1905,7 @@ first_opt1:
         ld      (ram_bank),a
         ld      a,(smallbuf+1)
         ld      (opt_flags),a
-        and     ~OPT_TAPE & $ff
+        and     ~(OPT_TAPE | OPT_TAPE_SET) & $ff
         ld      hl,msg_level
         jp      nz,fail_hl
         ld      a,(smallbuf)
@@ -1464,6 +1945,8 @@ copy_credit:
         jp      copy_text
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
 first_tgt1:
+        xor     a
+        ld      (set_tab),a                 ; one file, unless set_head says otherwise
         call    target_fixed
         ld      a,(target_count)
         cp      TARGETS_MAX
@@ -1476,11 +1959,18 @@ first_tgt1:
         ld      a,c
         ld      (target_count),a
         ld      a,(smallbuf+1)
-        cp      KIND_TAP                    ; a tape, or a snapshot
+        bit     7,a
+        jr      z,.one
+        call    set_head                    ; a set of tapes: its head, checked
+        ld      a,1
+        ld      (set_seen),a
+        ld      (target_kinds),a
+        jr      .tape
+.one:   cp      KIND_TAP                    ; a tape, or a snapshot
         jr      c,.snap
         cp      KIND_TZX + 1
         jr      nc,.kind
-        ld      a,(smallbuf)
+.tape:  ld      a,(smallbuf)
         ld      hl,tapes_listed
         call    bit_at
         or      (hl)
@@ -1491,11 +1981,13 @@ first_tgt1:
         call    kind_readable
         jr      nz,.other
         ld      (target_kinds),a
+        ld      (single_seen),a
 .other: call    read_text
         ld      de,key_file
         call    text_find
         jp      c,bad_patch
         call    check_name
+        call    set_names
         ld      a,(title)
         or      a
         ret     nz                          ; the first with a title
@@ -2399,12 +2891,12 @@ chosen:
         call    nc,load_part                ; a tape's first part over the snapshot's
         ld      a,(ver_original)
         or      a
-        jp      z,nexclash_chosen
+        jr      z,nexclash_chosen
         xor     a                           ; with the fix off, no set applies
         ld      (set_choices),a
         ld      (set_choices+1),a
         call    any_trainer_on
-        jp      nz,original_with_trainers
+        jr      nz,original_with_trainers
         call    part_plain
         ld      a,2
         jp      done
@@ -2920,8 +3412,7 @@ work_begin:
         ld      (hl),0
         ldir
         jp      crc_make
-.none:  ld      a,b
-        ld      a,(page_goal)
+.none:  ld      a,(page_goal)
         ld      hl,msg_ram
         cp      PAGES
         jp      z,fail_hl
@@ -2929,6 +3420,9 @@ work_begin:
         cp      PAGES + SET_PAGES
         jp      z,fail_hl
         ld      hl,msg_ram_two
+        cp      PAGES + 2 * SET_PAGES
+        jp      z,fail_hl
+        ld      hl,msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
         jp      fail_hl
 
 ; ---- page_list: W0, W1, IO, sites x 3, set x 3.
@@ -3080,6 +3574,7 @@ absorb_game:
         ld      hl,zero32
         ld      de,gsize
         call    absorb_range
+        call    part_more                   ; a set's further files, in order
         ld      hl,nonce
         ld      bc,16
         call    rc4_absorb
@@ -3233,7 +3728,7 @@ stream_start:
         ld      (s_j),a
         ld      hl,tmp5
         ld      bc,5
-        jp      rc4_absorb
+        jr      rc4_absorb
 
 ; XOR BC bytes at HL with the stream.
 rc4_xor:
@@ -3389,7 +3884,7 @@ crc_update:
         ld      c,a
         inc     h
         ld      b,(hl)
-        jp      .byte
+        jr      .byte
 .end:   exx
         ld      (crc),de
         ld      (crc+2),bc
@@ -3562,7 +4057,7 @@ zx0_decode:
         ld      de,(zx_last)
         add     hl,de
         pop     de
-        jp      nc,.bad
+        jr      nc,.bad
         ld      hl,(zx_last)
         add     hl,de
         ldir
@@ -4507,6 +5002,7 @@ part_bank:      jp      decode_game_bank    ; bank (cur_bank) of the game into W
 part_has:       jp      game_has            ; carry when the game has bank A; keeps BC
 part_plain:     jp      original_plain      ; the clash fix off with no trainer
 part_fix_off:   jp      z80_fix_off         ; and with one, from after unlock and part_parse
+part_more:      ret                         ; nothing more to key: one file
 
 ; The clash fix off's .z80: the POKEs checked, the header, then each page, the POKEs in place.
 z80_fix_off:
@@ -5098,6 +5594,7 @@ tape1_start:
         jp      bad_patch
         jp      original_with_trainers      ; with the fix off a tape is always rebuilt and checked
         jp      bad_patch
+        jp      absorb_more                 ; part_more: a set's further files keyed
 
 ; The TAP1 that serves this target into its pages, and the whole of it checked; the tape walked as
 ; far as the highest block a copy names, and each copy given its place in the file. Then the
@@ -5213,9 +5710,22 @@ tape_parse:
         ld      (t_count),hl
         ld      b,COPY_SIZE
         call    entry_get
-        ld      a,(ebuf+1)
-        cp      high TAPE_BLOCKS_MAX
-        jp      nc,bad_patch
+        ld      a,(ebuf+1)              ; bits 10, 11 and 15 clear; the file one the target has
+        ld      c,a
+        and     $8c
+        jp      nz,bad_patch
+        ld      a,c
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        ld      hl,set_n
+        cp      (hl)
+        jr      c,.fi
+        or      a
+        jp      nz,bad_patch
+.fi:
         ld      bc,(ebuf+5)
         ld      a,b
         or      c
@@ -5436,6 +5946,76 @@ tape_base1:
 ; The place in .nex order of banks 0 to 7.
 ord_of:         db 2, 3, 1, 4, 5, 0, 6, 7
 magic_tap1:     db "TAP1"
+
+; A set's files after the first, keyed in order after it (from absorb_game, before the last nonce);
+; then the first open again. The key is finished here, the last nonce and all, and a set whose
+; files unlock no target of theirs is refused as the wrong game: unlock's search for another file
+; is for one file. Otherwise back to unlock, past the rest of absorb_game, to find the key again.
+absorb_more:
+        ld      a,(set_n)
+        or      a
+        ret     z
+        ld      a,1
+.f:     ld      hl,set_n
+        cp      (hl)
+        jr      nc,.done
+        push    af
+        call    open_fi_1
+        call    src_game
+        ld      a,(gh)
+        ld      hl,zero32
+        ld      de,gsize
+        call    absorb_range
+        pop     af
+        inc     a
+        jr      .f
+.done:  xor     a
+        call    open_fi_1
+        ld      hl,nonce
+        ld      bc,16
+        call    rc4_absorb
+        call    state_keep
+        call    walk_begin
+.next:  call    walk_next
+        jr      z,.wrong
+        ld      de,magic_tgt1
+        call    tag_is
+        jr      nz,.next
+        ld      hl,tgt_buf
+        ld      bc,TARGET_FIXED
+        call    read_patch
+        ld      a,(tgt_buf+1)
+        call    kind_readable
+        jr      nz,.next
+        ld      hl,tgt_buf+2
+        ld      de,gsize
+        call    same_tag
+        jr      nz,.next
+        ld      de,magic_tgt1
+        ld      a,(tgt_buf)
+        ld      c,a
+        call    stream_open
+        ld      hl,tgt_buf+6
+        ld      bc,24
+        call    rc4_xor
+        ld      hl,tgt_buf+6
+        ld      de,wrap_check
+        ld      b,8
+.chk:   ld      a,(de)
+        cp      (hl)
+        jr      nz,.next
+        inc     hl
+        inc     de
+        djnz    .chk
+        pop     hl                          ; past absorb_game's last nonce: done here
+        ret
+.wrong: ld      hl,gh
+        call    close_at
+        ld      hl,msg_wrong_game
+        jp      fail_hl
+
+        OPEN_FI open_fi_1
+msg_ram_tape2:  db "Needs 120K free RA", 'M' | $80
         db      "NXQ1"
 tape1_end:
         ent
@@ -5446,19 +6026,23 @@ tape1_size      equ tape1_end - tape1_start
         disp    z80_part_at
 tape2_start:
         jp      tape_walk
-        jp      tape_bank
-        jp      tape_has
         jp      bad_patch
-        jp      tape_fix_off
+        jp      bad_patch
+        jp      bad_patch
+        jp      bad_patch
 
 ; The tape, from its start, walked as far as the highest block a copy names: each copy given its
 ; place in the file. Then the CRC.
 tape_walk:
+        ld      a,(set_n)                   ; a set: from its first file
+        or      a
+        ld      a,0
+        call    nz,open_fi_2
         ld      hl,0
         ld      (pos),hl
         ld      (pos+2),hl
         ld      (blk_index),hl
-        ld      a,(game_kind)
+.start: ld      a,(game_kind)
         cp      KIND_TZX
         jr      nz,.walk
         ld      b,10                        ; ZXTape!, 0x1A, major version 1
@@ -5466,22 +6050,20 @@ tape_walk:
         ld      hl,headbuf
         ld      de,tzx_magic
         call    same_tag
-        jp      nz,tape_bad
+        jp      nz,tape_bad_w
         ld      de,tzx_magic+4
         call    same_tag
-        jp      nz,tape_bad
+        jp      nz,tape_bad_w
         ld      a,(headbuf+8)
         dec     a
-        jp      nz,tape_bad
+        jp      nz,tape_bad_w
 .walk:  ld      hl,(unresolved)             ; until every copy has its place
         ld      a,h
         or      l
         jp      z,.walked
-        ld      hl,(blk_index)              ; past the 1,024th, or the end, one is missing
-        ld      de,TAPE_BLOCKS_MAX
-        or      a
-        sbc     hl,de
-        jp      nc,bad_patch
+        ld      a,(blk_index+1)             ; past a file's 1,024th, or the end, one is missing
+        and     $0c                         ; (the file's index is above them, in bits 12 to 14)
+        jp      nz,bad_patch
         ld      hl,gsize
         ld      de,left
         call    copy4
@@ -5490,7 +6072,7 @@ tape_walk:
         call    sub32
         ld      hl,left
         call    is_zero32
-        jp      z,bad_patch
+        jp      z,next_file
         ld      a,(game_kind)
         cp      KIND_TZX
         jr      z,.tzx
@@ -5511,7 +6093,7 @@ tape_walk:
         inc     hl
         inc     c
         dec     c
-        jp      z,tape_bad
+        jp      z,tape_bad_w
         cp      c
         jr      z,.known
         inc     hl
@@ -5578,7 +6160,7 @@ tape_walk:
         ld      hl,left
         ld      de,blk_len
         call    sub32
-        jp      c,tape_bad
+        jp      c,tape_bad_w
         ld      hl,pos
         ld      de,blk_pos
         call    copy4
@@ -5593,8 +6175,43 @@ tape_walk:
         inc     hl
         ld      (blk_index),hl
         jp      .walk
-.walked:
-        jp      tape_check
+.walked:                                    ; the third part, over this one, from its first entry
+        ld      hl,z80_part_at
+        ld      bc,tape3_size
+        ld      de,z80_part_at
+        push    de
+        jp      load_part
+
+; The end of a file with copies still to place: a set's next file, walked from its start; its
+; blocks are named with its index in bits 12 to 14. For one file, or past a set's last, damage.
+next_file:
+        ld      a,(set_n)
+        or      a
+        jp      z,bad_patch
+        ld      a,(blk_index+1)
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        inc     a
+        ld      hl,set_n
+        cp      (hl)
+        jp      nc,bad_patch
+        push    af
+        call    open_fi_2
+        pop     af
+        rlca
+        rlca
+        rlca
+        rlca
+        ld      h,a
+        ld      l,0
+        ld      (blk_index),hl
+        ld      hl,0
+        ld      (pos),hl
+        ld      (pos+2),hl
+        jp      tape_walk.start
 
 ; Each copy not yet placed that names this block: within it, and then its place in the file.
 resolve:
@@ -5648,6 +6265,13 @@ resolve:
         ld      hl,work32
         ld      de,ebuf
         call    copy4
+        ld      a,(blk_index+1)             ; and which file: kept in the place's top byte
+        rrca
+        rrca
+        rrca
+        rrca
+        and     7
+        ld      (ebuf+3),a
         ld      hl,ebuf+6
         set     7,(hl)
         ld      hl,(t_off)
@@ -5715,7 +6339,7 @@ tape_read:
         ld      bc,0
         ld      hl,left
         call    below32
-        jp      c,tape_bad
+        jp      c,tape_bad_w
         ld      hl,pos
         ld      a,(gh)
         call    seek_file
@@ -5770,6 +6394,26 @@ tzx_ids:
         db      $35, 20 | 1 << 5, 16 | 4 << 5
         db      $5a, 9, 0
         db      0
+tape_bad_w:
+        ld      hl,msg_game_bad
+        jp      fail_hl
+
+        OPEN_FI open_fi_2
+        db      "NXQ1"
+tape2_end:
+        ent
+tape2_size      equ tape2_end - tape2_start
+
+; ---------------------------------------------------------------- the third
+
+        disp    z80_part_at
+tape3_start:
+        jp      tape_check
+        jp      tape_bank
+        jp      tape_has
+        jp      bad_patch
+        jp      tape_fix_off
+
 ; The start state's CRC, from the banks the table makes, before any is used; and building the
 ; .nex, each extra bank one its header lists.
 tape_check:
@@ -5847,6 +6491,9 @@ tape_bank:
         ld      hl,ebuf+7
         cp      (hl)
         jr      nz,.c
+        ld      a,(set_n)                   ; a set: the copy's file open
+        or      a
+        call    nz,bank_switch
         ld      hl,ebuf                     ; its place in the file, found by the first part
         ld      a,(gh)
         call    seek_file
@@ -5988,13 +6635,41 @@ tpages_48k:
         db      8, 5, 4, 2, 5, 0
 tpages_128k:
         db      3, 0, 4, 1, 5, 2, 6, 3, 7, 4, 8, 5, 9, 6, 10, 7
+
+; The file a copy is in (the top byte of its place) open, the copy kept on the stack: opening a
+; file uses smallbuf, where the copy is.
+bank_switch:
+        ld      hl,(ebuf)
+        push    hl
+        ld      a,(ebuf+2)
+        push    af
+        ld      hl,(ebuf+5)
+        push    hl
+        ld      hl,(ebuf+8)
+        push    hl
+        ld      a,(ebuf+3)
+        call    open_fi_3
+        pop     hl
+        ld      (ebuf+8),hl
+        pop     hl
+        ld      (ebuf+5),hl
+        pop     af
+        ld      (ebuf+2),a
+        pop     hl
+        ld      (ebuf),hl
+        xor     a
+        ld      (ebuf+3),a
+        ret
+
+        OPEN_FI open_fi_3
         db      "NXQ1"
-tape2_end:
+tape3_end:
         ent
-tape2_size      equ tape2_end - tape2_start
+tape3_size      equ tape3_end - tape3_start
         assert  z80_part_at + tape1_size <= patch_path, "a tape's first part runs into the fixed memory"
         assert  z80_part_at + tape2_size <= patch_path, "a tape's second part runs into the fixed memory"
-        display "snapshot part: ", /d, ov_end - z80_part_at, ", tape parts: ", /d, tape1_size, " and ", /d, tape2_size, ", room for a part: ", /d, patch_path - z80_part_at
+        assert  z80_part_at + tape3_size <= patch_path, "a tape's third part runs into the fixed memory"
+        display "snapshot part: ", /d, ov_end - z80_part_at, ", tape parts: ", /d, tape1_size, ", ", /d, tape2_size, " and ", /d, tape3_size, ", room for a part: ", /d, patch_path - z80_part_at
 
 ; The highest the code reaches, whichever part is in.
         if      z80_part_at + tape1_size > ov_start_at + ov_size

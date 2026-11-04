@@ -309,8 +309,12 @@ def parse_tape_table(table, blocks):
     if isinstance(blocks, tuple):                     # (tape, kind) or (FileSet, kind): walk each file as far as needed
         files = files_of(*blocks)
         named = [struct.unpack_from('<H', table, i + COPY_SIZE * n)[0] for n in range(count) if i + COPY_SIZE * (n + 1) <= len(table)]
-        blocks = []
+        blocks = []; last_file = max([k >> FILE_SHIFT for k in named], default=0)
         for fi, (tape, kind) in enumerate(files):
+            if fi < last_file:                        # a file before the last one named: walked to its end
+                blocks.append(tape_blocks(tape, kind))
+                if len(blocks[-1]) > TAPE_BLOCKS_MAX: raise Wrong('a tape of a set has more data blocks than a reader walks')
+                continue
             mine = [k & BLOCK_MASK for k in named if k >> FILE_SHIFT == fi]
             blocks.append(tape_blocks(tape, kind, min(max(mine, default=-1), TAPE_BLOCKS_MAX - 1) + 1))
     elif blocks and not isinstance(blocks[0], list):
@@ -897,6 +901,10 @@ def add_target(f, known_game, new_game, kind, fields, residual_max=None):
         raise Wrong('this patch already has a target with that file name')
     first = len(new_files[0][0])
     if any(t['length'] == first and (t['kind'] & ~KIND_SET) != kind for t in have): raise Wrong('this patch has a target of another kind with that length')
+    rest = [(nm.lower(), len(x)) for nm, (x, _) in zip(names[1:], new_files[1:])]
+    for t in have:
+        if t['length'] == first and [(nm.lower(), n_) for nm, _, n_ in t['files'][1:]] != rest:
+            raise Wrong('this patch has a target whose first file has that length, but other further files')
     if not fields.get('title') and have and have[0]['title']: fields = dict(fields, title=have[0]['title'].decode('ascii', 'replace'))
     nonce = f[NONCE_AT:CHECK_AT]
     entry = target_block(len(have), kind, new_game, nonce, opened.master, fields)
