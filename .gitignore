@@ -18,3 +18,6 @@ tests/vectors/__pycache__/
 !patches/
 !patches/*/
 !patches/*/*.nxc
+# What a player copies to the SD card: the assembled loader and its hand-off (checked against their sources by tests/test_sdcard.py).
+!sdcard/
+!sdcard/**
