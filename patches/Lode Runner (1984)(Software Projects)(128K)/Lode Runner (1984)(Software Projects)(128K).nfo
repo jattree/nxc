@@ -1,0 +1,91 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Lode Runner
+  Publisher   Software Projects, 1984
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Lode Runner (1984)(Software Projects)(128K).z80
+  MD5         41360f6c33e7a02ca6450881cb385ade
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (-0.00% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the runner's update 0x92FC,
+              lockstep checked at every update)
+
+  Changes     1.0: Dean Woodyatt's Lode Runner engine rebuilt on the 128K
+              release (AY music), with the whole alt ROM image and the start-
+              up checks
+
+  Note        The 128K release, so the AY music plays. Dean Woodyatt's engine,
+              unchanged: the runner and the guards are hardware sprites in the
+              game's colours, the scenery keeps its own. The alt ROM holds the
+              128K machine's ROM 1, so the fade between lives looks as on a
+              real 128K.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Software Projects, 1984, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      4 recordings of the 128K release IDENTICAL on Dean's engine
+              (rework v2): 3 bot RZX of 20,042 / 20,021 / 20,049 frames + a
+              6,000-frame free run (registers, memory, sprite pixels vs the
+              plotter, the patched screen frame by frame, every screen /
+              attribute read); every hook ran (draws 14,859 + 24 runner,
+              erases 14,882, guard death 0x96B6 1 with its respawn draw
+              0x970C, level-start prints 60 + 240, paints 42,210, fades and
+              clears 96); 6,074 unit cases PASS, 3 negative controls detected;
+              clock matrix 8 hook sites x 4 incoming clocks = 32 cases, exit
+              speed = the incoming one, a forced 3.5 MHz exit detected; ROM
+              paths: every ROM byte as recorded but the 20-byte start-up
+              register block (known, read only by the fade); start-up tail
+              never read before written
+
+  Emulator    JNext 1.1.104 headless: reaches play, AY music written (146-169
+              data writes a second, as the original); flicker 300 frames: 0
+              out of step, 0 vanished; 15-minute soak against the original
+              .z80: no freeze, loop or crash, game overs and restarts in both;
+              frames viewed; no person played it
+
+  Coverage    level 1 only (the bot dies there); a guard trapped by a
+              refilling brick once; no level complete, editor, load / save
+              screens or redefine keys; cheats proved in the simulator on the
+              original 128K file: Infinite lives: 17 deaths, lives held at 5
+              (without: 5 to 0, game over); Immunity: guard touches never kill
+              (0x9CD2 death path 0 times, 15 without), deaths by a refilling
+              brick still happen
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
