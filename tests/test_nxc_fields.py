@@ -93,7 +93,8 @@ class Setter(unittest.TestCase):
 class Published(unittest.TestCase):
     def test_each_nfo_is_made_from_its_patch_alone(self) -> None:
         patches = sorted((ROOT / "patches").glob("*/*.nxc"))
-        self.assertEqual(len(patches), 20)
+        listed = [l for l in (ROOT / "patches" / "manifest.tsv").read_text().splitlines()[1:] if l.strip()]
+        self.assertEqual(len(patches), len(listed))   # every patch is in the manifest, and no more
         for p in patches:
             with self.subTest(p.name):
                 self.assertEqual(make_nfo.nfo(p.read_bytes(), p.stem), p.with_suffix(".nfo").read_text(newline="", encoding="ascii"))

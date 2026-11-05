@@ -73,12 +73,24 @@ def nfo(d, base):
     if inf.get('zxdb_entry'): para('ZXDB', inf['zxdb_entry'], o)
     if inf.get('version'): para('Version', inf['version'], o)
     rule(o, 'YOU NEED')
-    o.append('  Your own copy of the original game, saved beside this patch:')
-    for t in tg:
+    multi = any('file_2' in fields(t['text']) for t in tg)
+    o.append('  Your own copy of the original game, saved beside this patch' + (':' if not multi and len(tg) == 1 else ''))
+    if multi and len(tg) > 1: o.append('  (one of these sets, every file of the set together):')
+    elif multi: o.append('  (all of these files together):')
+    elif len(tg) > 1: o.append('  (one of these files):')
+    for n, t in enumerate(tg):
         f = fields(t['text'])
         o.append('')
-        para('File', f.get('file', ''), o)
-        para('MD5', f.get('md5', ''), o)
+        if multi and len(tg) > 1:
+            o.append('  Set %d' % (n + 1))
+        k = 1
+        while True:
+            sfx = '' if k == 1 else '_%d' % k
+            if 'file' + sfx not in f:
+                break
+            para('File', f['file' + sfx], o)
+            para('MD5', f.get('md5' + sfx, ''), o)
+            k += 1
     o.append('')
     o.append('  The patch carries none of the game\'s code. It only works with that exact')
     o.append('  dump, under that name or any other: anything else is refused, with a')
