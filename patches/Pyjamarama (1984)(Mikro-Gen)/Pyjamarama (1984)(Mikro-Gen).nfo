@@ -1,0 +1,87 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Pyjamarama
+  Publisher   Mikro-Gen, 1984
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Pyjamarama (1984)(Mikro-Gen).z80
+  MD5         1ff279754d0730e503816199ac6976f3
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Pink skin, blue pyjamas and red slippers; multi-colour
+              collectables, birds, tools, food and other figures. Solid black
+              drawn detail, no outlines. Flat palette and editable native PNG
+              sheets. Scenery retains the game colours. Source: Enhanced
+              colours: Jon Attree.
+
+  Pace        original
+
+  Changes     v1.1 owner art revision 1: flat orange coins from the owner PNG.
+              All 200 graphics may use hardware sprites below the HUD,
+              including collectables. 28 MHz hooks restore incoming CPU speed
+              and R. Full Sinclair hidden ROM image; loading screen and
+              verified trainers.
+
+  Note        O/P left/right; M jump/use. Any key past title, ENTER to play.
+              Enhanced is off by default. Original pace target; remaining
+              measured overhead below 2%. Hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite energy
+   3  Immunity
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Mikro-Gen, 1984, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05, default and Enhanced
+              with his coin edits: approved
+
+  Replay      Engine baseline: both sets 62 recordings, 186686 frames each
+              IDENTICAL; 11/11 broken builds caught; 224 clock/R cases. Owner
+              art revision: 56 ink colours only, all geometry/code identical;
+              2 targeted recordings, 4579 frames IDENTICAL; all 200 graphics
+              unit checked.
+
+  Emulator    JNext: title, menu, play; 220-frame flicker check no findings;
+              15-minute soak no freeze, loop or crash. Native pictures
+              inspected.
+
+  Coverage    192/200 graphics in recordings, all 200 exercised at five
+              position/HUD boundaries, pattern recycling and resets. Menus,
+              natural deaths/game over; 30 injected room starts. Ending not
+              completed.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
