@@ -1,0 +1,94 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Treasure Island Dizzy
+  Publisher   Code Masters, 1989
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy 2 - Treasure Island Dizzy (1989)(Code Masters)(128K).z80
+  MD5         db6ccbeb2f9c601476efab3cfd28b131
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+0.00% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the game loop 0x61A8, lockstep
+              checked at every update; one busy trial in 10 lost one interrupt
+              (in the game's own interrupts-off windows at another moment) and
+              left lockstep at update 147)
+
+  Changes     1.0: Dean Woodyatt's Treasure Island Dizzy build moved to the
+              128K release (AY music), his hooks at 28 MHz, whole alt ROM
+              image, loading screen
+
+  Note        The 128K release, so the AY music plays. Dean Woodyatt's
+              Treasure Island Dizzy builder: Dizzy is four hardware sprites,
+              so he no longer takes the colours of the scenery he walks
+              through; his hooks now run at 28 MHz. Loading screen from the
+              tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Immunity
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Code Masters, 1989, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      4 recordings of the 128K release IDENTICAL on rework v128 (3 bot
+              walks of 12,035 / 12,000 / 12,011 frames, and 1,103 frames on
+              the sea bed with the .pok's walk-in-water POKE to reach the
+              bubbles): 6,927 plots pixel-perfect, 6,900 erases, 27,567 ISR
+              hide checks, 111 room wipes, 189 bubble tests (the virtual read)
+              equal to the original's; the game never touches the trampolines
+              in the printer buffer; 3 negative controls detected; clock
+              matrix 5 hook sites x 4 incoming clocks = 20 cases PASS, a
+              forced 3.5 MHz exit detected; ROM paths: every ROM byte as
+              recorded; start-up tail never read before written
+
+  Emulator    JNext 1.1.104 headless: loading screen, title, play reached,
+              frames viewed; AY music written (469-550 data writes a second,
+              as the original); flicker 300 frames: 0 out of step, 0 vanished,
+              0 transients; 15-minute soak against the original .z80: no
+              freeze, loop or crash; no person played it
+
+  Coverage    the first rooms and the sea bed only (bot walks); inventory and
+              dialogue boxes not opened by the bots (the TID engine has no box
+              routine here); loading screen stub in bank 13, emulator-tested
+              only; cheats proved in the simulator on the original 128K file:
+              Immunity: the hazard death routine 0x7269 returns at once (4,906
+              calls on one walk), Dizzy went through 24 room changes against 4
+              before a game over (drowning still kills); dropped: Walk in
+              water (the game reset into BASIC at frame 1,130 of a walk with
+              it), Walk through walls (no effect seen walking left or right
+              for 3,000 frames), Cheat mode (use key C) (its effect not
+              established: Dizzy vanished), Immunity (alt) (0x742A is text in
+              this release)
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
