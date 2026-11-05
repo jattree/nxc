@@ -12,6 +12,7 @@ byte for byte. See spec/NXC-FORMAT.md.
     nxc.py credit PATCH GAME -o OUT [--patch-by NAME] [--colours-by NAME]
     nxc.py version PATCH GAME VERSION -o OUT   (the patch's own version, such as 1.0, shown as v1.0; '' removes it)
     nxc.py help PATCH GAME -o OUT --line KEY=TEXT ...   (the menu's help: fix, colours, language, trainer_N, toggle_N)
+    nxc.py set PATCH GAME FIELD VALUE -o OUT   (one INF1 or PRF1 field, such as notes, enhanced_N, changes, tested, pace; '' removes it)
     nxc.py handoff-bas -o NXCHAND.BAS
 
 Applying writes a .nex that carries its menu: it shows the menu when it starts, with any choices given here already on,
@@ -52,7 +53,7 @@ VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2   # INF1's version, shown as v
 CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
-              'timing', 'timing_when')
+              'timing', 'timing_when', 'pace', 'pace_measured', 'pace_where', 'pace_when')
 
 class Wrong(ValueError):
     """The file cannot be applied to this snapshot."""
@@ -1604,6 +1605,105 @@ def set_version(f, game, version):
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
+NOTE_MAX = 1024     # INF1's notes, enhanced_N, changes and tested: one line each, for the .nfo
+INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version', 'build', 'nex_md5', 'nexclash', 'credit',
+             'game_language', 'language_codes', 'text_by', 'trainers_played', 'notes', 'changes', 'tested')   # and enhanced_N
+NOTE_KEYS = ('notes', 'changes', 'tested')
+PACE_TARGETS = {'ORIGINAL': 'original', 'SLOWDOWN REMOVED': 'slowdown removed', 'TURBO': 'turbo'}
+CHANGE_SEP = ' | '; PACE_SEP = '; '
+
+def change_entries(v):
+    """INF1's changes as [(version, what changed)], in the order written; [] for none or a value that is not entries."""
+    out = []
+    for item in (v.split(CHANGE_SEP) if v else ()):
+        version, sep, what = item.partition(': ')
+        if not sep or not what.strip(): return []
+        out.append((version, what))
+    return out
+
+def pace_entries(v):
+    """PRF1's pace_measured as [(scene, penalty)], penalty a signed percentage such as +0.15%; [] for none or a value
+    that is not entries."""
+    out = []
+    for item in (v.split(PACE_SEP) if v else ()):
+        scene, sep, penalty = item.rpartition(': ')
+        if not sep or not scene.strip() or not re.fullmatch(r'[+-][0-9]+(\.[0-9]+)?%', penalty): return []
+        out.append((scene, penalty))
+    return out
+
+def field_place(f, key):
+    """Which block a field of `set` goes in, b'INF1' or b'PRF1', with its key as stored; Wrong for one this tool does not
+    know. 'enhanced' alone is enhanced_N of the patch's one colour set."""
+    if key == 'enhanced':
+        cs = offered(f, KIND_COLOURS)
+        if len(cs) != 1: raise Wrong('this patch has %d colour sets: say which, as enhanced_N, N its choice' % len(cs))
+        key = 'enhanced_%d' % cs[0]['choice']
+    if key in INFO_KEYS: return b'INF1', key
+    m = re.fullmatch(r'enhanced_([0-9]{1,3})', key)
+    if m:
+        if not any(e['choice'] == int(m.group(1)) for e in offered(f, KIND_COLOURS)): raise Wrong('this patch has no colour set of choice %s' % m.group(1))
+        return b'INF1', key
+    if key in PROOF_KEYS or re.fullmatch(r'toggle_[0-9]{1,3}', key): return b'PRF1', key
+    raise Wrong('%s is not a field of INF1 or PRF1 that this tool sets' % key)
+
+def check_field(key, value):
+    """Wrong if value cannot be key's: '' removes a field, but never credit."""
+    if not value:
+        if key == 'credit': raise Wrong('a patch always has a credit')
+        return
+    if '\n' in value or not value.isascii() or not value.isprintable(): raise Wrong('%s must be one line of printable ASCII' % key)
+    if key == 'fix_label': check_fix_label(value)
+    elif key == 'version': check_version(value)
+    elif key == 'nex_md5' and not re.fullmatch(r'[0-9a-f]{32}', value): raise Wrong('nex_md5 is 32 lower-case hexadecimal digits')
+    elif key == 'game_language' and not re.fullmatch(r'[a-z]{2,3}', value): raise Wrong('game_language is an ISO 639 code, such as en')
+    elif key in NOTE_KEYS or key.startswith('enhanced_'):
+        if len(value) > NOTE_MAX: raise Wrong('%s is at most %d characters' % (key, NOTE_MAX))
+        if key == 'changes':
+            entries = change_entries(value)
+            if not entries: raise Wrong('changes is entries of VERSION: what changed, separated by %r' % CHANGE_SEP)
+            for version, _ in entries: check_version(version)
+    elif key == 'pace' and value not in PACE_TARGETS: raise Wrong('pace is one of %s' % ', '.join(PACE_TARGETS))
+    elif key == 'pace_measured' and not pace_entries(value):
+        raise Wrong('pace_measured is entries of SCENE: PENALTY, such as "the first room: +0.15%%", separated by %r' % PACE_SEP)
+
+def set_field(f, game, key, value):
+    """The patch with one field of INF1 or PRF1 set, or removed if value is '': the same nonce and encrypted blocks, with a
+    new check value, as credit and version do. INF1 keeps the menu's lines (MENU_KEYS) first, and refuses a change that
+    would end them past the first TEXT_READ bytes, where a loader would not see them; another field goes after them."""
+    block_tag, key = field_place(f, key)
+    check_field(key, value)
+    st, bl = check_key(f, game)[:2]
+    new = b'%s=%s\n' % (key.encode(), value.encode()) if value else b''
+    out = [[t, d] for t, d in bl]
+    if block_tag == b'PRF1' and not any(t == b'PRF1' for t, _ in out):
+        out.insert(next(i for i, (t, _) in enumerate(out) if t == b'INF1') + 1, [b'PRF1', b''])
+    for entry in out:
+        if entry[0] != block_tag: continue
+        lines = [l + b'\n' for l in entry[1].split(b'\n') if l]
+        name = lambda l: l.partition(b'=')[0].decode('latin-1')
+        at = next((i for i, l in enumerate(lines) if name(l) == key), None)
+        if at is not None: lines[at:at + 1] = [new] if new else []
+        elif new and key in MENU_KEYS:
+            menu = [i for i, l in enumerate(lines) if name(l) in MENU_KEYS and MENU_KEYS.index(name(l)) < MENU_KEYS.index(key)]
+            lines.insert(menu[-1] + 1 if menu else 0, new)
+        elif new: lines.append(new)
+        if block_tag == b'INF1':
+            menu = [l for l in lines if name(l) in MENU_KEYS]
+            lines = menu + [l for l in lines if name(l) not in MENU_KEYS]
+            if len(b''.join(menu)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
+        entry[1] = b''.join(lines)
+        break
+    out = [e for e in out if not (e[0] == b'PRF1' and not e[1])]
+    return seal(f[:CHECK_AT], out, st)
+
+def text_fields(f, tag):
+    """A clear text block's fields, all of it, as a reader takes them: {key: value}, the first of a key winning."""
+    out = {}
+    for line in dict(blocks(f)[1]).get(tag, b'').split(b'\n'):
+        k, eq, v = line.partition(b'=')
+        if eq: out.setdefault(k.decode('latin-1'), v.decode('latin-1'))
+    return out
+
 def handoff_bas():
     """The one-line BASIC program browser.cfg merges into the snapshot loader: line 0, IF %x=1 THEN CLS:.nexload
     nexclash.nex. A browser.cfg line cannot branch by itself: IF ... ELSE and ON both fell through to the menu when
@@ -1734,6 +1834,19 @@ def run(argv):
         f = set_version(read_file(a.patch), game_arg(a.game, a.also), a.version)
         with open(a.output, 'wb') as g: g.write(f)
         print('version:', patch_version(f) or '(none)'); print('menu line:', credit_line(f)); print('wrote', a.output, len(f), 'bytes')
+        return
+    if argv[:1] == ['set']:
+        ap = argparse.ArgumentParser(prog='nxc.py set', description="Set one field of INF1 or PRF1, such as notes, enhanced_N, changes, tested, credit or pace, keeping the patch's key.")
+        ap.add_argument('patch'); ap.add_argument('game'); ap.add_argument('field'); ap.add_argument('value', help="one line of printable ASCII; '' removes the field")
+        ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
+        a = ap.parse_args(argv[1:])
+        refuse_same(a.output, a.patch, a.game, *a.also)
+        f0 = read_file(a.patch)
+        tag, key = field_place(f0, a.field)
+        f = set_field(f0, game_arg(a.game, a.also), a.field, a.value)
+        with open(a.output, 'wb') as g: g.write(f)
+        print('%s %s: %s' % (tag.decode(), key, text_fields(f, tag).get(key, '(none)'))); print('wrote', a.output, len(f), 'bytes')
         return
     if argv[:1] == ['import-pok']:
         ap = argparse.ArgumentParser(prog='nxc.py import-pok', description="Add a .pok's trainers to a patch.")

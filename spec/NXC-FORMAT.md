@@ -179,6 +179,21 @@ Keys: `publisher` (for the menu, such as `Ocean, 1986`; a loader may show the fi
 
 **`fix_label`**, optional: the menu's name for its main line, the rebuilt NexClash game on or off, for a game where "Colour clash fix" is the wrong words, such as `Colour` for a game that never had clash. It is 1 to 25 printable ASCII characters, as a toggle's name is, so `[ON]` keeps its column. A writer refuses a longer one, or one that would end past the first 252 bytes, and writes it after `publisher`, `patch_by` and `colours_by`. A reader that finds it longer shows the first 25, with anything unprintable as `?`. **Absent, the line reads `Colour clash fix`**: a patch without the key, or with it cut off at 252 bytes, shows the menu it always did, and a reader that does not know the key shows that too. It names the line and nothing else: what the line does, its `[ON]` and `[OFF]`, and the `[N/A]` of the lines after it with it off, are the clash fix's. `nxc.py make --fix-label TEXT` sets it.
 
+**Notes for the `.nfo`**, all optional: what a person reads about the patch, beside it. A loader never shows them, and no reader needs them to play, so they raise no level and set no flag. Each is one line of 1 to 1,024 printable ASCII characters, and a writer puts them after every key a loader reads, so that they never push a menu key past the first 252 bytes:
+
+| Key | Holds |
+|---|---|
+| `notes` | What a player should know that the rest does not say: choices the owner made, such as no outlines, and faults that are the original game's own |
+| `enhanced_N` | What colour set N looks like, from frames viewed, N being the set's choice ID in decimal (as for `PRF1`'s `toggle_N`), so that it stays with the set when the patch is remade. A key for a choice no colour set has is skipped |
+| `changes` | What changed in each version of the patch: entries of the version (as `version` holds it), `: ` and what changed, in the order written, separated by ` \| `, such as `1.1: writes the whole alt ROM image` |
+| `tested` | Who played it, where and when: one sentence, such as `Played by Jon Attree in JNext through the real loader, 2026-11-04` |
+
+A reader that does not know a key skips it, as always, so a patch with them is the same patch to a loader: the same description, menu and output, byte for byte. `trainers_played`, also optional and also not shown on the menu, records how each trainer was tried. `credit`, `build`, `nex_md5` (32 lower-case hexadecimal digits) and `nexclash` are as above.
+
+**`nxc.py set PATCH GAME FIELD VALUE -o OUT`** sets any one field of `INF1` or of `PRF1` (below), or removes it with `''`, keeping the nonce and key as `credit` and `version` do and needing the game. It refuses a field it does not know, and checks each as this document says: a menu key (`publisher`, `patch_by`, `colours_by`, `fix_label`, `version`) goes among the menu's lines, in that order, and is refused if they would then end past the first 252 bytes; `fix_label` and `version` keep their own limits; `credit` cannot be removed; `enhanced` alone means `enhanced_N` of a patch's one colour set, and `enhanced_N` must name a colour set the patch offers; `changes` must be entries, each version a valid one. Any other field goes after the menu's lines, in place if it is there, otherwise last. Every block but the one changed is as it was.
+
+`tools/make_nfo.py PATCH.nxc` writes the `.nfo` beside it from these fields and the patch's other clear blocks alone, without the game: the files it needs and their MD5s, what it does, each colour set's look, its pace, its changes and notes, its menu, its credits and its proofs.
+
 ### PRF1
 
 What has been shown about this build, with each kind of proof separate and never merged. Any may be left out, and leaving one out says nothing was recorded. Each has a `_when` giving the date it was true.
@@ -202,6 +217,17 @@ Optional display results, from comparing what the build shows with a reference:
 | `display_when` | When |
 
 A figure for how long something takes goes in `timing`, with `timing_when`, and states the machine and speed it was measured at. It is a record, not a requirement: no model of timing is part of this format.
+
+**Pace**, optional: how fast the rebuilt game plays against the original, in fields a reader can show the same way for every patch.
+
+| Key | States |
+|---|---|
+| `pace` | What the build aims for, one of three words: `ORIGINAL`, the original game's pace, the patch's own work hidden; `SLOWDOWN REMOVED`, the original's pace with the slowdown of its busy scenes taken out, which is a change to how it plays; `TURBO`, faster than the original, on purpose |
+| `pace_measured` | The penalty measured against the original, per scene: entries of the scene, `: ` and a signed percentage of the original's time (`+` slower, `-` faster), separated by `; `, the first being the headline, such as `the walk through rooms 0, 2, 3 and 16: +0.15%; room 2: +0.9%` |
+| `pace_where` | Where it was measured: the emulator and its version, or the machine |
+| `pace_when` | When |
+
+Absent, nothing is said of pace, and a reader shows nothing. A `pace` that is not one of the three words is refused by a writer and shown as nothing by a reader. `tools/make_nfo.py` shows one line, the word in lower case, then the headline figure and where: `Pace: original (+0.15% measured in JNext 1.1.104)`. `nxc.py set` sets each, checking the word and the entries. Like everything in `PRF1`, it describes the base build, with nothing chosen.
 
 A trainer voids the replay proof. `PRF1` describes the base build, and says nothing of a build with a trainer on.
 

@@ -201,7 +201,15 @@ python tools/nxc.py import-pok Game.nxc Game.pok Game.z80 -o Out.nxc --publisher
 python tools/nxc.py credit Game.nxc Game.z80 -o Out.nxc --patch-by "Your Name" --colours-by "Their Name"
 python tools/nxc.py version Game.nxc Game.z80 1.1 -o Out.nxc
 python tools/nxc.py help Game.nxc Game.z80 -o Out.nxc --line "trainer_1=Lives stay at three." --line "fix=The sprite build."
+python tools/nxc.py set Game.nxc Game.z80 notes "No outlines on the figures: my choice for this game." -o Out.nxc
+python tools/make_nfo.py Out.nxc
 ```
+
+`set` sets any one field of `INF1` or `PRF1`, keeping the patch's key, and refuses one it doesn't know or a value that
+breaks a limit: `notes`, `enhanced` (what the colour set looks like; `enhanced_N` for set N of several), `changes`
+(`1.1: what changed | 1.2: ...`), `tested` (who played it, where, when), `credit`, the menu's names, and `PRF1`'s proofs,
+`pace` among them (`ORIGINAL`, `SLOWDOWN REMOVED` or `TURBO`, with `pace_measured` such as `the first room: +0.15%`).
+`''` removes a field. None of them changes what the patch builds. `make_nfo.py` writes the `.nfo` from the patch alone.
 
 `version` sets the patch's own version, up to 8 characters such as `1.1`, which the menu shows as `v1.1` at the right
 of its `Patch:` row; give it a new one each time you change a published patch. `''` removes it.
