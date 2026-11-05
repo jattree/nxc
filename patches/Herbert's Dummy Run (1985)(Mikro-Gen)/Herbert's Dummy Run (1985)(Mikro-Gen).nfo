@@ -1,0 +1,87 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Herbert's Dummy Run
+  Publisher   Mikro-Gen, 1985
+  Version     1.3
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Herbert's Dummy Run (1985)(Mikro-Gen).z80
+  MD5         b5570016396fc2ec823da33a2a095ba3
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Herbert, the other figures and most of the scenery painted in
+              fuller colour: Herbert in a white nappy with pink skin, the
+              balls in solid yellow, no outlines or shading, mirrored facings
+              to match. Source: Enhanced colours: Jon Attree.
+
+  Pace        original (+1.21% measured in JNext 1.1.104, 10 runs per scene,
+              Enhanced)
+
+  Changes     1.0: the clash fix, every moving figure a sprite. 1.1-1.2: an
+              optional Enhanced colour set for the figures and scenery. 1.3:
+              hand-painted touches by Jon Attree to Herbert and the balls.
+
+  Note        Controls: Q and W move, Caps Shift jumps. Herbert's drawing code
+              is the same family as Everyone's a Wally and Three Weeks in
+              Paradise, so this patch builds on theirs. Plays at the
+              original's pace.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Partial immunity
+   3  Working torch
+   4  Loaded pop gun
+   5  Loaded catapult
+   6  Real ten pence
+   7  Remove moving enemies
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Mikro-Gen, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by Jon Attree in JNext through the real loader,
+              2026-11-05
+
+  Replay      v1.3 both sets: 30133 frames IDENTICAL each; 19 sites, 114651
+              external calls each; 18/18 negatives; 512 clock/R, 1072 pattern
+              and 7490 scenery cases
+
+  Emulator    JNext 1.1.104: six native room starts checked for v1.3. v1.2 two
+              220-frame flicker checks and 15-minute soak passed; identical
+              engine code retained.
+
+  Coverage    Menus, control choices, deaths, game over and return; 30
+              injected room starts in replay. 231 figure/facing previews. Not
+              a complete walkthrough.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
