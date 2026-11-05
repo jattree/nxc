@@ -1,0 +1,109 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Lunar Jetman
+  Publisher   Ultimate, 1983
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Lunar Jetman (1983)(Ultimate Play The Game).z80
+  MD5         4fd3f151dcf12216cb23618687da04d5
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Jetman in the suit of the Spec256 Jetpac; every alien family
+              painted by its parts in its own colours; the moon rover in blue
+              and cyan with dark grey tyres and light grey spokes. No white
+              outlines or edges. Source: Jetman's Enhanced suit from an older
+              Spec256 Jetpac conversion, painter not established.
+
+  Note        The patch writes the whole alt ROM image (Sinclair's ROM plus
+              its hooks), so the ROM's own interrupt code can never run the
+              hooks.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite fuel
+   3  No enemies
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Jetman's Enhanced suit from
+              an older Spec256 Jetpac conversion, painter not established
+  Original    Ultimate, 1983, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-04
+
+  Replay      IDENTICAL on 3 recordings from the title, 22,090 frames, default
+              and Enhanced, on the whole alt ROM build (2026-11-04: alt ROM
+              image is Sinclair's 48K ROM plus the hooks, 0x0000-0x3FFF all
+              written by the build): at every hook call (h_new 30,374, h_tnew
+              19,761, h_clr 105,103, h_eo 271, h_teo 4, h_cls 44, h_msg 4)
+              original and patched code run from the same state to the same
+              point, registers and 48K memory compared (dead stack aside),
+              slot 4 restored, the patched ROM modelled as the Next fills it
+              (NextZXOS's ROM3 first, then the build's writes); at all 21,398
+              IM 1 interrupts the alt ROM image's handler run against the
+              original's, IDENTICAL, no hook code reached; at 11,971
+              interrupts outside the plot code each object's sprite ink equals
+              the pixels its own XOR stores put on the original screen (35,595
+              object checks), palette offset equal to the object's colour at
+              every draw, setup palette checked entry by entry; 10 of 10
+              negatives detected on the default and 7 of 7 on Enhanced, the
+              new one in both the previous build's image (hooks only over
+              ROM3): hook code ran from the IM 1 handler at every interrupt;
+              Enhanced tiles checked against their default tiles, silhouette
+              for silhouette; the verified start is the stepped s0 state, and
+              the shipped build starts at the file's own decrypter, proven in
+              the simulator to reach the same memory at 0x8000 apart from 16
+              bytes of ROM keyboard and frame variables and dead stack
+
+  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04): menu,
+              play, the rover, aliens and bombs, default and Enhanced, frames
+              viewed; the alt ROM image dumped in JNext equals the modelled
+              Sinclair-plus-hooks image; with NextZXOS's DivMMC 0x0038 trap
+              removed IM 1 ran Sinclair's handler 4,470 times and play ran to
+              game over and the Hall of Fame; earlier, on the previous build:
+              the tape's loading picture held then the game, walking pace
+              equal to the plain build, real loader from the Browser, MD5
+              exact
+
+  Coverage    random play with infinite lives on 3 recordings: walking,
+              flying, firing, aliens of the first levels, bombs, the rover
+              moving and destroyed, the missile warning, game over and the
+              Hall of Fame; not reached: the alien base, the missile's flight
+              and destruction, bombing the base, the rover carrying items,
+              later levels; cheats from the archive's POKEs for this release
+              (its "Infinite Lives (corrected)" bytes, and fuel and no-enemies
+              written for the rotated code), lives, fuel and no enemies held
+              in the simulator on the original code, unplayed by a person;
+              whole alt ROM image from 2026-11-04: the previous build differs
+              only in the alt ROM fill (stub) and the image's low half
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
