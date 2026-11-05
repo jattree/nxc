@@ -94,7 +94,7 @@ cd firmware && sjasmplus --nologo --raw=nxcstub.bin nxcstub.asm
 The command shows the same menu, from the same `menu.asm`, as a `.nex` that carries it (the spec's "The menu"): a blue bar
 with the title and stripes, the publisher in white below, `TRAINER` and `OPTIONS` in yellow, `ON`
 green and `OFF` red, `ENTER play` and `BREAK exit`, the help from `HLP1` of the line last keyed (the number keys are the only keys;
-no cursor, no highlight), `Colours:` and `Patch:` above a plain bar with the stripes. Before the menu the command takes one 8K page for it, reads its menu part from its own file
+no cursor, no highlight), `Colours:` and `Patch:`, then the fixed footer, two bars crediting the format and the engine that no patch can change. Before the menu the command takes one 8K page for it, reads its menu part from its own file
 (after the tape parts) into the page at 0xA000, with interrupts off, and builds the description there from the patch; the font
 is ROM 3's, read from the card's `C:/MACHINES/NEXT/enNextZX.rom` at 0xFD00, as a dot command cannot see the ROM (without the
 file it stops with `Needs NEXT/enNextZX.rom: no font`). It switches to layer 0 for the menu if the caller is in another, and

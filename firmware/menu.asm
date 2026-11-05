@@ -34,7 +34,10 @@ MV_VTYPE        equ MENU_RAM + 12
 
 MENU_LINES_MAX  equ 10
 MENU_TITLE_ROW  equ 27                  ; a title's characters in a bar row, before the stripes
-MENU_HELP_ROW   equ 18                  ; the help's first row, at the latest
+MENU_HELP_ROW   equ 17                  ; the help's first row, at the latest, so that it ends by row 19
+MENU_COLOURS    equ 20                  ; the credit rows: Colours:, then Patch:
+MENU_PATCH      equ 21
+MENU_FOOTER     equ 22                  ; the fixed footer, two bars, which no patch can change
 MENU_VERSION    equ 8                   ; a version's characters, after its v
 MD_VERSION      equ 1                   ; the flags' bit: a version follows patch_by
 A_TEXT          equ $47                 ; BRIGHT, paper black, ink white
@@ -43,6 +46,7 @@ A_HEAD          equ $46
 A_ON            equ $44
 A_OFF           equ $42
 A_HELP          equ $45
+A_CYAN          equ $68                 ; BRIGHT, paper cyan: the footer's last cell
 M_DEBOUNCE      equ 3000
 
 ; HL: the description, DE: the font. Carry on return: BREAK; otherwise A is 0
@@ -369,9 +373,11 @@ menu_draw:
         ld      hl,MV_LINE
         inc     (hl)
         jr      .ln
-.done:  ld      a,(MV_ROW)              ; a blank, the keys, a blank, the help
+.done:  ld      a,(MV_ROW)              ; a blank, the keys, a blank, the help; the first blank is
+        cp      MENU_HELP_ROW - 1       ; left out only when the keys would then pass row 16, so
+        jr      nc,.keys                ; that the help still ends by row 19 (ten lines, both sections)
         inc     a
-        ld      (MV_ROW),a
+.keys:  ld      (MV_ROW),a
         ld      hl,s_enter
         ld      a,A_ON
         call    row_text
@@ -396,7 +402,7 @@ menu_draw:
         or      a
         jr      z,.credits
         ld      a,(MV_ROW)                  ; still the keys' row: a blank after it,
-        add     a,2                         ; unless the help would then pass row 20
+        add     a,2                         ; unless the help would then pass row 19
         cp      MENU_HELP_ROW + 1
         jr      c,.hr
         ld      a,MENU_HELP_ROW
@@ -423,7 +429,7 @@ menu_draw:
         call    puts_max
         pop     bc
         djnz    .help
-; The credits: colours and the patch's maker, above a plain bar with the stripes.
+; The credits: colours and the patch's maker, then the fixed footer.
 .credits:
         ld      a,A_TEXT
         ld      (MV_ATTR),a
@@ -434,7 +440,7 @@ menu_draw:
         or      a
         jr      z,.no_col
         push    hl
-        ld      a,21
+        ld      a,MENU_COLOURS
         ld      c,0
         call    at
         ld      hl,s_colours
@@ -463,7 +469,7 @@ menu_draw:
         ld      a,31                    ; the v in column 31 - E
         sub     e
         ld      c,a
-        ld      a,22
+        ld      a,MENU_PATCH
         call    at
         ld      a,'v'
         call    putc
@@ -478,7 +484,7 @@ menu_draw:
         jr      z,.no_patch
         push    hl
         push    bc
-        ld      a,22
+        ld      a,MENU_PATCH
         ld      c,0
         call    at
         ld      hl,s_patch
@@ -488,8 +494,23 @@ menu_draw:
         pop     hl
         call    puts_max
 .no_patch:
-        ld      a,23
-        jp      bar
+; The footer, the same on every patch's menu, from nothing in the patch: two bars, their stripes
+; one Spectrum band running down through both, crediting the format and the engine.
+        ld      a,MENU_FOOTER
+        call    bar
+        ld      a,MENU_FOOTER
+        ld      c,0
+        call    at
+        ld      hl,s_by
+        ld      b,MENU_TITLE_ROW
+        call    puts_max
+        ld      a,MENU_FOOTER + 1
+        call    bar_lo
+        ld      c,0
+        call    at
+        ld      hl,s_engine
+        ld      b,MENU_TITLE_ROW - 1
+        jp      puts_max
 
 ; The line whose record is at HL, at MV_ROW: its key, its name, its value; the
 ; keys are its number only, so no line is highlighted.
@@ -627,11 +648,14 @@ scr_clear:
         ret
 
 ; Row A as a bar: blue to column 27, then the four stripes.
-bar:    push    af
+bar:    ld      c,28
+; Row A as a bar, the stripes from column C.
+bar_at: push    bc
+        push    af
         ld      e,A_BAR
         call    row_attr
         pop     af
-        ld      c,28
+        pop     bc
         call    at
         ld      hl,s_stripes
         ld      b,4
@@ -647,6 +671,20 @@ bar:    push    af
         djnz    .s
         ld      a,A_BAR
         ld      (MV_ATTR),a
+        ret
+
+; Row A as the footer's lower bar: its stripes a column to the left, from 27 to 30, so that each runs
+; on from the one above it, and column 31 BRIGHT cyan, blank. Keeps A.
+bar_lo: push    af
+        ld      c,27
+        call    bar_at
+        ld      a,A_CYAN
+        ld      (MV_ATTR),a
+        ld      hl,g_blank
+        call    putg
+        ld      a,A_BAR
+        ld      (MV_ATTR),a
+        pop     af
         ret
 
 ; Row A's attributes all E.
@@ -850,3 +888,6 @@ s_patch:        db "Patch: "
 s_values:       db A_OFF,"OFF",A_ON," ON",A_TEXT,"N/A"
 s_stripes:      db $4a,$56,$74,$65      ; blue|red, red|yellow, yellow|green, green|cyan
 g_stripe:       db $01,$03,$07,$0f,$1f,$3f,$7f,$ff
+g_blank:        db 0,0,0,0,0,0,0,0
+s_by:           db " .nxc by Jon Attree",0       ; the footer: fixed, never from a patch
+s_engine:       db " Engine: Dean Woodyatt",0

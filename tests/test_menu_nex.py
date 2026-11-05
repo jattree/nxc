@@ -108,12 +108,16 @@ class TheMenu(unittest.TestCase):
         self.assertEqual(text[8], "3 Enhanced colours         [OFF]")
         self.assertEqual(text[9], "4 Language                 [OFF]")
         self.assertEqual(text[11], "ENTER play   BREAK exit")
-        self.assertEqual(text[22], "Patch: Vector")
-        self.assertEqual(text[23], "                            ////")
+        self.assertEqual(text[21], "Patch: Vector")
+        self.assertEqual(text[22], " .nxc by Jon Attree         ////")
+        self.assertEqual(text[23], " Engine: Dean Woodyatt     ////")
         self.assertNotIn("nexclash", m.screens[0].lower())
         a = attrs[0]
-        self.assertEqual(set(a[0][:28]) | set(a[23][:28]), {0x4E})
+        self.assertEqual(set(a[0][:28]) | set(a[22][:28]) | set(a[23][:27]), {0x4E})
         self.assertEqual(bytes(a[0][28:]), bytes((0x4A, 0x56, 0x74, 0x65)))
+        self.assertEqual(bytes(a[22][28:]), bytes((0x4A, 0x56, 0x74, 0x65)))
+        self.assertEqual(bytes(a[23][27:]), bytes((0x4A, 0x56, 0x74, 0x65, 0x68)))   # one band through both bars, then cyan
+        self.assertEqual(bytes(a[20]) + bytes(a[21]), bytes((0x47,) * 64))
         self.assertNotIn(0x69, set(a[4]))                    # no line highlighted
         self.assertEqual(a[3][0], 0x46)
         self.assertEqual(a[8][28:31], bytes((0x42,) * 3))   # OFF in red
@@ -122,6 +126,31 @@ class TheMenu(unittest.TestCase):
         self.assertEqual(a[11][13:23], bytes((0x42,) * 10))
         self.assertEqual(a[1], bytes((0x47,) * 32))         # the publisher, in white
         self.assertEqual(a[2], bytes((0x47,) * 32))
+
+    def test_the_longest_menu_and_the_footer(self):
+        """Ten lines in both sections, help, Colours: and Patch: with a version: the blank row before the keys is the one
+        left out, so that the help ends by row 19 above the credit rows and the fixed footer."""
+        f = longest(PATCH)
+        self.assertEqual(len(nxc.menu_lines(f)), 10)
+        m = self.screens(f, GAME, ("8",))
+        text = m.screens[-1].splitlines()
+        self.assertEqual(text[13:], ["8 Colour clash fix         [ ON]", "9 Enhanced colours         [OFF]", "0 Language                 [OFF]",
+                                     "ENTER play   BREAK exit", "Colour clash fix:", "The sprite build, with every",
+                                     "figure in its own colours.", "Colours: Jane Painter", "Patch: Jon Attree           v1.0",
+                                     " .nxc by Jon Attree         ////", " Engine: Dean Woodyatt     ////"])
+        self.assertEqual(text[11], "")                                       # the sections still apart
+
+    def test_no_patch_can_change_the_footer(self):
+        """The footer is the menu's own text: no INF1 key reaches it, and the description does not carry it."""
+        st, bl = nxc.check_key(PATCH, GAME)[:2]
+        odd = [[t, b"publisher=x\npatch_by=" + b"Z" * 40 + b"\ncredit=Somebody else\nfooter=Mine\n" if t == b"INF1" else d] for t, d in bl]
+        f = nxc.seal(PATCH[:nxc.CHECK_AT], odd, st)
+        for g in (PATCH, f, longest(PATCH)):
+            text = self.screens(g, GAME, ()).screens[0].splitlines()
+            self.assertEqual(text[22:], [" .nxc by Jon Attree         ////", " Engine: Dean Woodyatt     ////"])
+            desc = nxc.menu_description(g)[0]
+            self.assertNotIn(b"Attree", desc.replace(b"Jon Attree", b""))
+            self.assertNotIn(b"Woodyatt", desc)
 
     def test_keys_and_rules(self):
         m = self.screens(PATCH, GAME, ("3", "3", "2", "4", "1"))
@@ -185,6 +214,21 @@ class Presets(unittest.TestCase):
             self.assertEqual(joined, title)
             self.assertEqual(text[len(rows)], " Nobody, 2026")
             self.assertEqual(text[len(rows) + (1 if len(rows) == 2 else 2)], "TRAINER")
+
+
+def longest(f):
+    """The vector patch with the longest menu: seven trainers, the main line and both kinds of set, help for the main
+    line, colours_by, patch_by and a version, resealed."""
+    st, bl = nxc.check_key(f, GAME)[:2]
+    out = []
+    for t, d in bl:
+        out.append([t, d])
+        if t == b"TRN1":
+            out += [[b"TRN1", nxc.trn1("Cheat number %d" % k, [(5, 0x100 + k, 0)])] for k in range(2, 8)]
+    f = nxc.seal(f[:nxc.CHECK_AT], out, st)
+    f = nxc.set_credits(f, GAME, patch_by="Jon Attree", colours_by="Jane Painter")
+    f = nxc.set_version(f, GAME, "1.0")
+    return nxc.set_help(f, GAME, {"fix": "The sprite build, with every figure in its own colours."})
 
 
 def retitle(f, title):

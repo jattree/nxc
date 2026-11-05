@@ -68,10 +68,14 @@ def val(label: str, value: str) -> str:
     return label[:30 - len(value)].ljust(30 - len(value)) + value
 
 
+# The menu's fixed footer, rows 22 and 23, the same on every patch's menu (spec, "The menu"): row 23's stripes a column to
+# the left, and its last cell cyan with no pixels, which the harness reads as a space.
+FOOTER = {22: " .nxc by Jon Attree".ljust(28) + "////", 23: " Engine: Dean Woodyatt".ljust(27) + "////"}
+
+
 def screen(rows: dict[int, str]) -> str:
-    """A whole menu screen, as the harness reads it: rows not given are blank; row 23 the credit bar."""
-    rows = dict(rows)
-    rows.setdefault(23, "".ljust(28) + "////")
+    """A whole menu screen, as the harness reads it: rows not given are blank; rows 22 and 23 the fixed footer."""
+    rows = {**FOOTER, **rows}
     return "\n".join(rows.get(r, "") for r in range(24))
 
 
@@ -523,7 +527,7 @@ class Cobra(Base):
             4: row("1", "Infinite lives", "[OFF]"), 5: row("2", "Immunity", "[OFF]"),
             6: row("3", "Unlimited weaponry", "[OFF]"), 7: row("4", "Infinite lives (alt)", "[OFF]"),
             9: "OPTIONS", 10: row("5", "Colour clash fix", "[ ON]"), 12: "ENTER play   BREAK exit",
-            22: "Patch: Jon Attree"}))                     # row 21, Colours:, only with a colour set offered
+            21: "Patch: Jon Attree"}))                     # row 20, Colours:, only with a colour set offered
         self.assertNotIn("Someone", "\n".join(m.screens))
 
     def test_menu_without_trainers_or_publisher(self) -> None:
@@ -1809,13 +1813,13 @@ class MadeUpChoices(Choices, Base):
         return rekey(self.patch, self.game, edit)
 
     def tail(self, patch: bytes) -> list[str]:
-        """What the menu shows in its credit rows, 21 and 22, the ones there."""
+        """What the menu shows in its credit rows, 20 and 21, the ones there."""
         m, failed, message = self.run_it(["enter"], patch=patch)
         self.assertFalse(failed, message)
         self.assertEqual(m.clean(), [])
         lines = m.screens[1].split("\n")
-        self.assertEqual(lines[23], "".ljust(28) + "////")
-        return [x for x in lines[21:23] if x]
+        self.assertEqual(lines[22:], [FOOTER[22], FOOTER[23]])
+        return [x for x in lines[20:22] if x]
 
     def assert_credit(self, patch: bytes, shown: str | None) -> None:
         self.assertEqual(nxc.credit_line(patch), shown)
@@ -1887,7 +1891,7 @@ class MadeUpChoices(Choices, Base):
                 binary, symbols = H.assemble(replace)
                 m = self.machine({"patch.nxc": patch, self.game_name: self.game}, keys=["enter"], binary=binary, symbols=symbols)
                 failed, message = m.run('"patch.nxc"')
-                got = [x for x in m.screens[1].split("\n")[21:23] if x]
+                got = [x for x in m.screens[1].split("\n")[20:22] if x]
                 want = nxc.credit_line(patch)
                 self.assertNotEqual(got, [] if want is None else want.split("\n"), f"a loader with {name} passed")
 
@@ -1938,7 +1942,7 @@ class Jetpac(Choices, Base):
         self.assertFalse(failed, message)
         self.assertEqual(len(m.screens), 7)      # before, default, one for each key, after
         top = {0: " JETPAC".ljust(28) + "////", 1: " Ultimate, 1983", 3: "TRAINER", 6: "OPTIONS", 10: "ENTER play   BREAK exit",
-               22: "Patch: Jon Attree"}           # no Colours: row, as the patch names no painter
+               21: "Patch: Jon Attree"}           # no Colours: row, as the patch names no painter
         for shown, (trainer, fix, enhanced) in zip(m.screens[1:6], (("[OFF]", "[ ON]", "[OFF]"), ("[ ON]", "[ ON]", "[OFF]"),
                                                                     ("[ ON]", "[ ON]", "[ ON]"), ("[ ON]", "[OFF]", "[N/A]"),
                                                                     ("[ ON]", "[ ON]", "[ ON]"))):

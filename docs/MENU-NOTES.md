@@ -8,7 +8,7 @@ Next or a Tang.**
 - **Spec** ([NXC-FORMAT.md](../spec/NXC-FORMAT.md), "The menu", "HLP1", "A .nex that carries its menu"). The new menu,
   mock-up A: black, a blue title bar and a credit bar with the four Spectrum stripes, yellow `TRAINER` and `OPTIONS`, `ON`
   green, `OFF` red, `ENTER play` green and `BREAK exit` red, a help line for the line last keyed, `Patch: <patch_by>`
-  and a plain bar at the bottom (no highlight, no cursor keys, no engine line: the owner's calls, 2026-11-04). NexClash is not on it. Layout, colours as
+  and a plain bar at the bottom (no highlight, no cursor keys, no engine line: the owner's calls, 2026-11-04; the bottom is now a fixed footer, below). NexClash is not on it. Layout, colours as
   attribute bytes, the cutting rules and the keys are all specified. `HLP1` is a new optional clear block of help texts.
   The in-`.nex` menu is specified whole: the header changes, the menu banks above `OPT1`'s byte 2, the stub, its
   description and data, the stack shadow, the handoff, what is not the same (R, time, the NextREG select latch), RAM, the
@@ -64,10 +64,18 @@ out the menu's page, which every run holds; free-RAM thresholds are one page hig
 the credit line is now two rows, each cut on its own. The real-game Cobra and Jetpac tests, which skip without `build/v1`,
 still check the old menu text and will need the same change when run.
 
+## The footer (format round, 2026-11-04)
+
+The owner approved a fixed footer from a preview: `Colours:` moves to row 20 and `Patch:` to 21, and rows 22 and 23 are two
+blue bars, ` .nxc by Jon Attree` and ` Engine: Dean Woodyatt`, the lower bar's stripes a column to the left with its last
+cell cyan, so that one band of diagonals runs through both. `firmware/menu.asm` draws it from its own text, so no patch can
+change it. To keep the help clear of row 20, the longest menu (ten lines, both sections) loses its blank row before
+`ENTER play`; every other menu keeps it. On the Z80 harnesses only, the dot command's and the `.nex`'s screens are the same.
+
 ## For you to decide
 
 - Decided and in the spec: the main line in a `.nex` fixed `[ ON]`; BREAK in a `.nex` resets; the loader's ENTER is the
-  bare file (no menu twice); no highlight or cursor keys; no engine line on the bar (Dean is credited in `credit` and the `.nfo`).
+  bare file (no menu twice); no highlight or cursor keys; no engine line on the bar (Dean is credited in `credit` and the `.nfo`), since replaced by the fixed footer above.
 - **zx0.** A pure-Python compressor was considered and not written: `zx0`'s optimal parse searches every offset for every
   byte, which in Python would take minutes a bank, and matching its output byte for byte means porting its exact tie
   breaks. It stays an optional dependency for `make`; applying never needs it.
