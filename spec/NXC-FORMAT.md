@@ -100,6 +100,9 @@ These names and their rules are reserved. They are not defined further, and no t
 | `MNU1` | A picture behind a loader's menu, with rules below |
 | `SNP1` | The per-input baselines of snapshot output, with rules below |
 | `MEM1`, `SPR2` | Extras for machines with more memory or sprites than a Next, such as the Tang |
+| `SPL1` | Where a build's sprite images lie, for a tool that exports and imports them, with rules below |
+
+Also reserved: `SET2` kind 5, a game speed, with rules below. It is a kind of an existing block, not a block of its own.
 
 Custom loaders are not part of this standard. A game that needs one is out of scope, and a per-game adapter belongs in the engine that made the build.
 
@@ -303,7 +306,7 @@ An optional set of byte replacements, on the menu: a colour set, a language. One
 | Offset | Size | Field |
 |---|---|---|
 | 0 | 1 | Stream index, in the clear. **Unique among all `SET2` blocks**, of any kind or base, or two would use one stream. A repeat is damage |
-| 1 | 1 | Kind: 1 colours, 2 language, 3 a toggle that changes only what is shown or heard, 4 a toggle that changes the game's logic. Others are reserved |
+| 1 | 1 | Kind: 1 colours, 2 language, 3 a toggle that changes only what is shown or heard, 4 a toggle that changes the game's logic, 5 a game speed (reserved: see "Reserved: game speed"). Others are reserved |
 | 2 | 1 | Choice ID: which choice this is within its kind. It stays the same when a patch is remade, and is shared by the versions of one choice on different bases. A writer keeps kind, choice and base unique together |
 | 3 | 1 | Base: 1 the sprite build, 2 the plain game (reserved: see "Snapshot output") |
 | 4 | 1 | Length of the name, 1 to 25 |
@@ -369,6 +372,59 @@ A **toggle** is a set of its own kind, on its own menu line, for a bug fix or an
 **Compatibility.** A reader that does not know kinds 3 and 4 checks the block's shape and index as for any `SET2`, offers no line, and the game plays without it. So toggles raise no level and set no flag in `OPT1`. Patches and vectors made before toggles are unchanged byte for byte.
 
 **Memory, and a reader's limit.** A chosen toggle is held as a chosen set is: one chunk at a time, in the same pages. **A reader may hold fewer chosen sets and toggles at once than a patch offers.** It states its limit N, and its menu then lets no more than N be on: a key that would turn on one more does nothing, and the line stays `[OFF]`, so a choice it cannot make is never offered and then refused. `firmware/nexclash.asm` holds 2, in three 8K pages each. A writer warns when a patch offers more sets and toggles that can be on together than 2: a colour line, a language line and each toggle count one each.
+
+### Reserved: game speed, SET2 kind 5
+
+No tool or loader here writes or offers this; both already show nothing for it, as for any kind they do not know. The rules, so that every reader that comes to offer it offers the same thing. It comes from the speed review of 2026-11-04: a loader setting the CPU's speed (NextREG 0x07) by itself changes how several games play, so a speed is the engine's work, made and proven for each game, and the format only carries and selects it.
+
+**What it is.** A `SET2` block of kind 5, base 1, exactly as any set: its chunks change the engine's own configuration, start-up and hook bytes in banks the base build already lists, so that the build runs the game at that clock, with whatever limiter keeps its pace. It cannot add a bank, change the header or the length; a build that will offer speeds reserves the room in its base. It is not a toggle of kind 3, as a changed clock changes interrupt timing, input sampling and the game's cadence, which are logic.
+
+**The values are a fixed set**, by choice ID, so that every patch means the same by each:
+
+| Choice | Name, as the writer gives it and a reader shows it | The game's clock in play |
+|---|---|---|
+| none chosen | `Original` | as the original game, and the base build: always offered, and the default |
+| 1 | `7 MHz` | 7 MHz |
+| 2 | `14 MHz` | 14 MHz |
+| 3 | `28 MHz` | 28 MHz |
+
+Other choice IDs are reserved, for later policies at a clock under a rule to be written then; a reader offers none of them. **What a build supports is the blocks it has**: a kind 5 block of a choice declares that speed, and there is no separate list that could disagree with them. A writer refuses a name other than the table's, two blocks of one choice, and a kind 5 block without `PRF1` key `speed_<choice>`, one line saying what the clock and its limiter keep and change (pace, sound, interrupts), what was replayed or measured with it, and against what, as a kind 4 toggle's `toggle_<choice>` does. `pace` and its fields describe the base build, at Original.
+
+**The menu.** One line, `Game speed`, after `Language` and before the toggles, only when the patch has a kind 5 block with base 1. Its value starts `[Original]`, off as every choice starts, and its key steps through Original, then each speed offered in rising choice ID, and back to Original. Chosen, it counts as one set towards N, as any kind does. With the main line off it reads `[N/A]` and nothing of it is applied: the player's own game runs at the original clock. In a `.nex` that carries its menu it is carried and applied as any set is. A loader's own speed while it rebuilds, which `firmware/nexclash.asm` raises to 28 MHz and puts back, is separate, and never the game's.
+
+**Readers that do not know it**, every one up to now, check the block's shape and stream index, offer no line, and play the base build at its original clock: no level and no flag. A later reader that knows it offers it with no change to the patch.
+
+### Reserved: SPL1, where a build's sprite images lie
+
+No tool or loader here writes or reads this. An optional block, in the clear, covered by the check value as every block is, skipped by a reader that does not know it, so it raises no level. It says where a build keeps its sprite images, so that a tool can **export** them from the rebuilt `.nex` to be repainted and **import** the repainted images straight back into the build's own sprite memory: Dean Woodyatt's idea. The repainted build is then a colour set, packaged with `nxc.py make --colours NAME=NEX` as any other; an import never changes a patch's own blocks, whose check would refuse it.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | The layout's version: 1 |
+| 1 | 1 | The sprite palette's bank, or 0xFF for none |
+| 2 | 2 | Its offset in that bank |
+| 4 | 1 | Its form: 1 one byte a colour, RRRGGGBB, as NextREG 0x41 takes; 2 two bytes a colour, as NextREG 0x44 takes |
+| 5 | 2 | Its colours, 1 to 256 |
+| 7 | 2 | n, the images, 1 to 1,024 |
+| 9 | 12 each | The images, in rising order of index |
+
+An image:
+
+| Size | Field |
+|---|---|
+| 2 | Its index: the engine's own number for it, unique |
+| 1 | Its bank: one the `.nex` header lists, below 112 |
+| 2 | Its offset in that bank |
+| 2 | Its size in bytes: whole patterns, a multiple of 256 for 8-bit or 128 for 4-bit, ending within the bank |
+| 1 | Its form: 8 for 8-bit patterns of 256 bytes, 4 for 4-bit patterns of 128 |
+| 1 | Its palette offset, 0 to 15, as bits 4 to 7 of a sprite's third attribute byte take it |
+| 1 | Its shape: width in patterns less 1 in bits 4 to 7, height less 1 in bits 0 to 3; width times height patterns make its size |
+| 1 | Flags: bit 0, built at run time (below); bit 1, it shares its patterns with an image listed before it; others 0 |
+| 1 | 0, reserved |
+
+A reader refuses as damage anything else: a version it does not know is skipped instead, as a later layout. Images may overlap only with bit 1 set. Nothing here holds the game: positions and sizes only. The images themselves stay where they are, in the banks a patch holds encrypted, and are seen only by someone who rebuilt the `.nex` with the game.
+
+**Images built at run time cannot be exported from the file.** Some engines make sprite images as the game runs, from the game's own graphics or the screen: Nightshade's planes, Lunar Jetman's caches and The New Zealand Story's tilemap among them. In the `.nex` their place holds nothing yet, or something else. A writer lists such an image with bit 0 set, or not at all, and an exporter refuses one with bit 0: exporting it needs the engine's help, such as a hook that writes it out, or a dump of memory taken while the game runs, and importing it needs the engine to take a painted image in place of the one it builds. Neither is defined here.
 
 ### Reserved: snapshot output
 
