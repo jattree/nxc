@@ -16,7 +16,8 @@
   MD5         bf0eff8438e543f18e76d14940665d7d
 
   The patch carries none of the game's code. It only works with that exact
-  file: anything else is refused, with a message naming the file it wants.
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
 
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
@@ -27,6 +28,8 @@
   Enhanced    Wally and the other characters in the fuller colours of an older
               Spec256 conversion. Source: Enhanced colours from the MVV
               package's older Spec256 conversion, painter not established.
+
+  Pace        original (+0.15% measured in JNext 1.1.104)
 
   Note        Scenery that Wally walks behind covers him as whole objects
               (plants, palms), with the right-edge palms in front. Plays at
@@ -50,7 +53,7 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Owner       Played by Jon Attree in JNext through the real loader,
+  Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-04
 
   Replay      IDENTICAL on 16 recordings, 62696 frames, default colours;

@@ -16,7 +16,8 @@
   MD5         b94691b08d31386d3e5661d04e6c164f
 
   The patch carries none of the game's code. It only works with that exact
-  file: anything else is refused, with a message naming the file it wants.
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
 
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
@@ -43,7 +44,7 @@
               to the game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Owner       Played by Jon Attree in JNext through the real loader,
+  Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-04
 
   Replay      IDENTICAL on 9 recordings, 40884 frames (t1 2563 from the

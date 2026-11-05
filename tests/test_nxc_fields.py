@@ -90,5 +90,18 @@ class Setter(unittest.TestCase):
             self.assertTrue(all(len(line) <= 78 and line.isascii() for line in text.split("\r\n")))
 
 
+class Published(unittest.TestCase):
+    def test_each_nfo_is_made_from_its_patch_alone(self) -> None:
+        patches = sorted((ROOT / "patches").glob("*/*.nxc"))
+        self.assertEqual(len(patches), 20)
+        for p in patches:
+            with self.subTest(p.name):
+                self.assertEqual(make_nfo.nfo(p.read_bytes(), p.stem), p.with_suffix(".nfo").read_text(newline="", encoding="ascii"))
+                inf = nxc.text_fields(p.read_bytes(), b"INF1")
+                self.assertTrue(inf.get("tested"))
+                for e in nxc.offered(p.read_bytes(), nxc.KIND_COLOURS):
+                    self.assertTrue(inf.get("enhanced_%d" % e["choice"]), "every colour set says how it looks")
+
+
 if __name__ == "__main__":
     unittest.main()
