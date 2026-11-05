@@ -1,0 +1,94 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Match Day
+  Publisher   Ocean, 1984
+  Version     2.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Match Day (1984)(Ocean).z80
+  MD5         d5ea19e487141ce922d0e96c02fd9054
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+4.08% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the match loop 0x817F, lockstep
+              held; NOT within 2%: the fastest third of updates +11%, the
+              slowest -3 to -6% (the engine runs the game's own draw at 28
+              MHz); a hook-speed pass and a limiter are owed)
+
+  Changes     1.0: Dean Woodyatt's build f0aecd13
+              2.0: whole alt ROM image, start-up tail at 0xBE00 (the trophy
+              screen clean)
+
+  Note        Dean Woodyatt's Match Day engine with the whole alt ROM image
+              and the start-up tail moved off the trophy screen's data: the
+              trophy after the title is drawn clean, and the menus no longer
+              depend on the Next's own ROM. Players, ball and keepers are
+              hardware sprites in the game's colours. Plays 2-4% slower than
+              the original, and the hooks leave the CPU at 3.5 MHz, as Dean's
+              build does; a timing fix is planned. No loading screen: the
+              build already uses the last bank of a 1MB Next. No cheats: the
+              archive's POKEs only ask for values.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ocean, 1984, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved, timing fix to
+              follow
+
+  Replay      rework v2 as recorded on refactor-final f09750a (not repeated
+              here; the rebuild = recorded, plain 02fd1835, sprites ec0706e9):
+              both recordings IDENTICAL, 6,211 and 50,404 frames (412,000
+              objects, 22.4M sprite pixels), the IM 1 handler equal to the
+              original's at every menu interrupt against NextZXOS's ROM3; unit
+              461 cases PASS, 3 negative controls + rom3_left + the old tail
+              detected; ROM paths: every ROM byte as recorded; both start-up
+              tails never read before written. Clock matrix not passed: every
+              hook leaves at 3.5 MHz (NEXTREG 7,0), as Dean's engine is built;
+              at 7 / 14 / 28 MHz in the exit would not be the incoming speed
+
+  Emulator    JNext 1.1.104 headless: the trophy screen after the title drawn
+              clean (Dean's f0aecd13 shows it corrupted at the same frame),
+              menus, walk-on scene, kick-off and the match, frames viewed;
+              flicker 300 frames of the match: 0 out of step, 0 vanished, 0
+              transients; 15-minute soak against the original .z80: no crash;
+              both runs wait at the half-time menu (the profile never presses
+              ENTER there), which the soak calls a freeze in the build only
+              because its score differs; no person played it
+
+  Coverage    first halves with the computer and player 1 on Kempston (random
+              input); no second half, no 2-player game, no Match Day Special,
+              no menu changes; no cheats (the archive's .pok has only value-
+              asking entries); no loading screen (the tool adds its stub in
+              the highest bank, and this build holds Sinclair's ROM in bank
+              47)
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
