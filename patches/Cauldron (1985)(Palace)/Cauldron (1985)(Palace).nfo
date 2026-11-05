@@ -1,0 +1,107 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Cauldron
+  Publisher   Palace Software, 1985
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Cauldron (1985)(Palace).z80
+  MD5         d0788bcf0f43328508bba9d1a1d7370d
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (-0.45% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the main loop 0x809D, lockstep
+              checked; round 2: the plot hook paced by the hook library's
+              limiter (hlib_pace: the unpatched plot's JNext time by width,
+              shift and attribute type, x 0.95), the attribute hooks' limiter
+              kept; 3 of 30 trials warn that interrupts were held off longer
+              than the original (59.9 ms against 39.9), as before round 2)
+
+  Changes     1.0: Dean Woodyatt's build 43c1ca49
+              1.1: figures painted in their own colour keep it over scenery
+              (the bats over trees); trainer; loading screen; whole alt ROM
+              image and the start-up checks; the hooks sped up (an image
+              cache), the caller's speed kept; no one-frame figure vanish
+              (sprite switches deferred and timed to the beam); pace held to
+              the original's with a limiter on the plot hook
+
+  Note        Dean Woodyatt's Cauldron engine with one change: a bat (and
+              every figure the game paints in its own colour) keeps that
+              colour over the trees and the cavern rocks, where it used to
+              take theirs. The witch, the bats and the other figures are
+              hardware sprites with a black outline; the scenery keeps its
+              colours. A figure's old sprite stays until its new one replaces
+              it, in one switch timed to the beam, so no figure vanishes for a
+              frame. Loading screen from the tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite magic
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Palace Software, 1985, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      cauldron.rzx (89,596 frames, Dean's recording of this release)
+              IDENTICAL on rework v11 round 2: 84,638 plots (42,188 draws,
+              41,855 erases), PR-ALL 53,334, tile 28,399, scrolls 1,760 /
+              3,552, clears 110, CL-LINE 64; 268.7M sprite pixels; the sprite
+              model with pending hides (an erase's sprite stays until the
+              commit of the draw that replaces it) at every event and every
+              body start; every commit checked against a model beam; attribute
+              shadow + ULA model, no unhooked attribute access; 105 unit cases
+              PASS, 24 negative controls detected (new: the hide at the
+              erase's end, the build before round 2; a commit without the beam
+              wait); clock matrix 17 hook sites x 4 incoming clocks = 68
+              cases, exit = the incoming speed, a forced 3.5 MHz exit
+              detected; ROM paths pass (known: the 4 ROM-site JPs); start-up
+              tail never read before written. CL-SCROLL never reached
+
+  Emulator    JNext 1.1.104 headless: loading screen, menu, play reached,
+              frames viewed; flicker 900 frames (600-1499) against the
+              original: 0 one-frame picture transients, 0 vanished figures, 0
+              out of step, 1.20 picture changes a game update (the original
+              1.72); before round 2 the same frames had 23 transients, each on
+              a gap between an erase's hide and the next draw's show crossed
+              by the beam; 15-minute soak against the original: no freeze,
+              loop or crash; no person played it
+
+  Coverage    loading screen stub in bank 22, emulator-tested only (the replay
+              is of the build without it); cheats proved in the simulator on
+              the original (Kempston random play, 12,000 frames): Infinite
+              lives: lives 8 held (without: 8 to 3); Infinite magic: magic
+              held at 99 (without: 99 to 0); Infinite Hags dropped (the same
+              counter as the lives), Finish game dropped (no effect: the game
+              resets 41289), the value-asking entries not importable
+
+  Hardware    none (Dean ran v1.0 43c1ca49 on a Next, 2026-10-27; v1.1
+              untested)
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
