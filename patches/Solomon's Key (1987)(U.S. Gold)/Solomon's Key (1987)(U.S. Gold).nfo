@@ -1,0 +1,110 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Solomon's Key
+  Publisher   U.S. Gold, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Solomon's Key (1987)(U.S. Gold).z80
+  MD5         23ee5b2123dbc8a9a5daccbd51db4db0
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on every figure: Dana, the
+              goblins, dragons, flames and fireballs in their own colours over
+              the unchanged rooms. No white outlines or edges. Source:
+              Enhanced colours: from the Spec256 conversion (the Spectrum
+              Magic package, credited to Spec256), painter not established.
+
+  Pace        original (+0.12% measured in JNext 1.1.104 headless; probe 37799
+              (the main loop, once a pass); input keyed to passes; lockstep on
+              the pass and bonus counters; 10 trials per scene of 400 passes
+              (level 10: 5, a fixture started there))
+
+  Changes     1.0: figures as Next sprites; the hooks in Sinclair's 48K ROM as
+              the whole alt ROM; the game's speed restored after every hook; R
+              kept as the original's; the original's pace kept from the game's
+              own pass padding; the tape's loading screen; the Spec256
+              conversion's colours as the Enhanced set
+
+  Note        Keys: a key on the loading screen, then hold 1 on the title
+              until the room builds (the tune reads its keys between notes).
+              In play O left, P right, Q jump, A crouch, SPACE makes or breaks
+              a block, V throws a fireball. Every moving figure is a Next
+              sprite, bright white with a black body, the look the owner
+              approved; the rooms, blocks and panel keep the original's
+              colours. The game plays at the original's pace: the hooks' time
+              is repaid from the game's own padding of each pass; passes with
+              ten figures or more have none, and repay it in the next padded
+              passes. All four of the archive's cheats are on the menu, each
+              shown to work in the simulator. Not tested on hardware.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite fireballs
+   3  Immunity
+   4  Infinite time
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: from the
+              Spec256 conversion (the Spectrum Magic package, credited to
+              Spec256), painter not established
+  Original    U.S. Gold, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      IDENTICAL on 6 recordings, 202,364 frames, every hook run
+              (362,151 plots, 54,874 commits, 144 clears, 206,127 pads): at
+              every hook original and patched code compared from the same
+              state, every register with R, memory, the screen bit for bit
+              (sprites over the patched screen = the original's), and each
+              hook's debt change against its modelled time over the
+              original's; 12 of 12 negatives detected, a forced 3.5 MHz exit
+              (replayed at 7 MHz) among them; ROM path check clean on both
+              builds, apart from the reads the record accepts: the game's
+              delay copies ROM onto itself, and with 16,384 bytes (sk_o1)
+              reads the hook bytes, which nothing uses; the Enhanced build
+              differs from the default only in its patterns and 16 palette
+              bytes, none of them read by a hook
+
+  Emulator    JNext 1.1.104 headless: the tape's loading screen, the title and
+              play reached from the .nxc's menu builds in both colour sets,
+              cheats on and off, frames inspected; flicker check clean in both
+              sets (300 frames); 15-minute soak in both sets: no freeze, loop
+              or crash, play, game overs and restarts on the sheet
+
+  Coverage    Random-walk recordings only, no human play: rooms 0-16 and the
+              secret room 20 with cheats, deaths by enemies and the timer,
+              game over, high score, title, restart; the level end by a poke;
+              not reached: a room solved by play, 4 plot callers (enemy
+              states)
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
