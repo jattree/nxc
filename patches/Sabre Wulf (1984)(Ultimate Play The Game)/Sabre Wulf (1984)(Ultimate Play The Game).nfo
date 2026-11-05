@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Sabre Wulf
   Publisher   Ultimate, 1984
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -42,14 +42,18 @@
               alt ROM, so the game starts from its own BASIC; the game's speed
               restored after every hook; R kept as the original's; faster
               hooks with a frame cache; the Spec256 conversion's colours as
-              the Enhanced set
+              the Enhanced set. 1.1: QAOP + Space option
 
   Note        Keys: any key on the loading screen, then 0 on the menu (1 or 2
               players, 3-6 controls). In play Q left, W right, E up, R down, T
-              fight, SPACE pause. Every moving figure is a Next sprite in the
-              game's own colours, the look the owner approved; the jungle,
-              panel and text keep the original's colours. The hooks cost about
-              1.7 percent of the game's pace (enemies a little slower than the
+              fight, SPACE pause. With QAOP + Space on (menu, off by default;
+              keyboard chosen, 3): Q up, A down, O left, P right, Space fight,
+              Caps Shift pause (Space or Caps Shift resumes); W, E, R and T do
+              nothing; joysticks move and fight as before, and pause on Caps
+              Shift too. Every moving figure is a Next sprite in the game's
+              own colours, the look the owner approved; the jungle, panel and
+              text keep the original's colours. The hooks cost about 1.7
+              percent of the game's pace (enemies a little slower than the
               original, never faster); the game has no frame cap, so this
               could not be repaid. It starts from the tape's own BASIC, as on
               a 48K. Cheats from the archive's POKEs for this release;
@@ -80,7 +84,8 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05, with and without QAOP +
+              Space: approved
 
   Replay      IDENTICAL on 5 recordings, 123,765 frames, in both colour sets:
               142,954 moves, 5,363 toggles, 91 saved-image toggles, 133,780
