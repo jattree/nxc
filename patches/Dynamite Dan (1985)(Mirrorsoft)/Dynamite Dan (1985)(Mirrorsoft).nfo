@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Dynamite Dan
   Publisher   Mirrorsoft, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,32 +23,43 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original (+0.09% measured in JNext 1.1.104 headless; probe
-              0xC80A (the main loop, once a tick); input keyed to ticks;
-              lockstep on lives and room; 10 trials per scene of up to 300
-              ticks (the mean; single trials -0.6 to +0.5 percent))
+  Pace        original (+0.09% measured in JNext 1.1.104 headless, the default
+              build (its keys code adds 3 T a tick); probe 0xC80A (the main
+              loop, once a tick); input keyed to ticks; lockstep on lives and
+              room; 10 trials per scene of up to 300 ticks (the mean; single
+              trials -0.6 to +0.5 percent))
 
   Changes     1.0: Dan as Next sprites, the airship's hull and cables in front
               of him; Sinclair's 48K ROM as the whole alt ROM, so the game
               starts from its own BASIC; the game's speed restored after every
               hook; R kept as the original's
+              1.1: QUIT and PAUSE can be redefined (option, on by default)
 
   Note        Keys: a key on the loading screen, then ENTER on the menu. In
-              play A left, S right, SPACE jump, P pause. Dan is a Next sprite
-              in bright cyan over his own pixels, the look the owner approved,
-              and in the airship room the hull and cables are drawn in front
-              of him, so he stands inside the basket; the rooms, enemies and
-              panel keep the original's colours. The hook costs about 0.1
-              percent of the game's pace (never faster); the game has no
-              padding to repay it from. It starts from the tape's own BASIC.
-              Cheats from the archive's POKEs for this release (two names
-              shortened for the menu: Energy bar never decreases, Disable "Q
-              Quit" key); dropped: Manipulate teleports, Water can't kill you,
-              Picked up oxygen bottle and Speed up game (their code was never
-              reached in the simulator's play, so not shown to work), Dynamite
-              sticks found (asks for a value). Dan's sprite moves as his plot
-              starts, so once in a few hundred frames it is a frame ahead of
-              the game's own pixels under it. Not tested on hardware.
+              play A left, S right, SPACE jump, P pause, Q quit (the
+              defaults). On by default, all five can be set on the game's own
+              define-keys page (D on its menu), which now asks for QUIT and
+              PAUSE after LEFT, RIGHT and JUMP, in its own style, and no
+              longer warns about Q and P; the patch's menu line "Original keys
+              (Q,P fixed)" gives v1.0's game exactly. As in the original, the
+              page takes any key, a repeat included, and the game's menu and
+              instructions show the default keys. The "Disable Q quit key"
+              cheat disables whichever key is set for QUIT. Dan is a Next
+              sprite in bright cyan over his own pixels, the look the owner
+              approved, and in the airship room the hull and cables are drawn
+              in front of him, so he stands inside the basket; the rooms,
+              enemies and panel keep the original's colours. The hook costs
+              about 0.1 percent of the game's pace (never faster); the game
+              has no padding to repay it from. It starts from the tape's own
+              BASIC. Cheats from the archive's POKEs for this release (two
+              names shortened for the menu: Energy bar never decreases,
+              Disable "Q Quit" key); dropped: Manipulate teleports, Water
+              can't kill you, Picked up oxygen bottle and Speed up game (their
+              code was never reached in the simulator's play, so not shown to
+              work), Dynamite sticks found (asks for a value). Dan's sprite
+              moves as his plot starts, so once in a few hundred frames it is
+              a frame ahead of the game's own pixels under it. Not tested on
+              hardware.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -66,29 +77,43 @@
               game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05, with QUIT and PAUSE
+              redefined: approved
 
-  Replay      IDENTICAL on 52 recordings, 122,380 frames: 22,117 Dan plots,
-              269 screen clears (the ending's hide in unit cases only): at
-              every hook original and patched code compared from the same
-              state, every register with R, memory, Dan's sprite pixels
+  Replay      v1.0's hooks: IDENTICAL on 52 recordings, 122,380 frames: 22,117
+              Dan plots, 269 screen clears (the ending's hide in unit cases
+              only): at every hook original and patched code compared from the
+              same state, every register with R, memory, Dan's sprite pixels
               against the original plotter's ink, the airship's hull and
               cables against the live screen in room 43; 27 negative controls
-              detected on the states of each recording, a forced 3.5 MHz exit
-              (entered at 7 MHz) and R one off among them; ROM path check
-              clean on both builds, the BASIC start included
+              detected; ROM path check clean, the BASIC start included. v1.1's
+              keys (246 bytes, disjoint from the hooks): the original against
+              the original with them, in lockstep on the same 52 recordings,
+              every IN served in order (192,925 reads), all 22,425 main-loop
+              passes compared (every register but A and F, dead there; R
+              included; all RAM outside the patch): IDENTICAL with Q and P,
+              and with QUIT X and PAUSE H set by the build's own define
+              routine; 3 broken builds detected (play reading the old P, the
+              old Q; R 4 off); 6,290 unit cases 0 failures (pause, quit, the
+              old P and Q held, every key as PAUSE or QUIT, the Q cheat on and
+              off)
 
-  Emulator    JNext 1.1.104 headless: the snapshot's own BASIC start, the menu
-              and play reached from the .nxc's menu build, cheats on and off,
-              frames inspected; flicker check over 300 frames: 1 frame with
-              Dan's sprite a frame ahead of his own ULA pixels (the same cyan)
-              and 1 one-frame attribute change, the latter also in the
-              approved build; 15-minute soak: no freeze, loop or crash
+  Emulator    JNext 1.1.104 headless, the default build from its own BASIC:
+              the define page without the Q / P warning, five prompts, X and H
+              stored; in play the old P and Q held 30 ticks each do nothing, H
+              pauses and H resumes, X quits to the menu; the same through the
+              .nxc's menu build; the menu build against the bare build
+              (defaults, the toggle, all cheats, both): every listed bank and
+              register but R the same; flicker check over 300 frames: as v1.0
+              (1 frame with Dan's sprite a frame ahead of his own ULA pixels,
+              1 one-frame attribute change also in the approved build);
+              15-minute soak: no freeze, loop or crash
 
   Coverage    Random-play recordings only, no human play: one from the TOSEC
               file's BASIC start (rooms 0, 43, 44), 48 room-census starts,
-              deaths, water, the airship room; not reached: the ending (all 8
-              dynamite sticks and the airship), the lifts measured
+              deaths, water, the airship room; none pauses or quits (those by
+              unit cases and JNext); not reached: the ending (all 8 dynamite
+              sticks and the airship), the lifts measured
 
   Hardware    none
 
