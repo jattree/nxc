@@ -1,0 +1,100 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Dynamite Dan
+  Publisher   Mirrorsoft, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dynamite Dan (1985)(Mirrorsoft).z80
+  MD5         3470d12b21edb24d6b665dfac5e8d84d
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+0.09% measured in JNext 1.1.104 headless; probe
+              0xC80A (the main loop, once a tick); input keyed to ticks;
+              lockstep on lives and room; 10 trials per scene of up to 300
+              ticks (the mean; single trials -0.6 to +0.5 percent))
+
+  Changes     1.0: Dan as Next sprites, the airship's hull and cables in front
+              of him; Sinclair's 48K ROM as the whole alt ROM, so the game
+              starts from its own BASIC; the game's speed restored after every
+              hook; R kept as the original's
+
+  Note        Keys: a key on the loading screen, then ENTER on the menu. In
+              play A left, S right, SPACE jump, P pause. Dan is a Next sprite
+              in bright cyan over his own pixels, the look the owner approved,
+              and in the airship room the hull and cables are drawn in front
+              of him, so he stands inside the basket; the rooms, enemies and
+              panel keep the original's colours. The hook costs about 0.1
+              percent of the game's pace (never faster); the game has no
+              padding to repay it from. It starts from the tape's own BASIC.
+              Cheats from the archive's POKEs for this release (two names
+              shortened for the menu: Energy bar never decreases, Disable "Q
+              Quit" key); dropped: Manipulate teleports, Water can't kill you,
+              Picked up oxygen bottle and Speed up game (their code was never
+              reached in the simulator's play, so not shown to work), Dynamite
+              sticks found (asks for a value). Dan's sprite moves as his plot
+              starts, so once in a few hundred frames it is a frame ahead of
+              the game's own pixels under it. Not tested on hardware.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  No enemies
+   3  Energy never decreases
+   4  Disable Q quit key
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Mirrorsoft, 1985, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      IDENTICAL on 52 recordings, 122,380 frames: 22,117 Dan plots,
+              269 screen clears (the ending's hide in unit cases only): at
+              every hook original and patched code compared from the same
+              state, every register with R, memory, Dan's sprite pixels
+              against the original plotter's ink, the airship's hull and
+              cables against the live screen in room 43; 27 negative controls
+              detected on the states of each recording, a forced 3.5 MHz exit
+              (entered at 7 MHz) and R one off among them; ROM path check
+              clean on both builds, the BASIC start included
+
+  Emulator    JNext 1.1.104 headless: the snapshot's own BASIC start, the menu
+              and play reached from the .nxc's menu build, cheats on and off,
+              frames inspected; flicker check over 300 frames: 1 frame with
+              Dan's sprite a frame ahead of his own ULA pixels (the same cyan)
+              and 1 one-frame attribute change, the latter also in the
+              approved build; 15-minute soak: no freeze, loop or crash
+
+  Coverage    Random-play recordings only, no human play: one from the TOSEC
+              file's BASIC start (rooms 0, 43, 44), 48 room-census starts,
+              deaths, water, the airship room; not reached: the ending (all 8
+              dynamite sticks and the airship), the lifts measured
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
