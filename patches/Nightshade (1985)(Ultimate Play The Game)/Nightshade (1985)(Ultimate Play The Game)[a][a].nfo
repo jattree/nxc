@@ -1,0 +1,117 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Nightshade
+  Publisher   Ultimate Play The Game, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Nightshade (1985)(Ultimate Play The Game)[a][a].z80
+  MD5         7b4e8280896d7ff34b93e83ddba9d01c
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Every figure painted by its parts, following the drawn lines:
+              the hero in a grey mail hood and collar, skin face, arms and
+              legs, a leather belt and boots, and his tunic in his health
+              colour (white, yellow, then green); monsters, bosses and items
+              in their own colours. No white outlines or edges. Source:
+              Enhanced colours: Jon Attree.
+
+  Pace        original (+0.44% measured in JNext 1.1.104 headless,
+              nexclash.pace, 10 trials a scene keyed to the player update
+              0xDA7A, against the unchanged game as a plain .nex)
+
+  Note        Default and Enhanced colours both play at the original pace. The
+              CPU speed in use is kept: the hooks never force 3.5 MHz.
+              Hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Ultimate Play The Game, 1985, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Enhanced look approved by the owner in JNext 2026-11-05
+
+  Replay      IDENTICAL on 4 recordings (a1 9010 frames, a2 9028 from this
+              file; rec1 9010, rec2 9028 from the earlier derived menu state),
+              default colours and Enhanced; registers including R at every
+              hook site and after the blits, all RAM including the screen but
+              the stub area, the dead stack and the hero's 8 attribute cells,
+              sprite layer against an independent model (the game's own plot
+              loop run in Python into a zeroed buffer for the ink and for each
+              Enhanced colour plane, AND the final buffer, in the figure's
+              colours); every hook ran (figure 4817 + 4709 + 5711 + 5504,
+              blits 1776 + 1765 + 1945 + 1947, hero box the same, screen clear
+              1 each); clock matrix: a1 with every hook entered at 3.5, 7, 14
+              and 28 MHz passes in both sets, each exit restoring the incoming
+              speed; 18 of 18 negatives detected, among them a forced 3.5 MHz
+              exit, the Enhanced code image shift ignored, the hero part maps
+              dropped, the switch before the blits and one pattern buffer
+
+  Emulator    JNext 1.1.104 headless: plain, sprites and Enhanced .nex reach
+              play; one play-area change per game update (75 for 75 blits,
+              default and Enhanced) and the sprite switch never while the beam
+              draws the play area (0 of 118 in both); Enhanced screens pixel-
+              identical to the approved e1cfcc42 Enhanced at the same game
+              updates (60 of 60, quiet, busy and room); nexclash.flicker 300
+              frames clean in both sets; nexclash.soak 15 emulated minutes, no
+              freeze, loop or crash, both sets; real loader from the Browser
+              on a copy of card_test10.img: output MD5 exact for default and
+              Enhanced
+
+  Coverage    scripted random walks from the start in the scrolling town
+              streets and doorways, monsters attacking, lives lost; building
+              interiors, the four weapons, the bosses and the end not reached:
+              their figures go through the same hooks, their Enhanced colours
+              seen only on the contact sheet of every graphic drawn by the
+              game's own plotter; Enhanced colours hand-painted by Jon Attree
+              on 1:1 sheets of every graphic (paint_v1 and paint_v2, read back
+              by tools/import.py: snapped to the swatches, silhouettes
+              unchanged, the hero's tunic his health colour), over the v3
+              design painted by parts placed where the Amstrad CPC version
+              divides each figure (the CPC used for part boundaries only, no
+              CPC graphics or colours): the hero by per-graphic part maps that
+              follow the drawn lines (each ink region the mask lines close off
+              takes one part, split only where the drawn shape changes): mail
+              coif (hood, collar and the back's shoulder band), face, skin
+              forearms and legs from the sleeve's and hem's drawn edges, tunic
+              with its sleeves in his health colour white / yellow / green,
+              leather belt and boots, monster families by pixel class and row
+              bands (feet, horns, spikes, flame tips, eyes), no white rims; no
+              .256 exists; cheat: Infinite Lives from this release's .pok, in
+              the simulator the jump to game over is gone and the counter is
+              put back to 3 at every life lost, unplayed by a person; loading
+              screen from the tape, 250 frames or a key
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
