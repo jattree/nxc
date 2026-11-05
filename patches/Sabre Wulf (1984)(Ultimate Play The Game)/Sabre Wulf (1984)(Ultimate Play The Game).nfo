@@ -1,0 +1,114 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Sabre Wulf
+  Publisher   Ultimate, 1984
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Sabre Wulf (1984)(Ultimate Play The Game).z80
+  MD5         d8fb649ba5d8fa086cac43d0cd1c497e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on every figure: khaki
+              Sabreman, coloured parrot, pale spider, dusky scorpion, grey
+              rhino; the jungle unchanged. No white outlines or edges. Painted
+              colours are fixed, so Sabreman no longer changes colour with the
+              orchids. Source: Enhanced colours: from the Spec256 conversion
+              (the Spectrum Magic package, credited to Spec256), painter not
+              established.
+
+  Pace        original (+1.67% measured in JNext 1.1.104 headless; probe 39453
+              (the end of a round of the object loop: enemy pace); input keyed
+              to rounds; 10 trials per scene; a fixture with the game's time
+              sources read from its round counter in both runs)
+
+  Changes     1.0: figures as Next sprites; Sinclair's 48K ROM as the whole
+              alt ROM, so the game starts from its own BASIC; the game's speed
+              restored after every hook; R kept as the original's; faster
+              hooks with a frame cache; the Spec256 conversion's colours as
+              the Enhanced set
+
+  Note        Keys: any key on the loading screen, then 0 on the menu (1 or 2
+              players, 3-6 controls). In play Q left, W right, E up, R down, T
+              fight, SPACE pause. Every moving figure is a Next sprite in the
+              game's own colours, the look the owner approved; the jungle,
+              panel and text keep the original's colours. The hooks cost about
+              1.7 percent of the game's pace (enemies a little slower than the
+              original, never faster); the game has no frame cap, so this
+              could not be repaid. It starts from the tape's own BASIC, as on
+              a 48K. Cheats from the archive's POKEs for this release;
+              dropped: Infinite Lives (an RST 38 at each death, and the two
+              below do it cleanly), Keep SabreMan cyan (sets colour 186 and
+              stops every orchid effect ending), Immunity (lives still lost),
+              Less Animals, No destructible Enemies and Floating rhinos (no
+              effect seen in the simulator), See Ending and Paralyzed Enemies
+              (the game freezes), Lives and Invincibility to jungle animals
+              (ask for a value). Not tested on hardware.
+
+-- MENU ----------------------------------------------------------------------
+   1  [P1]Infinite lives
+   2  [P2]Infinite lives
+   3  Less enemies
+   4  Always walk fast
+   5  "Ghost" jungle
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: from the
+              Spec256 conversion (the Spectrum Magic package, credited to
+              Spec256), painter not established
+  Original    Ultimate, 1984, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      IDENTICAL on 5 recordings, 123,765 frames, in both colour sets:
+              142,954 moves, 5,363 toggles, 91 saved-image toggles, 133,780
+              paints, 821 clears, every hook run; at every hook original and
+              patched code compared from the same state, every register with
+              R, memory, sprite pixels against the original's XOR; the
+              Enhanced build beside the default at all 283,009 hook events; 14
+              of 14 negatives detected in replays, a forced 3.5 MHz exit and R
+              one off among them, 2 Enhanced negatives detected, controls at
+              3.5 and 7 MHz clean; ROM path check clean on both builds
+
+  Emulator    JNext 1.1.104 headless: loading screen, title and play reached
+              from the build's own BASIC start in both colour sets, frames
+              inspected; flicker check clean in both sets (300 frames);
+              15-minute soak in both sets: no freeze, loop or crash, play,
+              game overs and restarts on the sheet; the .nxc menu builds of
+              both sets reach play, cheats on and off
+
+  Coverage    Bot recordings only, no human play: rooms near the start and 34
+              rooms with cheats, deaths, game over, hall of fame, two-player
+              games, the ending by a cheat; not reached: the amulet collected
+              by a player, the cave, joysticks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
