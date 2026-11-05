@@ -1,0 +1,93 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Nodes of Yesod
+  Publisher   Odin Computer Graphics, 1985
+  Version     1.5
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Nodes of Yesod (1985)(Odin Computer Graphics)(128K).z80
+  MD5         4dd5e967592f0eabd20f113cb64f740e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Latest owner-painted sprites and matching pink/grey/orange HUD
+              portrait. Exact flat colours, including deliberate black detail
+              and painted interior pixels; no outside outline. Source:
+              Enhanced colours: Jon Attree.
+
+  Pace        original (-1.28756% measured in v1.4 original comparison
+              inherited. Current v1.5 quiet regression: 301 player-update
+              records and timed AY writes match v1.4 exactly.)
+
+  Changes     v1.5: final owner sprite pass, 456 exact-palette pixels across
+              12 mole and enemy-spaceman graphics. Only sprite patterns
+              changed; HUD, code, palettes, backdrops and timing retained.
+
+  Note        1 keyboard; Z/X move; Q jump; A mole. Enhanced colours and
+              Backdrops are independent and off by default. Backdrops select
+              surface aurora or distant cavern walls automatically. Original
+              collision-loop bug remains. Hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite time
+   3  Infinite energy
+   4  Drop from any height
+   5  Don't get stunned
+   6  Don't get bounced
+   7  No alchiem stealing
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Odin Computer Graphics, 1985, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05, default and Enhanced
+              with his final painting pass: approved
+
+  Replay      Current: 2 targeted RZX files, 6194 frames. Seven changed
+              graphics covered by replay; five remaining poses covered by the
+              all-graphic unit matrix. Unchanged-engine baseline v1.4: 48
+              files/243719 frames. Original clipping exception and malformed
+              t1 exclusion remain.
+
+  Emulator    Current JNext quiet regression: 301 player-update records and
+              timed AY data identical to v1.4. Four actual-loader combinations
+              rebuild byte-exact. Original quiet pace, 59 native room pairs
+              and HUD/bank checks are v1.4 baseline evidence.
+
+  Coverage    Current Enhanced: all 136 graphics, 2992 positions, 7
+              interrupted uploads, unknown graphic and 16 object indices.
+              Original engine unchanged: v1.4 clock/R 240 cases and 60 IRQ
+              injections, 16 surface and 43 cavern starts remain baseline
+              evidence.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
