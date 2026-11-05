@@ -69,6 +69,8 @@ F_READ          equ $9d
 F_WRITE         equ $9e
 F_SEEK          equ $9f
 F_FSTAT         equ $a1
+F_OPENDIR       equ $a3
+F_READDIR       equ $a4
 F_GETCWD        equ $a8
 F_UNLINK        equ $ad
 FA_READ         equ $01
@@ -242,7 +244,8 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     out_name, 2                 ; set only once the output exists
         VAR     msg_ptr, 2
         VAR     need_name, 1                ; print TGT1's file with the error
-        VAR     game_which, 1               ; the next name to try: targets, then the patch's own
+        VAR     game_which, 1               ; the next name to try: targets, then the patch's own; past them all,
+                                            ; SCANNED_Z80 or SCANNED_TAPE for a file found by the folder's scan
         VAR     seen_wrong, 1               ; a file was there, and was not the game
         VAR     target_count, 1
         VAR     target_kinds, 1             ; not 0 if a target is one this loader reads; after the menu, the game's kind
@@ -331,6 +334,7 @@ game_kind       equ target_kinds
         VAR     tg_kind, TOGGLES_MAX        ; each one's kind, 3 or 4
         VAR     tg_rank, TOGGLES_MAX        ; and its place among the toggles of that kind, from 1
         VAR     tg_seen, 2                  ; how many of kind 3, and of 4, so far
+        VAR     dir_h, 1                    ; the folder being scanned for the game
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -1248,6 +1252,7 @@ start_menu:
         call    walk_first
         call    build_game_b
         call    next_game
+        call    c,scan_game
         call    c,set_game
         call    menu
         jp      after_menu
@@ -1821,6 +1826,155 @@ set_game:
         jp      z,fail_hl
         ld      hl,msg_wrong_game
         jp      fail_hl
+
+; No file under a name the patch gives, nor its own with .z80, has a listed length: then any file in
+; the patch's folder with the length of a target of one file this loader reads, the first in the
+; folder's own order, opened by its 8.3 name, which every FAT file has and which always fits in a
+; directory entry of 22 bytes. A file found so is the game only if it unlocks the patch, as any other
+; is: game_which says it was found this way, so that it is checked even with the clash fix off and no
+; trainer, and so that nothing is tried after it. The lengths are first put in game_a, free until
+; then, so that the folder is read without going back to the patch for each entry. A file that
+; is an output's name is refused, as one under a listed name is. Carry when there is none.
+SCANNED_Z80     equ $ff
+SCANNED_TAPE    equ $fe
+SCAN_ENTRY      equ 5                       ; a target's kind, then its length
+scan_game:
+        ld      hl,str_dot                  ; the folder: "x/." becomes "x", "/." and "C:/." stay
+        ld      bc,1                        ; the root, as "/" and "C:/"; no folder is "."
+        call    build_game_a
+        ld      hl,(game_a_file)
+        ld      de,game_a
+        or      a
+        sbc     hl,de
+        jr      z,.open
+        add     hl,de
+        dec     hl
+        ld      a,(hl)
+        cp      '/'
+        jr      z,.slash
+        cp      92
+        jr      nz,.open
+.slash: ex      de,hl                       ; DE at the slash
+        ld      hl,game_a
+        or      a
+        sbc     hl,de
+        jr      z,.root
+        dec     de
+        ld      a,(de)
+        inc     de
+        cp      ':'
+        jr      z,.root
+        xor     a
+        ld      (de),a
+        jr      .open
+.root:  ld      hl,(game_a_file)
+        ld      (hl),0
+.open:  ld      a,'*'
+        ld      hl,game_a
+        ld      b,0                         ; 8.3 names only
+        rst     $08
+        db      F_OPENDIR
+        ret     c                           ; no folder to read: none
+        ld      (dir_h),a
+        call    walk_begin                  ; the lengths, into game_a
+        ld      de,game_a
+.tl:    push    de
+        call    walk_next
+        pop     de
+        jr      z,.tend
+        push    de
+        ld      de,magic_tgt1
+        call    tag_is
+        pop     de
+        jr      nz,.tl
+        push    de
+        ld      hl,tagbuf
+        ld      bc,6
+        call    read_patch
+        pop     de
+        ld      a,(tagbuf+1)
+        push    de
+        call    kind_readable
+        pop     de
+        jr      nz,.tl
+        ld      hl,tagbuf+1
+        ld      bc,SCAN_ENTRY
+        ldir
+        jr      .tl
+.tend:  xor     a                           ; ended by a kind of 0
+        ld      (de),a
+.entry: ld      a,(dir_h)
+        ld      hl,smallbuf
+        rst     $08
+        db      F_READDIR
+        jr      c,.none
+        or      a
+        jr      z,.none
+        ld      a,(smallbuf)
+        and     $18                         ; a folder, or the volume's label
+        jr      nz,.entry
+        ld      hl,smallbuf + 1
+        xor     a
+        ld      bc,32
+        cpir                                ; past the name, then its time and date
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        ex      de,hl                       ; DE at its length
+        ld      hl,game_a
+.match: ld      a,(hl)
+        or      a
+        jr      z,.entry                    ; no target has it
+        inc     hl
+        push    hl
+        push    de
+        ex      de,hl
+        call    same_tag
+        pop     de
+        pop     hl
+        jr      z,.found
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        jr      .match
+.found: dec     hl
+        ld      a,(hl)
+        cp      KIND_TAP
+        ld      a,SCANNED_Z80
+        jr      c,.z80
+        dec     a
+.z80:   push    af
+        ld      hl,dir_h
+        call    close_at
+        ld      hl,smallbuf + 1             ; game_a: the folder, then the 8.3 name
+        push    hl
+        xor     a
+        ld      bc,32
+        cpir
+        pop     de
+        or      a
+        sbc     hl,de
+        dec     hl
+        ld      b,h
+        ld      c,l
+        ex      de,hl
+        call    build_game_a
+        ld      hl,game_a
+        call    try_open
+        pop     de
+        ret     c
+        ld      a,d
+        ld      (game_which),a
+        ld      hl,game_a
+        call    check_alias
+        or      a
+        ret
+.none:  ld      hl,dir_h
+        call    close_at
+        scf
+        ret
 
 ; The set's file named by the key at DE, beside the patch: open as gh, its length in gsize, and
 ; never an output's name. Carry when it is not there.
@@ -2531,6 +2685,7 @@ key_fix_label:  db "fix_label=",0
 key_colours_by: db "colours_by=",0
 key_version:    db "version=",0
 ext_z80:        db ".z80",0
+str_dot:        db ".",0
 str_fix:        db "Colour clash fix",0
 str_enhanced:   db "Enhanced colours",0
 str_language:   db "Language",0
@@ -2578,7 +2733,15 @@ chosen:
         ld      (set_choices+1),a
         call    any_trainer_on
         jr      nz,original_with_trainers
-        call    part_plain
+        ld      a,(game_which)              ; found by its length alone under another name: the game
+        inc     a                           ; only if it unlocks the patch (a tape always does)
+        jr      nz,.plain
+        call    work_begin
+        call    unlock
+        ld      a,(gh)
+        ld      hl,zero32
+        call    seek_file
+.plain: call    part_plain
         ld      a,2
         jp      done
 

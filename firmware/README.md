@@ -44,7 +44,10 @@ run on a Next.
 
 - `NEXCLASH` goes in `C:/DOT/`, `NXCHAND.BAS` in `C:/NEXTZXOS/`. `C:/TMP/` must exist, as it does on the standard card.
 - The patch goes beside the player's game, named `NAME.nxc`. The game is looked for under each name in the patch's `TGT1`
-  blocks, then as `NAME.z80`, and must have the length of one that the patch lists. A tape keeps its archive name, such as
+  blocks, then as `NAME.z80`, and must have the length of one that the patch lists. If none of those is there with a
+  listed length, the folder is read (`F_OPENDIR`, `F_READDIR`, 8.3 names) for the first file of a listed length,
+  whatever its name, which must then unlock the patch, even with the clash fix off and no trainer. That has run only on
+  the Z80 harness, whose directory calls follow JNext's model of NextZXOS; not yet in JNext or on a Next. A tape keeps its archive name, such as
   `New Zealand Story, The (1989)(Ocean)(48K-128K).tap`: the long name is opened as it is, as for a `.z80`. **Keep the extension to three letters:** the Browser goes by the 8.3 short name, so an old
   `Cobra.nexclash` is `COBRA~1.NEX` to it. It went to `.nexload`, which took it for a `.nex` and asked for a core update.
   The command itself reads any name.
@@ -135,7 +138,7 @@ Copy the three files as above with the game and `Cobra.nxc` into one folder, sel
    on, the lives stay at three.
    With a patch with sets, a set's key steps through them, the `.nex` has the chosen ones, and with the fix off each line reads
    `[N/A]`.
-5. Press Break at the menu: it stops with "Cancelled". Rename the game: it refuses and names the file.
+5. Press Break at the menu: it stops with "Cancelled". Rename the game: it is still found. Put another file of the same length in its place: it refuses and names the file.
 6. After a refusal, `.MEM` (or the menu's free RAM figure) shows the same as before: the pages are freed.
 
 ## Memory

@@ -23,7 +23,7 @@ an official Next board. The format may still change.
 - A ZX Spectrum Next, or a compatible machine, running **NextZXOS 2.09 or later**. Older versions are untested.
 - Its SD card, in a PC (Windows, macOS or Linux).
 - This repository: `git clone https://github.com/jattree/nxc.git`, or download it as a zip.
-- Your own copy of each game you want to play, as the exact file its patch asks for.
+- Your own copy of each game you want to play, as the exact dump its patch asks for, under any name.
 
 ## One-time card setup
 
@@ -55,8 +55,9 @@ the original file first.
 
 1. Copy the game's folder from [`patches/`](patches/) into `nxc/` on the card, for example
    `nxc/Jet Pac (1983)(Ultimate Play The Game)(16K)/`.
-2. Put your copy of the game in that folder, beside the `.nxc`. Its `.nfo` gives the exact file name and MD5 it
-   needs. Rename your file to that name if you have to; the MD5 must match.
+2. Put your copy of the game in that folder, beside the `.nxc`. Its `.nfo` gives the MD5 it needs. Any name will do:
+   the loader looks for the name in the `.nfo` first, then for any file in the folder of the right length, and takes it
+   only if it is that exact dump.
 3. On the Next, open the Browser, go to the folder and choose the `.nxc`.
 
 The patch's menu comes up: its cheats under `TRAINER`, and under `OPTIONS` the clash fix and any colour sets. Press a
@@ -72,8 +73,8 @@ The loader stops with a message:
 | Message | What to do |
 |---|---|
 | `Game not beside the patch` | Put your game file in the same folder as the `.nxc`. |
-| `Wrong game file for this patch` | Your file is a different dump. Check its MD5 against the `.nfo`. |
-| `Needs this game file:` and a name | Name your file exactly as shown, in the patch's folder. |
+| `Wrong game file for this patch` | Your file is a different dump. Check its MD5 against the `.nfo`. If a file has the name the `.nfo` gives but is another dump, remove it: the loader tries that name first. |
+| `Needs this game file:` and a name | The dump the patch wants, by the name the `.nfo` gives. Your copy can have any name, but must be that dump, in the patch's folder. |
 | `Game file is damaged` | Copy the game to the card again. |
 | `Patch damaged: get it again` or `Not a .nxc file` | Copy the `.nxc` again. |
 | `Patch needs a newer .NEXCLASH` | Update this repository and run the card setup again. |
@@ -94,6 +95,8 @@ You can also build the game as a `.nex` file on a PC, with only Python 3, and ru
 ```sh
 python3 tools/nxc.py PATCH.nxc YOUR_GAME.z80 -o Game.nex
 ```
+
+Leave out `YOUR_GAME.z80` and the tool finds the game beside the patch, as the loader does, under any name, by its MD5.
 
 The `.nex` carries the patch's menu, so you choose cheats and colours when it starts. `--bare` builds one without the
 menu, with your choices fixed. [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md) has every step. A `.nex` contains the

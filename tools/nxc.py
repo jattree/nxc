@@ -3,6 +3,7 @@
 byte for byte. See spec/NXC-FORMAT.md.
 
     nxc.py PATCH [GAME] [-o OUT] [--trainer NAME_OR_NUMBER ...] [--original] [--colours NAME]
+                 (without GAME, -o finds the game beside the patch, as the loader does: by name, then by length and MD5)
     nxc.py make NEX GAME -o OUT [--zxdb ENTRY] [--title T] [--publisher "Ocean, 1986"] [--patch-by N] [--colours-by N]
                  [--fix-label TEXT] [--patch-version V] [--rom 0|1|2] [--highest-bank N] [--proof KEY=VALUE ...] [--proof-file F] [--colours NAME=NEX ...] [--language NAME=NEX ...]
     nxc.py make NEX TAPE --start START.z80 -o OUT [--tape-bank N ...] [--residual-max N] [as above]
@@ -1632,6 +1633,64 @@ def game_arg(path, also=()):
     paths = [path] + list(also)
     return FileSet([read_file(x) for x in paths], [kind_of_name(x) for x in paths])
 
+def target_md5s(e):
+    """The MD5s a target entry's text gives, in its files' order (md5, then md5_2 to md5_n), None where one is missing."""
+    found = {}
+    for line in e['text'].split(b'\n'):
+        k, eq, v = line.partition(b'=')
+        if eq: found.setdefault(k.decode('latin-1'), v.decode('latin-1'))
+    return [found.get('md5' if k == 0 else 'md5_%d' % (k + 1)) for k in range(len(e['files']))]
+
+def find_game(patch_path, f=None):
+    """The game beside a patch, found as a loader finds it (spec, "Applying a patch", step 3): (what was found, the game,
+    as bytes or a FileSet). In order: each single-file target's file, then the patch's own name with .z80, any of a listed
+    length, the first that unlocks the patch; only if none of those is there with a listed length, any file in the folder
+    with the length and MD5 of a single-file target, whatever its name; then a set of tapes, by its files' names. Names are
+    matched without regard to case, as FAT does. Wrong otherwise, with the loader's messages."""
+    f = f if f is not None else read_file(patch_path)
+    folder = os.path.dirname(os.path.abspath(patch_path))
+    listing = sorted(n for n in os.listdir(folder) if os.path.isfile(os.path.join(folder, n)))
+    def there(name):
+        return next((os.path.join(folder, n) for n in listing if n.lower() == name.lower()), None)
+    ts = [e for e in targets(f) if readable(e)]
+    singles = [e for e in ts if len(e['files']) == 1]
+    lengths = {e['length'] for e in singles}
+    if not ts: raise Wrong('Patch needs a newer reader: it has no target this one reads')
+    needs = ts[0]['file']
+    wrong = False; listed = False
+    own = os.path.splitext(os.path.basename(patch_path))[0] + '.z80'
+    for name in [e['file'] for e in singles] + [own]:
+        path = there(name)
+        if path is None or os.path.samefile(path, patch_path): continue
+        game = read_file(path)
+        if len(game) not in lengths: wrong = True; continue
+        listed = True
+        try:
+            check_key(f, game)
+            return path, game
+        except Wrong:
+            wrong = True
+    if not listed:
+        for n in listing:
+            path = os.path.join(folder, n)
+            if os.path.samefile(path, patch_path) or os.path.getsize(path) not in lengths: continue
+            game = read_file(path); digest = hashlib.md5(game).hexdigest()
+            if any(e['length'] == len(game) and target_md5s(e)[0] == digest for e in singles): return path, game
+            wrong = True
+        for e in ts:
+            if len(e['files']) == 1: continue
+            first = there(e['files'][0][0])
+            if first is None: continue
+            if os.path.getsize(first) != e['files'][0][2]: wrong = True; continue
+            paths = [first]
+            for name, kind, length in e['files'][1:]:
+                path = there(name)
+                if path is None: raise Wrong('Game not beside the patch: needs this game file: %s' % name)
+                if os.path.getsize(path) != length: raise Wrong('Wrong game file for this patch: needs this game file: %s' % name)
+                paths.append(path)
+            return paths, FileSet([read_file(p) for p in paths], [k for _, k, _ in e['files']])
+    raise Wrong('%s: needs this game file: %s' % ('Wrong game file for this patch' if wrong else 'Game not beside the patch', needs))
+
 def main(argv):
     try:
         run(argv)
@@ -1793,7 +1852,7 @@ def run(argv):
         print('accepts', len(targets(f)), 'dumps; wrote', a.output, len(f), 'bytes')
         return
     ap = argparse.ArgumentParser(description='Apply or list a .nxc patch.')
-    ap.add_argument('patch'); ap.add_argument('game', nargs='?'); ap.add_argument('-o', '--output')
+    ap.add_argument('patch'); ap.add_argument('game', nargs='?', help='the game; without it, -o finds it beside the patch, as the loader does'); ap.add_argument('-o', '--output')
     ap.add_argument('--colours', help='a colour set by name; omit for the default; has no effect with --original')
     ap.add_argument('--language', help='a language set by name; has no effect with --original')
     ap.add_argument('--toggle', action='append', default=[], help='a toggle by name, on; repeatable; no effect with --original')
@@ -1812,10 +1871,13 @@ def run(argv):
         print('accepts ' + ' + '.join('%s, %s, %d bytes' % (nm, KIND_NAMES.get(k_, 'unknown kind'), n_) for nm, k_, n_ in t['files']))
     for t, d in blocks(f)[1]:
         if t in (b'INF1', b'PRF1'): print(d.decode(errors='replace'), end='')
-    if a.game:
+    if a.game or a.output:
         output = a.output or 'out.nex'
-        refuse_same(output, a.patch, a.game, *a.also)
-        game = game_arg(a.game, a.also)
+        if a.game: game = game_arg(a.game, a.also)
+        else:
+            found, game = find_game(a.patch, f)
+            print('found beside it:', ', '.join(os.path.basename(x) for x in (found if isinstance(found, list) else [found])))
+        refuse_same(output, a.patch, *(a.game, *a.also) if a.game else (found if isinstance(found, list) else [found]))
         if a.original: d = original_with_pokes(f, game, a.trainer)
         elif a.bare: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
         else: d = apply_menu(f, game, chosen=a.trainer, colours=a.colours, language=a.language, toggles=a.toggle)

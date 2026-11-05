@@ -7,7 +7,7 @@ sprites. Each has a .nfo beside it with the details: the exact game file it
 needs, what it changes, its cheats, credits and how it was tested.
 
 The patches carry none of the games' code. You need your own copy of each
-game, with exactly the file name and MD5 given in its .nfo.
+game: the exact dump whose MD5 its .nfo gives, under any name.
 
 On the Next
 -----------

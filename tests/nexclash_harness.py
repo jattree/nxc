@@ -68,6 +68,29 @@ def resolve_folder(spec: str, cwd: str) -> str | None:
     return drive + ":/" + "".join(p + "/" for p in parts)
 
 
+SHORT_OK = set("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#$%&'()-@^_`{}~")
+
+
+def short_names(names: list[str]) -> dict[str, str]:
+    """{name: its 8.3 name} for the files of one folder, in their order, as FAT makes them (JNext's rule, measured against
+    NextZXOS): a name that is already 8.3 in capitals' terms stays, others become the first 6 of the base, ~N and the first
+    3 of the extension, without spaces or dots, anything else as _."""
+    out: dict[str, str] = {}
+    for name in names:
+        bare = name.lstrip(".")
+        base, dot, ext = bare.rpartition(".") if "." in bare else (bare, "", "")
+        clean = lambda t, n: "".join(c if c in SHORT_OK else "_" for c in t.upper() if c not in " .")[:n]
+        native = name == bare and " " not in name and name.count(".") <= 1 and 1 <= len(base) <= 8 and len(ext) <= 3 \
+            and all(c in SHORT_OK for c in (base + ext).upper())
+        sfn = base.upper() + ("." + ext.upper() if ext else "") if native else None
+        n = 1
+        while sfn is None or sfn in out.values():
+            sfn = clean(base, 6) + "~%d" % n + ("." + clean(ext, 3) if ext else "")
+            n += 1
+        out[name] = sfn
+    return out
+
+
 def assemble(replace: list[tuple[str, str]] | None = None) -> tuple[bytes, dict[str, int]]:
     """The binary and its symbols; replace: (old, new) text changes for a deliberately broken loader."""
     with tempfile.TemporaryDirectory(dir=os.environ.get("TMPDIR")) as directory:
@@ -113,7 +136,7 @@ class Machine:
     def __init__(self, binary: bytes, symbols: dict[str, int], files: dict[str, bytes], keys=("enter",),
                  free_pages: int = 90, fail_read: int | None = None, os_mode: int = 0,
                  fail_write: int | None = None, fail_create: bool = False, cwd: str = "/",
-                 total_pages: int | None = 224) -> None:
+                 total_pages: int | None = 224, folders: tuple[str, ...] = ()) -> None:
         self.symbols = symbols
         self.files = {name.lower(): bytes(data) for name, data in files.items()}
         self.files.setdefault(ROM_FILE, bytes(FAKE_ROM))
@@ -129,6 +152,8 @@ class Machine:
         self.fail_create = fail_create
         self.total_pages = total_pages
         self.cwd = cwd
+        self.folders = folders               # subfolders to list, as folders, beside the files
+        self.dir_reads = 0
         self.opened: list[str] = []
         self.absorbs = 0
         self.overlay = bytes(binary[FIRST_PART:])
@@ -439,11 +464,30 @@ class Machine:
                 m.a = handle
                 return False
             if key not in self.files:
+                key = self.by_short_name(key)
+            if key is None:
                 m.a = 5
                 return True
             handle = self.next_handle
             self.next_handle += 1
             self.handles[handle] = [self.files[key], 0, key]
+            m.a = handle
+            return False
+        if function == 0xA3:  # F_OPENDIR: B 0, 8.3 names; a list of (attributes, name, length) as the folder has them
+            if m.b != 0:
+                self.problems.append(f"F_OPENDIR mode {m.b:#x}")
+            folder = resolve_folder(self.string(m.hl).rstrip("/\\") + "/x", self.cwd)
+            if folder is None or not self.string(m.hl):
+                m.a = 5
+                return True
+            entries = [(0x10, ".", 0), (0x10, "..", 0)] if folder != "C:/" else []
+            entries += [(0x10, d.upper()[:8], 0) for d in self.folders]
+            here = [k for k in self.files if resolve_folder(k, self.cwd) == folder]
+            names = short_names([k.replace("\\", "/").rsplit("/", 1)[-1] for k in here])
+            entries += [(0x20, names[k.replace("\\", "/").rsplit("/", 1)[-1]], len(self.files[k])) for k in here]
+            handle = 0x80 | self.next_handle
+            self.next_handle += 1
+            self.handles[handle] = [entries, 0, "dir " + folder]
             m.a = handle
             return False
         if function == 0xAD:  # F_UNLINK
@@ -456,7 +500,24 @@ class Machine:
         if entry is None:
             self.problems.append(f"esxDOS call {function:#x} on a bad handle")
             return True
-        if function == 0xA1:  # F_FSTAT
+        if function == 0xA4:  # F_READDIR: attributes, the name, time and date (4), the length (4); A 0 at the end
+            self.dir_reads += 1
+            if entry[1] >= len(entry[0]):
+                m.a = 0
+                return False
+            attr, name, size = entry[0][entry[1]]
+            entry[1] += 1
+            if m.hl + 22 > 0xC000:
+                self.problems.append(f"F_READDIR into {m.hl:#06x}")
+            m.set_memory_block(m.hl, bytes((attr,)) + name.encode() + b"\0" + bytes(4) + size.to_bytes(4, "little"))
+            m.a = 1
+            return False
+        if isinstance(entry[0], list):
+            if function != 0x9B:
+                self.problems.append(f"esxDOS call {function:#x} on a folder's handle")
+                return True
+            del self.handles[m.a]
+        elif function == 0xA1:  # F_FSTAT
             m.set_memory_block(m.hl, bytes(7) + len(entry[0]).to_bytes(4, "little"))
         elif function == 0x9F:  # F_SEEK
             if m.l != 0:
@@ -494,6 +555,14 @@ class Machine:
         else:
             raise AssertionError(f"esxDOS call {function:#x}")
         return False
+
+    def by_short_name(self, key: str) -> str | None:
+        """The file a path names by its 8.3 name, if any."""
+        folder = resolve_folder(key, self.cwd)
+        here = [k for k in self.files if resolve_folder(k, self.cwd) == folder]
+        names = short_names([k.replace("\\", "/").rsplit("/", 1)[-1] for k in here])
+        want = key.replace("\\", "/").rsplit("/", 1)[-1].upper()
+        return next((k for k in here if names[k.replace("\\", "/").rsplit("/", 1)[-1]] == want), None)
 
     # ---- running
 
