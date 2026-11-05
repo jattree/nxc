@@ -1,0 +1,97 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Three Weeks in Paradise
+  Publisher   Mikro-Gen, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Three Weeks in Paradise (1986)(Mikro-Gen)(128K).z80
+  MD5         bf0eff8438e543f18e76d14940665d7d
+
+  The patch carries none of the game's code. It only works with that exact
+  file: anything else is refused, with a message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Wally and the other characters in the fuller colours of an older
+              Spec256 conversion. Source: Enhanced colours from the MVV
+              package's older Spec256 conversion, painter not established.
+
+  Note        Scenery that Wally walks behind covers him as whole objects
+              (plants, palms), with the right-edge palms in front. Plays at
+              the original's pace: the hooks are timed so the patch costs no
+              speed (measured +0.15% in JNext). The slowdown in busy rooms and
+              the music lagging while an effect plays are the original game's
+              own: its tune and effects share the beeper.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune to enemies
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours from the
+              MVV package's older Spec256 conversion, painter not established
+  Original    Mikro-Gen, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Owner       Played by Jon Attree in JNext through the real loader,
+              2026-11-04
+
+  Replay      IDENTICAL on 16 recordings, 62696 frames, default colours;
+              Enhanced IDENTICAL on 5, 28930 frames; the game's memory,
+              registers and flags as the original's at every hook, the pace
+              window included; site differential, sprite layer and Layer 2
+              against an independent model; every hook ran; go-behind by whole
+              room objects, 565 room checks, 0 split; Wally's body least 52.1%
+              (47.5% at the owner's right-edge palm exception); 27 of 27
+              negatives detected, among them the two new ones for the pace
+              window (the wait loses AF: registers differ 373; the blit left
+              at 28 MHz: MMU / speed not restored 224); plots-survive only on
+              a forced start state and in a unit test; pace (headless JNext,
+              same game state at every update, updates 21-561): 46.80 s
+              against the original's 46.73 s (+0.15%), d386a699 51.29 s
+              (+9.8%); room 2 across 9.63 s against 9.55 (+0.9%), room 3
+              across 9.04 against 9.07 (-0.3%); timing negatives: no wait -18
+              to -32%, hook time outside the window ignored +1.2 to +2.7%;
+              captures by update after the blit, d386a699 against this build,
+              7 of 7 pixel-identical
+
+  Emulator    JNext 1.1.104: plain, sprites and Enhanced reach play headless;
+              this build's .nex through the real loader, default and Enhanced,
+              MD5 exact, room 0 walked; pace measured update-locked against
+              the plain .nex
+
+  Coverage    19 rooms walked with cheats, 13 more entered by poked room
+              change; go-behind in 18 rooms, all 18 replayed; deaths, game
+              over, new game; puzzles, Wilma, Herbert and the ending not
+              reached; loading hold not replayed, JNext only; cheats from the
+              archive's 128K POKEs, lives held in the simulator on the
+              original code, effect in the patched build not checked, unplayed
+              by a person; pace measured on the walk from the start through
+              rooms 0, 2, 3 and 16 only; 60 Hz and the line counter on a Next
+              not measured
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
