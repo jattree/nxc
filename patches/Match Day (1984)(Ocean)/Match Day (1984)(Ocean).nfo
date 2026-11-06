@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Match Day
   Publisher   Ocean, 1984
-  Version     2.0
+  Version     2.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,25 +23,29 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original (+4.08% measured in JNext 1.1.104 headless, the plain
-              .nex as control, input keyed to the match loop 0x817F, lockstep
-              held; NOT within 2%: the fastest third of updates +11%, the
-              slowest -3 to -6% (the engine runs the game's own draw at 28
-              MHz); a hook-speed pass and a limiter are owed)
+  Pace        original (-0.61% measured in JNext 1.1.104 headless, the plain
+              .nex (02fd1835) as control, input keyed to the match loop
+              0x817F, lockstep held (one busy trial measured to update 236,
+              where the games part); the hooks restore the incoming speed and
+              a limiter holds the game's own code run at 28 MHz (image builds,
+              XOR draw, the figures' calls, crowd copier, ball) to the
+              original's T on the video line, interrupt time left out, paid
+              once per match-loop pass; fastest third of updates +2.0 to
+              +5.7%, slowest -0.2 to -4.2%)
 
   Changes     1.0: Dean Woodyatt's build f0aecd13
               2.0: whole alt ROM image, start-up tail at 0xBE00 (the trophy
               screen clean)
+              2.1: original pace; hooks restore the game's speed
 
   Note        Dean Woodyatt's Match Day engine with the whole alt ROM image
               and the start-up tail moved off the trophy screen's data: the
               trophy after the title is drawn clean, and the menus no longer
               depend on the Next's own ROM. Players, ball and keepers are
-              hardware sprites in the game's colours. Plays 2-4% slower than
-              the original, and the hooks leave the CPU at 3.5 MHz, as Dean's
-              build does; a timing fix is planned. No loading screen: the
-              build already uses the last bank of a 1MB Next. No cheats: the
-              archive's POKEs only ask for values.
+              hardware sprites in the game's colours. Plays at the original's
+              pace, and the hooks give the CPU back at the speed they found
+              it. No loading screen: the build already uses the last bank of a
+              1MB Next. No cheats: the archive's POKEs only ask for values.
 
 -- MENU ----------------------------------------------------------------------
   No cheats.
@@ -54,28 +58,37 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved, timing fix to
-              follow
+  Tested      Played by the owner in JNext 2026-11-06: approved
 
-  Replay      rework v2 as recorded on refactor-final f09750a (not repeated
-              here; the rebuild = recorded, plain 02fd1835, sprites ec0706e9):
-              both recordings IDENTICAL, 6,211 and 50,404 frames (412,000
-              objects, 22.4M sprite pixels), the IM 1 handler equal to the
-              original's at every menu interrupt against NextZXOS's ROM3; unit
-              461 cases PASS, 3 negative controls + rom3_left + the old tail
-              detected; ROM paths: every ROM byte as recorded; both start-up
-              tails never read before written. Clock matrix not passed: every
-              hook leaves at 3.5 MHz (NEXTREG 7,0), as Dean's engine is built;
-              at 7 / 14 / 28 MHz in the exit would not be the incoming speed
+  Replay      engine matchday_v21 (rework v2.1 on refactor-final f6b8ac0, run
+              clone 8de4d6a; plain 02fd1835, sprites 0b10aeb4): match_day.rzx
+              6,211 frames and match_day_spectrumcomputing.rzx 50,404 frames
+              IDENTICAL (413,300 figure calls, 22.4M sprite pixels, R compared
+              at every event, all 26,529 e_objs calls at 0x8194 checked whole
+              against the original, IM 1 handler equal at 2,305 menu
+              interrupts); pace targets against the original's own T: 166,103
+              image builds exact (max 7 T), 166,468 XOR draws mean error 21 T
+              of 6,817 (bias +0.01%), crowd copier bias +0.01%; every-site
+              clock matrix 248 cases at 4 incoming clocks, exit = incoming, 0
+              fail; limiter 144 cases paid within 4 lines; isr_w / isr_x 240
+              cases; negatives detected: forced 3.5 MHz exit, limiter removed
+              (also -7.3 to -7.5% in JNext), R one off, isr_x R / interrupt
+              lines / speed, 3 unit controls, rom3_left, the old tail; unit
+              460 of 461 cases PASS (open: the guard object outside the figure
+              table, unreachable in play, leaves its build out of the pace
+              target)
 
   Emulator    JNext 1.1.104 headless: the trophy screen after the title drawn
-              clean (Dean's f0aecd13 shows it corrupted at the same frame),
-              menus, walk-on scene, kick-off and the match, frames viewed;
-              flicker 300 frames of the match: 0 out of step, 0 vanished, 0
-              transients; 15-minute soak against the original .z80: no crash;
-              both runs wait at the half-time menu (the profile never presses
-              ENTER there), which the soak calls a freeze in the build only
-              because its score differs; no person played it
+              clean, the walk-on scene, kick-off and the match reached, frames
+              viewed; flicker 300 frames of the match: 0 out of step, 0
+              vanished, 0 transients; 15-minute soak against the original
+              .z80: no crash, both runs wait at the half-time menu (build from
+              frame 24,900, original 25,850; the profile never presses ENTER
+              there), which the soak calls a freeze in the build only because
+              its score differs; beeper (port 0xFE) writes a second equal to
+              the control's in all 30 pace trials (2,429 quiet, 2,336 busy and
+              sound), 50 interrupts a second in both; the limiter removed
+              reads -7.3 to -7.5% (caught); no person played it
 
   Coverage    first halves with the computer and player 1 on Kempston (random
               input); no second half, no 2-player game, no Match Day Special,
