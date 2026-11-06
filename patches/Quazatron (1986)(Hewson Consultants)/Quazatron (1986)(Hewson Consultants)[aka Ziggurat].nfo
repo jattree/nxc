@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Quazatron
   Publisher   Hewson, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,22 +33,28 @@
 
   Pace        original
 
-  Changes     1.0: colour scenery on Layer 2 and droids as painted sprites, as
-              the Colour set over a monochrome base; Smooth scrolling as a
-              menu toggle; the original's pace kept by a pace limiter (hook
-              time repaid from the game's own delay, on each scroll move, and
-              in pace windows on the game's block blits and scroll-step copy)
+  Changes     1.1: Centred view toggle: the camera follows the player at 50
+              frames a second through a velocity filter (steady speed while
+              walking, no overshoot when stopping), the player fixed on the
+              screen, droids locked to the deck, the game's view stepping
+              ahead of the camera; fewer missed interrupts in the pace
+              limiter's waits. 1.0: colour scenery on Layer 2 and droids as
+              painted sprites over a monochrome base; Smooth scrolling; the
+              original's pace kept by a pace limiter
 
   Note        Kempston: choose 4 on CONTROL SELECTION, ENTER, then fire.
               Colour is the menu's Enhanced colours line: on, the colour game;
-              off, the game's own monochrome picture (the patched game, at the
-              original's pace). The main line off in the loader gives your own
-              unpatched game. The menu .nex starts with Colour on. Smooth
-              scrolling (off by default) makes scroll bursts quicker and
-              glides the view; it has no effect in monochrome. Scenery is a
-              wrapping Layer 2 canvas coloured by the game's own drawing
-              lists; droids are Next sprites painted by parts. Pace measured
-              in JNext only; hardware untested.
+              off, the game's own monochrome picture. Smooth scrolling (off by
+              default) makes scroll bursts quicker and glides the view.
+              Centred view (off by default; turns Smooth scrolling on with it)
+              keeps your droid in the middle of the screen with the deck
+              gliding underneath, instead of the game's pushes at the screen
+              edges: a change to the game, as the view decides which droids
+              move. The camera follows your droid at a steady speed, about
+              0.12 s behind it. Both have no visible effect in monochrome
+              except that Centred view scrolls in single steps there. Pace
+              measured in JNext only; hardware untested. P pauses; fire
+              resumes.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -64,38 +70,36 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      1.0 played by the owner in JNext 2026-11-06: approved; 1.1
+              played by the owner in JNext 2026-11-06 (Centred view): approved
 
-  Replay      IDENTICAL on 6 recordings (c1, b2, b1, u2, u3, d1), 25,117
-              frames, in 4 states (colour, colour + Smooth scrolling,
-              monochrome, monochrome + Smooth scrolling): registers with R and
-              all game memory equal at every hook event; per state t_isr
-              23,989, t_prn 10,584, t_spr 5,181, t_dly 4,848, t_list 1,637
-              (+3,528 nested in t_bs), t_c05a 100, t_bs 82, t_paste 56, t_clr
-              56, t_sl 35, t_sd 32, t_cls 15, t_su 8, t_sr 7: every hook ran
-              (d1, a test recording, has the down-scroll edge lowered from
-              line 151 to 112 in its own first snapshot, and the power cheat,
-              so that t_su runs). Negatives detected: ink pass skipped, paste
-              at the wrong origin, t_dly R delta off by one, sprites not moved
-              with the glide, a forced 3.5 MHz exit, the E656 pace window's R
-              delta off by one (both states), the monochrome gate dropped; in
-              JNext the limiter removed (no debt kept, no window waits) plays
-              busy scenes -3.9% (2 trials)
+  Replay      Centred view off: IDENTICAL on v1.0's 6 recordings (c1, b2, b1,
+              u2, u3, d1), 25,117 frames, in its 4 states, every hook event
+              count equal to v1.0's. Centred view on: IDENTICAL against the
+              Centred reference game (the original with the two Centred
+              patches and c_pre, the same bytes) on 4 bot recordings of it
+              (t5, r6, r7, r8), 16,000 frames, in 4 states; per state 1,096
+              one-step scrolls (288 right, 254 left, 288 up, 266 down) at
+              2,189 decisions, each matching the rule (per axis: moving that
+              way and past the centre), and every settled scroll's background
+              equal to a full render (871 checks). Smoothness at every frame:
+              the shown player equal to this verifier's own run of the camera
+              filter in all 14,744 frames, and the player at (128, 88) on the
+              screen in all 12,699 frames with the camera free. Negatives
+              detected: the camera filter disabled, ink pass skipped, t_dly R
+              delta off by one, sprites with a stale offset (Smooth, and
+              Centred), the monochrome gate dropped, the alt ROM fill stopping
+              before c_pre, a reference whose step skips its strip render
 
-  Emulator    JNext 1.1.104 headless, v2.09 card: play reached in colour in
-              both menu states; nexclash.flicker 300 frames in each state, no
-              figure vanished, no one-frame transients, 2 and 1 frames flagged
-              out of step against the ULA play area, which Layer 2 hides
-              (looked at: the figures whole in every flagged frame);
-              nexclash.soak 15 emulated minutes in each state against the
-              original, no freeze, loop or crash; both trainers proven in
-              session 2
+  Emulator    JNext 1.1.104 headless, v2.09 card: Centred view (colour) walks
+              captured frame by frame; nexclash.flicker 300 frames: no figure
+              vanished, 7 out-of-step flags against the ULA play area, which
+              Layer 2 hides; soak: see notes; both trainers as v1.0
 
-  Coverage    Bot recordings only, no human play: green, white, yellow and
-              cyan decks, all four scroll moves in lockstep (t_sd, t_sl, t_sr
-              from play; t_su only in the test recording d1), droid classes in
-              play X, U, R, B, L; not reached: lifts, transfer game, later
-              decks
+  Coverage    v1.0's coverage, plus the Centred reference: 4 bot recordings
+              toward every side of the deck, scrolls in all four directions,
+              deck edges, deck changes and deaths (r8: no cheats); not
+              reached: lifts, the transfer game, later decks
 
   Hardware    none
 
