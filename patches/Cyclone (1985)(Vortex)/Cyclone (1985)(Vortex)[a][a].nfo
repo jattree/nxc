@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cyclone
   Publisher   Vortex, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,8 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -40,41 +42,55 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+  Tested      1.0 played by Jon Attree in JNext through the real loader,
+              2026-11-03; 1.1 played by the owner in JNext on NextZXOS v2.10
+              (System/Next 26.11), 2026-11-06: approved
 
-  Replay      2 bot recordings from this file, 30000 frames: IDENTICAL, 5575
-              helicopter plots, 1012910 sprite pixels. Negative controls 6/6
-              detected. Dean's recordings desync on this file at once
+  Replay      1.1: NexClash's ROM path check (nextboot.rom_paths) on the v2.10
+              ROM3, 7 recordings, 194456 frames: the ROM bytes the game runs
+              are the same as on v2.09 (1.0: BEEPER 0x03C1-0x03C4 differs in
+              all 7). 1.0: 2 bot recordings from this file, 30000 frames:
+              IDENTICAL, 5575 helicopter plots, 1012910 sprite pixels.
+              Negative controls 6/6 detected. Dean's recordings desync on this
+              file at once
 
-  Emulator    JNext 1.1.104 headless: plain and sprites reach play, nobody
-              played; with the loading screen: JNext 1.1.104 headless through
-              the real loader, MD5 exact, reached the screen, the game and
-              play frames, viewed; no person played it; JNext 1.1.104 headless
-              through the real loader, 2026-11-03: chosen in the Browser with
-              every cheat on, /tmp/NEXCLASH.NEX equal to apply
+  Emulator    1.1, 2026-11-06: JNext 1.1.104 headless, through the Browser and
+              the real loader on System/Next 26.11 (NextZXOS v2.10) and on
+              v2.09: reached play, keys answered, beeper sound in the recorded
+              audio, /tmp/NEXCLASH.NEX equal to apply; 1.0 on 26.11: hangs at
+              the start of play (BEEPER runs into RAM). 1.0: JNext 1.1.104
+              headless: plain and sprites reach play, nobody played; with the
+              loading screen: JNext 1.1.104 headless through the real loader,
+              MD5 exact, reached the screen, the game and play frames, viewed;
+              no person played it; JNext 1.1.104 headless through the real
+              loader, 2026-11-03: chosen in the Browser with every cheat on,
+              /tmp/NEXCLASH.NEX equal to apply
 
-  Coverage    No aircraft in the replays (unit cases only), no cyclone,
-              crates, landing or game over. About 35 code and data bytes
-              differ from the engine's own snapshot, including two INC HL at
-              0x81EF and 0x81F6 that are NOP here; loading screen stub added
-              in bank 14, 2026-11-03: the replay and hardware lines are of the
-              build without it, whose game memory the stub restores at the
-              original start; the stub is emulator-tested only; cheats proved
-              in a simulator on the original game: Infinite lives: simulator
-              (Kempston wander, seed 1): INC A at 92A0 runs at each crash; 3
-              helicopters lost and game over by frame 2853 without, none lost
-              with; Infinite time: simulator (idle, 15000 frames): time tick
-              8295 runs 11 times; time-bar pointer steps 12 times without,
-              held with; Infinite fuel: simulator (pulsed climb, lives held,
-              20000 frames): fuel bar steps in 43 of 49 in-flight ticks
-              without, 0 of 58 with; post-crash drain loop exits (no hang),
-              game over still reached without the lives harness; Immune to
-              cyclone: simulator (seed 1, lives held, 20000 frames): cyclone
-              buffet routine 7378 runs 41 frames (4 push-downs) without; 0
-              with, though in range 129 frames; No crashes: simulator (3 key
-              schedules, 8000 frames): crash flag 7505 never set and no
-              helicopter lost with; 3 lost in each without (frames
+  Coverage    1.1 changes only the start-up stub: after its copy of the
+              running ROM3 into the alt ROM it puts v2.09's bytes back at 11
+              sites where that ROM3 holds v2.10's (BEEPER, PLOT, POINT, DRAW,
+              CIRCLE); on v2.09 nothing changes; POINTERS (0x1664) is left as
+              v2.10 has it. 1.0: No aircraft in the replays (unit cases only),
+              no cyclone, crates, landing or game over. About 35 code and data
+              bytes differ from the engine's own snapshot, including two INC
+              HL at 0x81EF and 0x81F6 that are NOP here; loading screen stub
+              added in bank 14, 2026-11-03: the replay and hardware lines are
+              of the build without it, whose game memory the stub restores at
+              the original start; the stub is emulator-tested only; cheats
+              proved in a simulator on the original game: Infinite lives:
+              simulator (Kempston wander, seed 1): INC A at 92A0 runs at each
+              crash; 3 helicopters lost and game over by frame 2853 without,
+              none lost with; Infinite time: simulator (idle, 15000 frames):
+              time tick 8295 runs 11 times; time-bar pointer steps 12 times
+              without, held with; Infinite fuel: simulator (pulsed climb,
+              lives held, 20000 frames): fuel bar steps in 43 of 49 in-flight
+              ticks without, 0 of 58 with; post-crash drain loop exits (no
+              hang), game over still reached without the lives harness; Immune
+              to cyclone: simulator (seed 1, lives held, 20000 frames):
+              cyclone buffet routine 7378 runs 41 frames (4 push-downs)
+              without; 0 with, though in range 129 frames; No crashes:
+              simulator (3 key schedules, 8000 frames): crash flag 7505 never
+              set and no helicopter lost with; 3 lost in each without (frames
               shots/cy_nocrash.png: still flying at 5000)
 
   Hardware    none
