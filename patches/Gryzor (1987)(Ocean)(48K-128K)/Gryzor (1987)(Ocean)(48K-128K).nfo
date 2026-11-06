@@ -1,0 +1,100 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Gryzor
+  Publisher   Ocean, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Gryzor (1987)(Ocean)(48K-128K).z80
+  MD5         fdab5fb61b2cb01ce38edcfa85ea9e80
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original
+
+  Changes     1.0: figures and bullets as Next sprites; black outline;
+              Sinclair's 48K ROM as the alt ROM; hooks at 28 MHz restoring the
+              game's speed; R kept, so the game's random numbers are the
+              original's; the original's pace kept by a pace limiter and
+              prepared sprite patterns
+
+  Note        Keys: hold 0 on the menu to start (the menu checks the keyboard
+              every few frames); cursor keys 5 left, 8 right, 7 jump, 6 down,
+              0 fire. The player, enemies and bullets are Next sprites with a
+              black outline, so they show one colour across the jungle's bands
+              instead of taking the paper of each row; scenery, stars, objects
+              and text keep the original's colours. The outline is black at
+              the owner's request in place of the white one he approved: the
+              same pixels, around each figure inside its own image. In the
+              yellow forest the black outline meets the forest's black pattern
+              and figures read less well than with the white one. The game
+              plays at the original's pace (hooks at 28 MHz, the speed you
+              chose restored after each, the original's own slowdowns kept)
+              and gives the same enemies for the same keys. While the scenery
+              scrolls, a figure can show a frame behind it now and then. This
+              is the 48K form: the first section only; the next needs the
+              tape. Cheats are the archive's, checked on a simulator only.
+              Enhanced colour rated HARD and not offered. Not tested on
+              hardware.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune to enemies touch
+   3  Immune to enemy fire
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ocean, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      IDENTICAL on 5 recordings, 33,038 frames, 13,466 ticks, R
+              compared at every tick and after every hook: 48,251 plots (c4
+              22,547, c3 14,594, clip 4,603, bullet 6,078, c5 429), 13,080
+              star hooks, 13,466 tick hooks, 16 screen and 3 bitmap clears;
+              the outline's white twin IDENTICAL too; 23 of 23 negatives
+              detected, a forced 3.5 MHz exit and a missing cache invalidation
+              among them; ROM path check clean on all three builds
+
+  Emulator    JNext 1.1.104 headless: menu and play reached from the build's
+              own start, frames inspected; pace runs in lockstep with the
+              original at every update with no fixture (R kept); 15-minute
+              soak: no freeze, loop or crash (1,708 distinct pictures of
+              1,801, the original 1,732); flicker check: 2, 18 and 1 frames of
+              220 with figures a frame behind the scrolled scenery (the
+              2026-11-03 build: 42 in the same window), no figure vanished, no
+              attribute flashes
+
+  Coverage    Random-key bot recordings only, no human play: the whole first
+              section to the door, the walk out and START TAPE (lives cheat in
+              3 of 5), game overs, menu and restarts; not reached: Kempston
+              and other input modes in play, define keys; the 48K form holds
+              section 1 only
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
