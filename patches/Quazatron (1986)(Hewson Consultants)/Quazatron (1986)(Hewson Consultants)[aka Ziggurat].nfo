@@ -1,0 +1,107 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Quazatron
+  Publisher   Hewson, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Quazatron (1986)(Hewson Consultants)[aka Ziggurat].z80
+  MD5         ac51eb58af87fdac9c0c7077db98c90a
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Colour, chosen on the menu, off
+              by default.
+  Enhanced    The monochrome decks in colour: floors, walls, ramps, arrow
+              panels, objects and pads each in their own tone, taken from the
+              deck's own colour; every droid painted by its parts as a
+              hardware sprite, the player's droid included. The panel below
+              the play area is unchanged. A painted set, colourist not named.
+
+  Pace        original
+
+  Changes     1.0: colour scenery on Layer 2 and droids as painted sprites, as
+              the Colour set over a monochrome base; Smooth scrolling as a
+              menu toggle; the original's pace kept by a pace limiter (hook
+              time repaid from the game's own delay, on each scroll move, and
+              in pace windows on the game's block blits and scroll-step copy)
+
+  Note        Kempston: choose 4 on CONTROL SELECTION, ENTER, then fire.
+              Colour is the menu's Enhanced colours line: on, the colour game;
+              off, the game's own monochrome picture (the patched game, at the
+              original's pace). The main line off in the loader gives your own
+              unpatched game. The menu .nex starts with Colour on. Smooth
+              scrolling (off by default) makes scroll bursts quicker and
+              glides the view; it has no effect in monochrome. Scenery is a
+              wrapping Layer 2 canvas coloured by the game's own drawing
+              lists; droids are Next sprites painted by parts. Pace measured
+              in JNext only; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite power
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Hewson, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved
+
+  Replay      IDENTICAL on 6 recordings (c1, b2, b1, u2, u3, d1), 25,117
+              frames, in 4 states (colour, colour + Smooth scrolling,
+              monochrome, monochrome + Smooth scrolling): registers with R and
+              all game memory equal at every hook event; per state t_isr
+              23,989, t_prn 10,584, t_spr 5,181, t_dly 4,848, t_list 1,637
+              (+3,528 nested in t_bs), t_c05a 100, t_bs 82, t_paste 56, t_clr
+              56, t_sl 35, t_sd 32, t_cls 15, t_su 8, t_sr 7: every hook ran
+              (d1, a test recording, has the down-scroll edge lowered from
+              line 151 to 112 in its own first snapshot, and the power cheat,
+              so that t_su runs). Negatives detected: ink pass skipped, paste
+              at the wrong origin, t_dly R delta off by one, sprites not moved
+              with the glide, a forced 3.5 MHz exit, the E656 pace window's R
+              delta off by one (both states), the monochrome gate dropped; in
+              JNext the limiter removed (no debt kept, no window waits) plays
+              busy scenes -3.9% (2 trials)
+
+  Emulator    JNext 1.1.104 headless, v2.09 card: play reached in colour in
+              both menu states; nexclash.flicker 300 frames in each state, no
+              figure vanished, no one-frame transients, 2 and 1 frames flagged
+              out of step against the ULA play area, which Layer 2 hides
+              (looked at: the figures whole in every flagged frame);
+              nexclash.soak 15 emulated minutes in each state against the
+              original, no freeze, loop or crash; both trainers proven in
+              session 2
+
+  Coverage    Bot recordings only, no human play: green, white, yellow and
+              cyan decks, all four scroll moves in lockstep (t_sd, t_sl, t_sr
+              from play; t_su only in the test recording d1), droid classes in
+              play X, U, R, B, L; not reached: lifts, transfer game, later
+              decks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
