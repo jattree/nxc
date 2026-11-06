@@ -1,0 +1,108 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Prince of the Yolkfolk
+  Publisher   Code Masters, 1991
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy 6 - Dizzy, Prince of the YolkFolk (1991)(Code
+              Masters)(128K)[a][a][aka Dizzy VI - Prince of the Yolkfolk].z80
+  MD5         292c1b1ca9f78dac32045533c9ba5361
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+0.00% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the game loop update 0x786E,
+              lockstep checked at every update (equal in all 30 trials), SPACE
+              tapped in boxes and the title by the game's own input poll)
+
+  Changes     1.0: Dean Woodyatt's Prince of the Yolkfolk build moved to the
+              128K release (AY music), his plot hook at 28 MHz, whole alt ROM
+              image with the mirrored Dizzy's plotter, loading screen
+
+  Note        The 128K release, so the AY music plays. Dean Woodyatt's Prince
+              of the Yolkfolk build: Dizzy is four hardware sprites, so he no
+              longer takes the colours of the scenery he walks through; the
+              mirrored Dizzy in Double Trouble stays on the screen as in the
+              original. His plot hook now runs at 28 MHz. Loading screen from
+              the tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune to bats
+   3  Immune to flame of torch
+   4  Immune to flames of burnt
+   5  Immune to troll
+   6  Immune to ferryman
+   7  Extra energy
+   8  Start with 20 cherries
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Code Masters, 1991, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved
+
+  Replay      5 recordings of the 128K release on rework v128 (bot walks: two
+              of 6,013 / 6,330 frames in Double Trouble, the mirrored Dizzy's
+              room, reached with the game's own room skip, and three of 12,008
+              / 12,015 / 12,163 frames from the start): every hook event
+              identical: 8,182 player plots (8,779 sprite pictures pixel-
+              perfect), 8,686 erases, 18,603 ISR checks, 130 room wipes and 90
+              boxes hiding Dizzy, 1,022 mirrored-Dizzy plots and 989 erases
+              equal to the original's; 3 recordings IDENTICAL; 2 differ in 5
+              of 171,382 pixel tests, where the original's eraser leaves a
+              hole or a ghost pixel in an object drawn over Dizzy (the build
+              keeps the object whole); 8 negative controls detected; clock
+              matrix 7 hook sites x 4 incoming clocks = 28 cases PASS, a
+              forced 3.5 MHz exit detected; ROM paths: every ROM byte as
+              recorded; start-up tail never read before written; R never read
+
+  Emulator    JNext 1.1.104 headless: loading screen, title, play reached,
+              frames viewed; AY music written (700 data writes a second in
+              play, as the original); flicker 300 frames: 0 out of step, 0
+              vanished, 0 transients; 15-minute soak against the original
+              .z80: no freeze or crash, one loop warning on the game's own
+              4-frame wait with Dizzy moving (frames viewed); no person played
+              it
+
+  Coverage    the start rooms, the title and Double Trouble (the mirrored
+              Dizzy) only (bot walks); loading screen stub in bank 13,
+              emulator-tested only; cheats proved in the simulator on the 128K
+              file: Infinite Lives: lives stayed 3 after a death (2 without);
+              Immune to Bats, Flame of Torch, Flames of Burnt Door, Troll,
+              Ferryman: each hazard's damage call run from a play state left
+              the energy at 31 (29, 30, 0, 23, 23 without); Extra energy: 62
+              at the start (31); Start with 20 cherries: 20 (0); dropped:
+              Animation speed (asks the player for a value, which a patch
+              cannot hold) and the second Infinite lives (made for another
+              layout: it overwrites the 128K release's AY paging routine and
+              the game stops)
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
