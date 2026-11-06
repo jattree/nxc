@@ -1,0 +1,102 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Fantasy World Dizzy
+  Publisher   Code Masters, 1989
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy 3 - Fantasy World Dizzy (1989)(Code
+              Masters)(128K)[a2][a2].z80
+  MD5         2f84d85c52046a8b7a2ec6f2ebd415bc
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+0.00% measured in JNext 1.1.104 headless, the plain
+              .nex as control, input keyed to the game loop update 0xA711,
+              lockstep checked at every update (equal in all 30 trials), SPACE
+              tapped in boxes and the title by the game's own input poll)
+
+  Changes     1.0: Dean Woodyatt's Fantasy World Dizzy build moved to the 128K
+              release (AY music), his plot hook at 28 MHz, whole alt ROM
+              image, loading screen
+
+  Note        The 128K release, so the AY music plays. Dean Woodyatt's Fantasy
+              World Dizzy build: Dizzy is four hardware sprites, so he no
+              longer takes the colours of the scenery he walks through; his
+              plot hook now runs at 28 MHz. Loading screen from the tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune to flame
+   3  Immune to rat
+   4  Immune to dragon's fire
+   5  Immune to armorog
+   6  Immune to gator
+   7  Immune to sharp daggers
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Code Masters, 1989, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      3 recordings of the 128K release IDENTICAL on rework v128 (bot
+              walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the
+              troll's dialogue, deaths in the fire, a game over and restart,
+              the inventory, the Smuggler's Hideout): 5,983 plots pixel-
+              perfect, 5,935 erases, 12,122 ISR hide checks (104 on the hide
+              path), 100 room wipes and 96 boxes hiding Dizzy, equal to the
+              original's; the game never touches the tail and latch in the
+              printer buffer nor the alt ROM hook bytes; 4 negative controls
+              detected; clock matrix 5 hook sites x 4 incoming clocks = 20
+              cases PASS, a forced 3.5 MHz exit detected; ROM paths: every ROM
+              byte as recorded; start-up tail never read before written
+
+  Emulator    JNext 1.1.104 headless: loading screen, title, play reached,
+              frames viewed, also with a cheat on; AY music written (550 data
+              writes a second in play, as the original); flicker 300 frames: 3
+              out of step (Dizzy standing in the animated fire, which redraws
+              under his sprite on its own cycle; frames viewed, Dizzy whole),
+              0 vanished, 0 transients, one-frame attribute blinks as the
+              original; 15-minute soak against the original .z80: no freeze,
+              loop or crash; no person played it
+
+  Coverage    the dungeon, the first rooms and the title only (bot walks);
+              loading screen stub in bank 13, emulator-tested only; cheats
+              proved in the simulator on the 128K file: Infinite lives: the
+              lives counter (63790) stayed 3 over 8 walks into the start
+              room's fire (without it 2, 1, 0, game over); Immune to flame:
+              the burn path (0xAFCD) never ran over 8 walks into the fire (6
+              times without it); Immune to rat, dragon's fire, armorog, gator,
+              sharp daggers: their rooms not reached; at each POKE site with
+              the collision flag set the original goes on to its death code
+              and the POKE takes the no-collision exit; dropped: Lives (asks
+              the player for a value, which a patch cannot hold)
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
