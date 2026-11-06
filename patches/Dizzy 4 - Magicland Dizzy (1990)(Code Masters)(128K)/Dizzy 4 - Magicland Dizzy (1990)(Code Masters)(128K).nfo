@@ -1,0 +1,106 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Magicland Dizzy
+  Publisher   Code Masters, 1990
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy 4 - Magicland Dizzy (1990)(Code Masters)(128K).z80
+  MD5         7ebfab28186697409f9026b552ccbf84
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original
+
+  Changes     1.0: Dean Woodyatt's Magicland Dizzy build moved to the 128K
+              release (AY music), his plot hook at 28 MHz, whole alt ROM
+              image, printer buffer put back after loading, loading screen
+
+  Note        The 128K release, so the AY music plays. Dean Woodyatt's
+              Magicland Dizzy build: Dizzy is four hardware sprites, so he no
+              longer takes the colours of the scenery he walks through; his
+              plot hook now runs at 28 MHz. The game's own table at 0x5B00
+              (mirrored objects) is put back after loading. Loading screen
+              from the tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Walk through walls
+   3  Tune continues when dead
+   4  Play at double speed
+   5  Immune to flame
+   6  Immune to swamp ghosts
+   7  Immune to rat
+   8  Immune to bats
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Code Masters, 1990, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-05: approved
+
+  Replay      NOT IDENTICAL (PARTIAL): 3 bot walks of the 128K release (12,013
+              / 12,028 / 12,020 frames) on rework v128: every hook event
+              identical to the original (4,684 plots, 4,695 erases, 21,245 ISR
+              hide checks, 135 room wipes, 47 inventory boxes), 4,713 sprite
+              plots pixel-perfect; but 5 of 101,594 pixel tests read a byte
+              where the original's own erase had left a hole (another routine
+              drew over Dizzy before his XOR erase): the build keeps that
+              background pixel, so those 5 tests differ from the original
+              (Dean's 48K build has the same property, the same code);
+              negatives: 6 broken builds, 5 caught by their own signal, the
+              wipe hide alone masked by the ISR hide; clock matrix 5 hook
+              sites x 4 incoming clocks = 20 cases PASS, a forced 3.5 MHz exit
+              detected; ROM paths: every ROM byte as recorded; start-up tail
+              never read before written; printer buffer as the snapshot after
+              NEXLOAD
+
+  Emulator    JNext 1.1.104 headless: loading screen, title, play reached,
+              frames viewed; AY music written (750 data writes a second in
+              play, as the original); flicker 300 frames: 0 out of step, 0
+              vanished, 0 transients; 15-minute soak against the original
+              .z80: no freeze, loop or crash, AY 737 writes a second in both;
+              no person played it
+
+  Coverage    the first rooms only (bot walks: Weirdhenge, the Mysterious
+              Monolith, Bushy Grove, the Haunted Swamp, Down a Well), the
+              inventory box, deaths and game over; loading screen stub in bank
+              13, emulator-tested only; cheats proved in the simulator on the
+              original 128K file: Infinite Lives (a death: lives 3 -> 3
+              against 3 -> 2), Walk through walls (holding left: 4 rooms and
+              90 positions against 1 room and 12; holding right he passes the
+              rock at the swamp's edge that stops him without it), Tune
+              continues when dead (4,500 AY writes in the 300 frames after a
+              death against 540), Play at double speed (185 player updates in
+              1,000 frames against 127), Immune to Flame / Swamp Ghosts / Rat
+              / Bats (each hazard's damage call run from a play state: energy
+              31 -> 31 against 30 / 27 / 28 / 30; flame and swamp ghost hits
+              also met on the bot walks); none dropped
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
