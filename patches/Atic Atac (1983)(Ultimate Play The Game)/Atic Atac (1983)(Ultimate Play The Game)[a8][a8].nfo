@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Atic Atac
   Publisher   Ultimate
-  Version     1.4
+  Version     1.5
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -39,7 +39,8 @@
               to moving figures; the menu's screen clear no longer leaves the
               icons on screen. 1.3: option QAOP + Space keys (Q A O P to move,
               Space to fire, Caps Shift pauses). 1.4: original pace, never
-              faster (limiter).
+              faster (limiter). 1.5: works on NextZXOS v2.10 (System/Next
+              26.11).
 
   Note        Plays at the original's pace, never faster: a limiter makes each
               figure's drawing take the original's time, waiting on the video
@@ -50,11 +51,9 @@
               on the same keys, because the game takes chance from the R
               register, which the hooks change; the game reads a few ROM bytes
               as data and gets the Next ROM's values, not the 48K ROM's (found
-              by replay; effect on play not established); not yet checked in
-              full on NextZXOS v2.10: it lacks the start-up fix for v2.10's
-              ROM changes that Cyclone and Chuckie Egg needed. Missing: a
-              quiet-play pace check with the same enemies in both games;
-              hardware untested.
+              by replay; effect on play not established). Missing: a quiet-
+              play pace check with the same enemies in both games; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -72,9 +71,15 @@
               theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      Played by the owner in JNext 2026-11-06: approved; 1.5 approved
+              by the owner in JNext, 2026-11-07
 
-  Replay      Original-game lockstep IDENTICAL on walk1, walk2 and t for all
+  Replay      1.5 (2026-11-07, nexclash main 102091f): every game bank byte
+              for byte the published 1.4's; only the start-up stub changed,
+              the v2.10 fix-up; original-game lockstep re-run on these builds:
+              IDENTICAL on walk1, walk2 and t for all four (21003 frames
+              each), negatives 3 of 3 and 22 of 22, unit tests pass. 1.4:
+              Original-game lockstep IDENTICAL on walk1, walk2 and t for all
               four v1.4 builds (default, Enhanced, each with QAOP + Space):
               21003 frames each, 40623 figure setups, 666275 rows, 45.1M
               sprite pixels; every hook ran (setups, rows, clears, room line,
@@ -88,7 +93,12 @@
               toggle keys 924 / 832 cases pass, both toggle negatives
               detected; 3 replay negatives on t detected.
 
-  Emulator    JNext 1.2.0 and 1.1.104 headless (v2.09 card, read-only): the
+  Emulator    1.5 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu with Enhanced on,
+              ENTER: /tmp/NEXCLASH.NEX equal to the bare Enhanced build
+              (ac9a2dc2), the loading screen, game selection and play reached,
+              the knight moving, frames viewed; no person played it. 1.4:
+              JNext 1.2.0 and 1.1.104 headless (v2.09 card, read-only): the
               four bare builds reach play and the player moves; the menu build
               reaches play. Flicker, 3 windows of 300 frames against the
               original: 0 out of step, 0 vanished, one-frame attribute changes
