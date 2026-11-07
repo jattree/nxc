@@ -1,0 +1,116 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Green Beret
+  Publisher   Imagine, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Green Beret (1986)(Imagine)[a2][a2].z80
+  MD5         c1a76349d08289810323bae0e62a9102
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (+0.00% measured in JNext 1.1.104 headless, the v2.09
+              card; probe 0xA38C (the main loop's scenery blit, once a game
+              update); input keyed to updates; lockstep on lives and stage; 10
+              trials per scene of up to 300 updates (the mean; single trials
+              0.00 to +0.21 percent, never faster: the game waits for the
+              interrupt each update))
+
+  Changes     1.0: figures as Next sprites (white body, black dark pixels, a 1
+              pixel white edge around each outline); Sinclair's 48K ROM as the
+              whole alt ROM; the game's speed restored after every hook
+
+  Note        Keys: 1 on the game's menu for the keyboard, then the six keys
+              you want (up, down, left, right, stab, shoot), Y, then stab to
+              start. The player, the soldiers, dogs and explosions are Next
+              sprites in white and black over their own pixels, so they no
+              longer take on the scenery's colours; the scenery, panel and
+              text keep the original's colours. Each figure keeps a 1 pixel
+              white edge around its outline so it stays clear of dark scenery;
+              the wider white areas some enemies had behind them in earlier
+              builds are gone. In the sky, where the original draws figures
+              without a mask, their white bodies are solid. The weapon shot
+              stays on the Spectrum screen, behind the figures. The game's own
+              speed is restored after every hook. The hooks take under 2
+              percent of the game's time; the game waits for the next frame
+              each update, so its pace is the original's, but its beeper sound
+              loops run until that frame starts, so the build makes 5 to 7
+              percent fewer beeper writes than the original (measured in
+              JNext). Not tested on hardware.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Extra firepower
+   3  No mines
+   4  Infinite ammo
+   5  Immunity (except mortars)
+   6  Mortars don't shoot
+
+  Cheats are the archive's POKEs for this release; dropped: Lives and the
+  weapon choice (they ask for a value).
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Imagine, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved
+
+  Replay      IDENTICAL on 4 recordings, 84,814 frames: 22,521 draw passes,
+              91,412 figure plots, 2,716 object plots, 9,871 mines, 4,119
+              bullets, 40 screen wipes: at every hook original and patched
+              code compared from the same state (every register but R, all
+              memory), then the picture: the patched screen plus the sprites
+              against the original's pixels, 35.2M pixels; the trimmed edge
+              pixels (310,485 in 54,983 plots) allowed only where a plot of a
+              trimmed figure put them; 106 figure images against the edge
+              rule, 18 negative controls detected (the edge rule left out and
+              the exit forced to 3.5 MHz among them). R is not kept by the
+              hooks: the game reads R only for its bit 7 (the sign after LD
+              A,R), and the four recordings replayed with R's low 7 bits
+              randomised at every hook site and game update (283,838 times)
+              give the same RAM at every update
+
+  Emulator    JNext 1.1.104 headless. On copies of the v2.09 and the 26.11
+              (NextZXOS v2.10) emulator cards, through the Browser: the .nxc
+              and the loader's menu, then ENTER: the loader wrote the bare
+              build (d982d5ae) on both, and the game reached play, the same
+              pictures at the same frames on both cards; the menu .nex the
+              same. The whole alt ROM image copies no NextZXOS ROM3 byte, so
+              the v2.10 ROM3 change does not reach it. Flicker check over 300
+              frames of play: 0 frames out of step, 0 vanished figures, 0 one-
+              frame attribute changes or transients; 15-minute soak against
+              the original: no freeze, loop or crash (game overs and restarts
+              in both); pace as below
+
+  Coverage    Random-key recordings only, no human play: stages 1-4 reached
+              (lives, immunity and weapon cheats in some recordings'
+              snapshots), deaths, game over and restart, weapons and pickups;
+              not reached: the end of stage 3 by play (by cheat only), stage
+              4's boss paths, the end of the game
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
