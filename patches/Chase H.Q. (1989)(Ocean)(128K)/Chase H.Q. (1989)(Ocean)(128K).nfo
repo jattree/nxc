@@ -1,0 +1,122 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Chase H.Q.
+  Publisher   Ocean, 1989
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Chase H.Q. (1989)(Ocean)(128K).z80
+  MD5         cedb31d5860815ef7e871ee249744de5
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Speed needs a
+              2MB Next, and is not offered on a smaller one; Orig. pace needs
+              a 2MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Speed (needs a 2MB Next), Orig.
+              pace (needs a 2MB Next), chosen on the menu, off by default.
+  Speed       Colours on the original Spectrum drawings, chosen with the
+              arcade game as a reference: a rebuilt grey Porsche with nine
+              steering views and black passengers; coloured traffic, roadside
+              objects, fire, barricades, effects and capture faces on all five
+              stages; a metal dashboard with red and blue sirens; five
+              coloured radio faces and a navy message pane; mountain and city
+              skylines; colour kept in the attract demo and game over. Layer 2
+              and Next sprites; figures are not converted to hardware sprites.
+              Needs a 2MB Next. On the menu: Speed, drawn at the Speed pace;
+              Orig. pace, at the original pace. Source: Enhanced colours: Jon
+              Attree.
+  Orig. pace  The same colours at the original pace, within 2% of the original
+              in every measured scene. Needs a 2MB Next. Source: Enhanced
+              colours: Jon Attree.
+
+  Pace        slowdown removed (-10.5% measured in JNext 1.1.104 headless;
+              player update B063, three input trials per driving scene;
+              briefing and demo loop entries)
+
+  Changes     1.0: speed pass: road, scenery and screen copy drawn at 28 MHz,
+              capped at the original quiet-scene pace
+              1.1: Enhanced colours on the menu, off by default, for a 2MB
+              Next, at the Speed pace or the original pace; Speed now uses the
+              Enhanced engine with its colours off and still fits a 1MB Next;
+              fixes a crash at the tunnel mouth in Enhanced colours when a
+              wall row has no width
+
+  Note        Keys: ENTER options, 5 redefine (tested: SPACE gear, Q
+              accelerate, A brake, O left, P right, X quit, H pause, T turbo),
+              4 keyboard, SPACE to start. Modes: Speed alone keeps the
+              original artwork and is faster on purpose, the frame rate
+              improvement asked for; Enhanced colours [Speed] adds the colours
+              at the Speed pace; Enhanced colours [Orig. pace] keeps the
+              original pace; Speed off is your own game. Time per update
+              against the original, Speed / Enhanced Speed / Enhanced Orig.
+              pace: quiet -10.5/-6.4/-1.0%; busy -11.1/-2.8/-0.7%; tunnel
+              -8.1/-4.0/+0.6%; city -15.6/-2.3/-1.1%; attract
+              -13.5/-0.9/-0.9%; briefing +1.7/-15.0/+0.1%. Known issues:
+              Enhanced colours needs a 2MB Next, and a 1MB Next shows it as
+              N/A; the original game's synchronous sound effects still stall
+              play for up to about 0.8 s; the Enhanced road motion is an
+              approximate in-between pose and frames can tear. Missing:
+              hardware untested; no full five-stage playthrough or final
+              ending checked; joystick options not checked.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite credits
+   2  Infinite time
+   3  1Hit to capture
+   4  Infinite turbos
+
+  The archive's POKEs for this release. 1Hit to capture and Infinite turbos
+  are written to their source copies in bank 3, which the game copies into
+  place at its intro.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Ocean, 1989, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06 (Speed, Enhanced at both
+              paces): approved. Automated JNext checks and the real loader on
+              disposable card copies.
+
+  Replay      Native lockstep in JNext against the original, not RZX. Enhanced
+              at each pace: 4 driving scenes x 3 input trials; Orig. pace also
+              6 autopilot tunnel routes; Speed: 4 driving scenes x 1 trial:
+              the 57 player-state bytes identical at every update, every AY
+              and beeper write identical by update, port and value. Briefing
+              and attract demo, every mode: registers including R, 384 game
+              bytes and sound identical at every loop end.
+
+  Emulator    JNext 1.1.104 headless; real-loader results are recorded in the
+              run report.
+
+  Coverage    Stages 1-5 from fixtures, tunnel routes, briefing, attract demo,
+              time-out game over and return to menu. Not covered: a full
+              unassisted playthrough, the final ending, joystick options.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
