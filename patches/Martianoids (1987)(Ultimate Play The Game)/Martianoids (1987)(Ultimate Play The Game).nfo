@@ -1,0 +1,105 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Martianoids
+  Publisher   Ultimate, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Martianoids (1987)(Ultimate Play The Game).z80
+  MD5         5df07fbd5dabdcb9a909b86cf690a4e8
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Your robot in blue with a white dome, the Martianoids in purple,
+              the pylons cyan-striped on orange bases, items in their own
+              colours and explosions orange, on a dark blue checker floor; the
+              panel, score, battery and map unchanged. No outlines added. A
+              painted set, colourist not named.
+
+  Pace        original (-1.37% measured in JNext 1.1.104 headless; probe 9967
+              (the player's own update); 3 trials per scene, each at its own R
+              and raster phase, 240 updates; every window and every single
+              update faster than the original, none slower; player state equal
+              to the original at every update)
+
+  Changes     1.0: Enhanced colours, painted by Jon Attree, drawn in order on
+              a double-buffered Layer 2 view inside the original play area;
+              the original loading screen; Sinclair's 48K ROM as the whole alt
+              ROM (NextZXOS 26.11 safe); the game's speed restored after every
+              hook; three cheats from the archive, corrected.
+
+  Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
+              Interface II, then 0 to start. The default is the original game,
+              picture and all: its play area is drawn in one colour, so it
+              never had colour clash; the patch gives it Sinclair's whole 48K
+              ROM so it runs on NextZXOS 26.11. Enhanced paints the figures in
+              their own colours and lays a coloured checker floor, drawn on
+              the Next's Layer 2 behind the original's own screen, so the
+              game's masks, XOR effects, panel and map stay as they were. The
+              original 48K game with its beeper sound; fits a 1MB Next. Known
+              issues: the original's low update rate and its small frame-to-
+              frame timing variation remain; in JNext it runs 1.2 to 1.4
+              percent faster than the original in every scene measured.
+              Missing: not reached in testing: natural play to the end,
+              joysticks; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite battery
+   3  Protect sectors
+
+  The archive's POKEs checked against this exact release. Infinite lives
+  covers both of the original's loss paths (the archive missed one); Infinite
+  battery covers the meter and both collision drains; Protect sectors takes
+  the original's own protected-sector branch instead of the archive's unsafe
+  RET.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ultimate, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
+              by script through the real loader on NextZXOS v2.09 and 26.11
+              card copies.
+
+  Replay      IDENTICAL on the archive-start recording (18,000 frames) and a
+              last-life recording (4,000 frames): at every hook original and
+              patched code compared from the same state, every register with R
+              and all 48K RAM; Enhanced 2,936 complete pictures, 144 million
+              pixels checked
+
+  Emulator    JNext 1.1.104; original beeper writes remain outside the
+              accelerated renderer and at the original clock. Whole hidden
+              ROM, original loading screen and sparse BASIC-safe veneers.
+
+  Coverage    Recordings and soaks by script, no human play: menus, play,
+              deaths, game over, initials entry and a new game; not reached:
+              natural completion, joysticks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
