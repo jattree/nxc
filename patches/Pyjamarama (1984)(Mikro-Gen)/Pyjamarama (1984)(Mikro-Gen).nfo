@@ -40,8 +40,11 @@
               verified trainers.
 
   Note        O/P left/right; M jump/use. Any key past title, ENTER to play.
-              Enhanced is off by default. Original pace target; remaining
-              measured overhead below 2%. Hardware untested.
+              Enhanced is off by default. Known issues: about 1.2 to 1.7
+              percent slower than the original (the hooks' cost, which this
+              game gives no time to repay). Missing: the cheats were checked
+              in the code, not in play; the ending not reached in testing;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

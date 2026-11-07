@@ -23,6 +23,13 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Note        Known issues: not yet checked in full on NextZXOS v2.10: it
+              lacks the start-up fix for v2.10's ROM changes that Cyclone and
+              Chuckie Egg needed. Missing: no Enhanced colour set; pace not
+              measured against the original; an earlier build ran on a real
+              Next for Dean (2026-10-14), but this one, with the loading
+              screen, has not; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Infinite weapons

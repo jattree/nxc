@@ -36,9 +36,12 @@
               nexclash.pace, 10 trials a scene keyed to the player update
               0xDA7A, against the unchanged game as a plain .nex)
 
-  Note        Default and Enhanced colours both play at the original pace. The
-              CPU speed in use is kept: the hooks never force 3.5 MHz.
-              Hardware untested.
+  Note        Default and Enhanced colours both play at the original's pace.
+              The CPU speed in use is kept: the hooks never force 3.5 MHz.
+              Known issues: none found in testing. Missing: not reached in
+              testing: building interiors, the four weapons, the bosses and
+              the end (their Enhanced colours seen only on sheets); hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

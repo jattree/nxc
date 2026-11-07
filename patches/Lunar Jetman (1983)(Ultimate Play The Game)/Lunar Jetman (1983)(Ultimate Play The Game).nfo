@@ -33,7 +33,11 @@
 
   Note        The patch writes the whole alt ROM image (Sinclair's ROM plus
               its hooks), so the ROM's own interrupt code can never run the
-              hooks.
+              hooks. Known issues: none found in testing. Missing: pace not
+              measured against the original; the cheats are unplayed by a
+              person; not reached in testing: the alien base, the missile's
+              flight, the rover carrying items and later levels; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

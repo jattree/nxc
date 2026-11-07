@@ -35,7 +35,11 @@
               unchanged: the runner and the guards are hardware sprites in the
               game's colours, the scenery keeps its own. The alt ROM holds the
               128K machine's ROM 1, so the fade between lives looks as on a
-              real 128K.
+              real 128K. Known issues: none found in testing. Missing: no
+              Enhanced colour set; no loading screen (the tape has none); only
+              level 1 checked in testing: no level completed, and the editor,
+              load/save screens and redefine keys not checked; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

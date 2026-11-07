@@ -27,6 +27,14 @@
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
 
+  Note        Known issues: the star map reads data from the Next's ROM rather
+              than the 128K machine's; whether it looks different is not
+              checked. Missing: no Enhanced colour set; pace not measured
+              against the original; the cheats are unplayed by a person
+              (strength and fuel not run); not reached in testing: the story
+              puzzles, transporter trips by play and the ending; hardware
+              untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
    2  Infinite strength

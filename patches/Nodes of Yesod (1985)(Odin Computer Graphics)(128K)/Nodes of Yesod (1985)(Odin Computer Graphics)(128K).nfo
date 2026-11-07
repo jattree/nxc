@@ -40,8 +40,13 @@
 
   Note        1 keyboard; Z/X move; Q jump; A mole. Enhanced colours and
               Backdrops are independent and off by default. Backdrops select
-              surface aurora or distant cavern walls automatically. Original
-              collision-loop bug remains. Hardware untested.
+              surface aurora or distant cavern walls automatically. Known
+              issues: now and then the player breaks up into scattered sprite
+              pieces during the death animation, clearing on respawn (seen by
+              the owner, not yet reproduced or fixed); quiet play measured
+              about 1.3% faster than the original; the original's collision-
+              loop bug remains. Missing: the ending not checked; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -45,12 +45,15 @@
               tilemap from the game's own map, and every figure, fruit and
               item is a painted sprite. It loads from Ocean's two tape files,
               the Side A .tap (or .tzx) and the Side B .tzx, kept together in
-              the patch's folder. Starts at the title screen. The busy scenes
-              no longer slow down: the game's own drawing runs at 28 MHz,
-              capped at the original's quiet-scene pace, with its logic and
-              sound at 3.5 MHz. Smooth scrolling, off by default, glides the
-              camera between the game's steps. Needs a core with the tilemap
-              (any recent one).
+              the patch's folder. Starts at the title screen. Smooth
+              scrolling, off by default, glides the camera between the game's
+              steps. Needs a core with the tilemap (any recent one). Known
+              issues: busy scenes no longer slow down, so busy play runs about
+              10% faster than the original's (by design: the drawing runs at
+              28 MHz, capped at the original's quiet-scene pace); not yet
+              checked in full on NextZXOS v2.10: it lacks the start-up fix for
+              v2.10's ROM changes that Cyclone and Chuckie Egg needed.
+              Missing: no complete playthrough checked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

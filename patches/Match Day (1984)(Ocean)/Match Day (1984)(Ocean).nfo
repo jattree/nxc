@@ -44,8 +44,11 @@
               depend on the Next's own ROM. Players, ball and keepers are
               hardware sprites in the game's colours. Plays at the original's
               pace, and the hooks give the CPU back at the speed they found
-              it. No loading screen: the build already uses the last bank of a
-              1MB Next. No cheats: the archive's POKEs only ask for values.
+              it. Known issues: none found in testing. Missing: no loading
+              screen (the build already uses the last bank of a 1MB Next); no
+              cheats (the archive's POKEs only ask for values); not yet
+              checked: the second half, 2-player games and Match Day Special;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
   No cheats.
