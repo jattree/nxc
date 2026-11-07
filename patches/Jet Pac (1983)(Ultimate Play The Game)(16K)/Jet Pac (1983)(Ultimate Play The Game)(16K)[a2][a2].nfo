@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jetpac
   Publisher   Ultimate, 1983
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,12 +30,25 @@
               conversion (Spectrum Magic's jetpac_.zip), painter not
               established.
 
+  Pace        original (-0.60% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same file;
+              probe 0x73D3 (found automatically), keys keyed to updates; runs
+              end at the bot's game over; no state addresses, so lockstep not
+              checked)
+
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
+              1.2: the hooks hand back the CPU speed the game was running at,
+              instead of always dropping to 3.5 MHz
 
-  Note        Coloured build (not Dean's Jetpac build). Known issues: none
-              found in testing. Missing: pace not measured against the
-              original; two-player games not checked; hardware untested.
+  Note        Coloured build (not Dean's Jetpac build). Pace measured close to
+              the original's: -0.6% to +1.7% over runs of 60 to 300 game
+              updates, Enhanced -0.3% and +1.4% (JNext, 2026-11-07). Known
+              issues: in one run the quietest third was 2.5% slower than the
+              original (Enhanced 2.6%); the runs could not be checked for
+              lockstep, so this may be the two runs drifting apart rather than
+              the build. Missing: two-player games not checked; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -53,27 +66,35 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.2 approved by the owner in JNext, 2026-11-07
 
-  Replay      free run of 6000 frames IDENTICAL, no recording (20,433 draws,
-              100 erases, 23,192 colour paints, 5 clears, 2,193,166 sprite
-              pixels); alt ROM image modelled as the Next fills it, from
-              NextZXOS's ROM3 then the build's writes: whole image Sinclair's
-              48K ROM plus hooks, 0 bytes outside the hooks differ; IM 1
-              handler compared with the original's at all 5,149 interrupts,
-              IDENTICAL; unit tests 6,816 graphic cases, negative control
-              40/40; new negative: the previous partial image (hooks only over
-              ROM3) detected at 5,149 of 5,149 interrupts (hook code ran from
-              the IM 1 handler) and by 5,367 image bytes
+  Replay      1.2 (NexClash main 102091f, selftest --game jetpac --verify,
+              rework v11): free run 6,000 frames IDENTICAL with the IM 1
+              handler compared at every interrupt, unit PASS, negative control
+              40/40; outputs equal to the record's. free run of 6000 frames
+              IDENTICAL, no recording (20,433 draws, 100 erases, 23,192 colour
+              paints, 5 clears, 2,193,166 sprite pixels); alt ROM image
+              modelled as the Next fills it, from NextZXOS's ROM3 then the
+              build's writes: whole image Sinclair's 48K ROM plus hooks, 0
+              bytes outside the hooks differ; IM 1 handler compared with the
+              original's at all 5,149 interrupts, IDENTICAL; unit tests 6,816
+              graphic cases, negative control 40/40; new negative: the
+              previous partial image (hooks only over ROM3) detected at 5,149
+              of 5,149 interrupts (hook code ran from the IM 1 handler) and by
+              5,367 image bytes
 
-  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04):
-              loading screen, menu, play and game over back to the menu,
-              default and Enhanced, frames viewed; alt ROM image dumped in
-              JNext equals the modelled Sinclair-plus-hooks image; with
-              NextZXOS's DivMMC 0x0038 trap removed, IM 1 ran Sinclair's
-              handler 1,609 times and no ROM3 handler; earlier: the owner
-              played the painted build through take-off, rocket and fuel
-              appearing; real loader runs were of the previous build
+  Emulator    1.2, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card, default and
+              Enhanced: menu v1.2, loading screen, play to game over;
+              /tmp/NEXCLASH.NEX equal to apply for both. JNext 1.1.104
+              headless, whole alt ROM build (2026-11-04): loading screen,
+              menu, play and game over back to the menu, default and Enhanced,
+              frames viewed; alt ROM image dumped in JNext equals the modelled
+              Sinclair-plus-hooks image; with NextZXOS's DivMMC 0x0038 trap
+              removed, IM 1 ran Sinclair's handler 1,609 times and no ROM3
+              handler; earlier: the owner played the painted build through
+              take-off, rocket and fuel appearing; real loader runs were of
+              the previous build
 
   Coverage    two players not exercised; whole alt ROM image from 2026-11-04:
               the previous build differs only in the alt ROM fill (stub) and
