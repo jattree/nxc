@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ikari Warriors
   Publisher   Elite Systems, 1988
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,16 +30,21 @@
               skin faces, so players stand out at a glance. A painted set,
               colourist not named.
 
+  Changes     1.1: the game keeps its own CPU speed after each sprite update
+              instead of being set back to 3.5 MHz, the screen copy at 14 MHz
+              or faster; works on NextZXOS v2.10 (System/Next 26.11).
+
   Note        No outline on the figures, in both default and Enhanced: the
               owner chose that for this game. Known issues: the game reads a
               few ROM bytes as data and gets the Next ROM's values, not the
-              48K ROM's (found by replay; effect on play not established); not
-              yet checked in full on NextZXOS v2.10: it lacks the start-up fix
-              for v2.10's ROM changes that Cyclone and Chuckie Egg needed.
-              Missing: no AY music, as this snapshot is the game's 48K form;
-              pace not measured against the original; the cheats are the
-              archive's and have not been played; not yet checked: a level end
-              and driving a tank; hardware untested.
+              48K ROM's (found by replay; effect on play not established);
+              quiet scenes run 12 to 15% faster than the original in JNext, as
+              in 1.0: the game has no frame limiter of its own, and holding
+              them to the original's pace needs a pace limiter in the hooks,
+              not in this version. Missing: no AY music, as this snapshot is
+              the game's 48K form; the cheats are the archive's and have not
+              been played; not yet checked: a level end and driving a tank;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -59,11 +64,15 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      lockstep memory, registers and picture IDENTICAL on 8 scripted
-              recordings, 20982 game frames, default and Enhanced (both
-              without outline or paper edge, seams closed); negatives
+  Replay      1.1 (2026-11-07, nexclash main 102091f, hooks give back the
+              caller's CPU speed, the blit at 14 MHz or faster): IDENTICAL on
+              the same 8 recordings, 74864 frames, default and Enhanced;
+              negatives 7 of 7 (engine) and 12 of 12 (colour sets) detected.
+              1.0: lockstep memory, registers and picture IDENTICAL on 8
+              scripted recordings, 20982 game frames, default and Enhanced
+              (both without outline or paper edge, seams closed); negatives
               detected: 7 (engine), 4 for the default figure edges (the old
               default, outline kept, paper edge kept, seams open), 15 for
               Enhanced (player, player 2, rotation map, pick-up keys, store
@@ -71,9 +80,14 @@
               painted, skin outside an enemy face, enemy without a face, seams
               open, the fourth pass, the fifth pass, the 17:00 build)
 
-  Emulator    JNext headless, plain, sprites and Enhanced reach play from the
-              file's start; default and Enhanced through the Browser and the
-              loader, output byte-exact with apply
+  Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu with Enhanced on,
+              ENTER: /tmp/NEXCLASH.NEX equal to the bare Enhanced build
+              (1bf270bf), title, player select and play reached, frames
+              viewed; no person played it. 1.0: JNext headless, plain, sprites
+              and Enhanced reach play from the file's start; default and
+              Enhanced through the Browser and the loader, output byte-exact
+              with apply
 
   Coverage    level 1 to beyond the bridge, one and two players, wading, game
               over, attract; no level end; no tank seen driven
