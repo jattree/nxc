@@ -49,7 +49,7 @@ def big_build(nex: bytes, changes=((0x2300, 0x77),)) -> bytes:
     return with_banks(variant(nex, list(changes)), extra)
 
 
-def build(big=True, colours=None, language=None, toggles=None, trainers=(), set_top=None, rules=None, extra_big=None):
+def build(big=True, colours=None, language=None, toggles=None, trainers=(), set_top=None, rules=None, extra_big=None, alt=None):
     """(patch, base .nex, tap, big .nex)."""
     blocks = G.data_blocks()
     start = G.start_banks(blocks)
@@ -66,6 +66,8 @@ def build(big=True, colours=None, language=None, toggles=None, trainers=(), set_
             (tmp / f"c{i}.nex").write_bytes(variant(nex, ch)); col[n] = str(tmp / f"c{i}.nex")
         if extra_big:
             (tmp / "big2.nex").write_bytes(extra_big(nex)); col["Second"] = str(tmp / "big2.nex")
+        if alt:
+            (tmp / "alt.nex").write_bytes(alt(nex)); col["Orig. pace"] = str(tmp / "alt.nex")
         lang = {}
         for i, (n, ch) in enumerate((language or {}).items()):
             (tmp / f"l{i}.nex").write_bytes(variant(nex, ch)); lang[n] = str(tmp / f"l{i}.nex")
@@ -165,10 +167,25 @@ class BigOption(unittest.TestCase):
         self.assertEqual(nxc.big_offered(patch)[0]["top"], 100)
         self.assertEqual(nxc.apply_menu(patch, self.tap)[139], 101)
 
+    def test_alternatives_on_one_line(self) -> None:
+        patch, nex, tap, big = build(alt=lambda nex: big_build(nex, ((0x2300, 0x66),)))
+        lines = nxc.menu_lines(patch)
+        (line,) = [l for l in lines if l[0] == 2]
+        self.assertEqual([e["name"] for e in line[3]], [b"Enhanced", b"Orig. pace"])
+        self.assertEqual(nxc.apply(patch, game=tap, colours="Enhanced"), big)
+        self.assertEqual(nxc.apply(patch, game=tap, colours="Orig. pace"), big_build(nex, ((0x2300, 0x66),)))
+        with self.assertRaisesRegex(nxc.Wrong, "Needs a 2MB Next"):
+            nxc.apply(patch, game=tap, colours="Orig. pace", ram_top=47)
+        self.assertNotIn(b"Orig. pace", nxc.apply_menu(patch, tap, ram_top=47))
+        full = nxc.apply_menu(patch, tap, colours="Orig. pace")
+        self.assertEqual(full[512:len(nxc.apply(patch, game=tap, carrier=True))], nxc.apply(patch, game=tap, carrier=True)[512:])
+        old = old_reader()
+        self.assertEqual(old.apply(patch, game=tap), nex)
+
     def test_writer_refusals(self) -> None:
         with self.assertRaisesRegex(ValueError, "line to itself"):
             build(colours={"Plain": [(0x2600, 1)]})
-        with self.assertRaisesRegex(ValueError, "only one"):
+        with self.assertRaisesRegex(ValueError, "same banks"):
             build(extra_big=lambda nex: with_banks(nex, {70: bytes(16384)}))
         with self.assertRaisesRegex(ValueError, "both change"):
             build(language={"Deutsch": [(0x2300, 0x44)]})            # the byte the big option changes

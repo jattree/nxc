@@ -925,7 +925,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
         added = [b for b in range(112) if painted[18 + b] and not out[18 + b]] if len(painted) >= 512 else []
         if added:
             if kind not in BIG_KINDS: raise ValueError('only a colour or language set may add banks')
-            if big_pending: raise ValueError('a patch can have only one set that adds banks')
+            if big_pending and kind != big_pending[0][1]: raise ValueError('the sets that add banks must all be of one kind')
             big_pending.append((stream_index, kind, choice, name, painted, added)); continue
         if painted[:512] != out[:512] or len(painted) != len(out) or nex_screen(painted) != screen_of_out:
             raise ValueError('a set must only change banks of the same build')
@@ -943,6 +943,9 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
         bl.append([SET_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges})))
     for stream_index, kind, choice, name, painted, added in big_pending:
         if any(k == kind for k, _ in painted_of.values()): raise ValueError('a set that adds banks has its kind\'s line to itself')
+        first = big_pending[0]
+        if added != first[5] or any(nex_banks(painted)[b] != nex_banks(first[4])[b] for b in added):
+            raise ValueError('sets that add banks are alternatives on one line: the same banks, holding the same bytes')
         if bytes(extended_header(out[:512], dict(added=added))) != painted[:512] or nex_screen(painted) != screen_of_out \
                 or len(painted) != len(out) + BANK * len(added):
             raise ValueError('a set that adds banks must be the same build with those banks listed, and nothing else in its header changed')
@@ -1237,8 +1240,9 @@ def big_sets(f):
 
 def big_offered(f, kind=None):
     """The SET3 options a reader offers (of one kind): those with the sprite build as their base and a kind this version has."""
-    return [e for e in big_sets(f) if e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS][:1] if kind is None else \
-        [e for e in big_offered(f) if e['kind'] == kind]
+    every = [e for e in big_sets(f) if e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS]
+    first = [e for e in every if e['kind'] == every[0]['kind']] if every else []   # alternatives on the first one's line
+    return first if kind is None else [e for e in first if e['kind'] == kind]
 
 def offered(f, kind, big=False):
     """The sets of a kind a loader offers, in file order: those whose base is the sprite build. With big, a SET3 of that
@@ -1511,7 +1515,10 @@ def check_structure(bl):
         if t == BIG_TAG:
             e = parse_set(x, True)
             if e['top'] < opt[2] or not set(e['table']) <= plain: raise Wrong('a set block is damaged')
-            if offered_big is None and e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS: offered_big = e
+            if e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS:
+                if offered_big is None: offered_big = e
+                elif e['kind'] == offered_big['kind'] and (e['top'], e['added'], e['table']) != (offered_big['top'], offered_big['added'], offered_big['table']):
+                    raise Wrong('a set block is damaged')     # alternatives on one line: one need, one set of banks, one table
     if offered_big is not None and any(parse_set(x)['kind'] == offered_big['kind'] and parse_set(x)['base'] == BASE_SPRITE for t, x in bl if t == SET_TAG):
         raise Wrong('a set block is damaged')                # a SET3's kind's line is its own
 

@@ -355,6 +355,7 @@ game_kind       equ target_kinds
         VAR     big_pos, 4                  ; its block's data, and length
         VAR     big_len, 4
 BIG_VARS        equ 17
+        VAR     big_count, 1                ; alternatives of its kind after the first (not copied)
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -2508,8 +2509,19 @@ note_big:
         call    note_set_head
         ld      a,(big_seen)
         or      a
+        jr      z,.first
+        ld      a,(smallbuf+3)              ; a later one: an alternative on the line if of its kind
+        cp      BASE_SPRITE
         ret     nz
-        ld      a,(smallbuf+3)
+        ld      a,(smallbuf+1)
+        dec     a
+        ld      hl,big_kind
+        cp      (hl)
+        ret     nz
+        ld      hl,big_count
+        inc     (hl)
+        ret
+.first: ld      a,(smallbuf+3)
         cp      BASE_SPRITE
         ret     nz
         ld      a,(smallbuf+1)
@@ -2635,7 +2647,9 @@ big_line:
         ld      a,(hl)
         or      a
         jp      nz,bad_patch
-        inc     (hl)
+        ld      a,(big_count)
+        inc     a
+        ld      (hl),a
         ld      a,(ram_bank)
         ld      hl,big_top
         cp      (hl)
@@ -7509,17 +7523,26 @@ mp_find_any:
         ld      hl,cur_kind
         cp      (hl)
         jp      nz,find_set
-        ld      hl,big_pos
-        ld      de,blk_pos
-        call    copy4
-        ld      hl,big_len
-        ld      de,blk_len
-        call    copy4
-        ld      hl,blk_pos
-        call    seek_patch
+        call    walk_begin                  ; the (cur_n)th SET3 of its kind
+.n:     call    walk_next
+        jp      z,bad_patch
+        ld      de,magic_set3
+        call    tag_is
+        jr      nz,.n
         ld      hl,tagbuf
         ld      bc,SET_FIXED
         call    read_patch
+        ld      a,(tagbuf+3)
+        cp      BASE_SPRITE
+        jr      nz,.n
+        ld      a,(tagbuf+1)
+        dec     a
+        ld      hl,big_kind
+        cp      (hl)
+        jr      nz,.n
+        ld      hl,cur_n
+        dec     (hl)
+        jr      nz,.n
         ld      a,(tagbuf)
         ld      (cur_stream),a
         ret
@@ -7610,20 +7633,30 @@ big_find_any:
         jp      nz,find_set
         ld      a,1
         ld      (B_CUR),a
-        ld      hl,B_POS
-        ld      de,blk_pos
-        call    copy4
-        ld      hl,B_LEN
-        ld      de,blk_len
-        call    copy4
-        ld      hl,blk_pos
-        call    seek_patch
+        call    walk_begin                  ; the (cur_n)th SET3 of its kind: alternatives share banks
+.n:     call    walk_next
+        jp      z,bad_patch
+        ld      de,big_tag
+        call    tag_is
+        jr      nz,.n
         ld      hl,tagbuf
         ld      bc,SET_FIXED
         call    read_patch
+        ld      a,(tagbuf+3)
+        cp      BASE_SPRITE
+        jr      nz,.n
+        ld      a,(tagbuf+1)
+        dec     a
+        ld      hl,B_KIND
+        cp      (hl)
+        jr      nz,.n
+        ld      hl,cur_n
+        dec     (hl)
+        jr      nz,.n
         ld      a,(tagbuf)
         ld      (cur_stream),a
         ret
+big_tag:        db "SET3"
 
 ; HL, past a set's fixed part and name: for the SET3, past its need, banks and table's indices too.
 big_extras:

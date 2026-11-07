@@ -85,7 +85,7 @@ An extra block must never be required to play. A patch that truly needs more tha
 | `TAP1` | one for each group of tape targets | yes, after its first 2 + n bytes | How one or more tapes become the game's banks |
 | `HLP1` | no, once | no | Help for the menu's lines |
 | `OPR1` | no, once | no | Which options go together, with no limit of two at once |
-| `SET3` | no, at most one | yes, after its name, its banks, its table's indices and the heads of its chunks | One choice that needs more memory than the base: banks of its own, and the most memory the game needs with it |
+| `SET3` | no, zero or more, all of one kind | yes, after its name, its banks, its table's indices and the heads of its chunks | A choice that needs more memory than the base: banks of its own, and the most memory the game needs with it |
 
 A second `OPT1`, `INF1`, `OUT1`, `NEX1` or `SIT1` is damage at once, however many there are.
 
@@ -401,7 +401,7 @@ An **option** is a set the menu offers: a colour set or a language (kinds 1 and 
 
 ### SET3: a choice that needs more memory
 
-A colour set or a language that only fits a bigger Next: Enhanced colours whose pictures fill a 2MB Next, on a game whose base build fits a 1MB one. It is a `SET2` in every way but these: it says the most memory the game needs with it on; it may **add banks**, which the base build does not list and the set fills; and a loader offers it only on a machine with that memory. Optional, at most one in a patch.
+A colour set or a language that only fits a bigger Next: Enhanced colours whose pictures fill a 2MB Next, on a game whose base build fits a 1MB one. It is a `SET2` in every way but these: it says the most memory the game needs with it on; it may **add banks**, which the base build does not list and the set fills; and a loader offers it only on a machine with that memory. Optional. A patch may have several, all of one kind, as **alternatives on one line**, such as Enhanced colours at the Speed pace and at the original pace: each has the same need, the same added banks holding the same bytes, and the same table's indices, so that one carrier serves them all. They differ only in the banks the base lists. A writer refuses anything else; a reader refuses alternatives whose need, banks or table's indices differ as damage.
 
 | Offset | Size | Field |
 |---|---|---|
@@ -433,7 +433,7 @@ taking each chosen `SET2`'s term from this set's table. A chosen `SET2` with no 
 
 **Its need, and the machine.** A reader that can find out how much memory the machine has (see `OPT1`) offers it only when the machine has banks 0 to its need. **On a machine with less, the line is shown, but cannot be chosen:** its value reads `[N/A]`, its key does nothing, and its help reads `Needs a 2MB Next` (for a need of 48 or more; a need it can never have, above 111, is damage), whatever `HLP1` says. A reader that cannot find out offers it, and refuses at the end if the machine turns out too small, as for `OPT1`. Everything else on the menu works as before, and the base build is what plays.
 
-**Its kind's line is its own:** a writer refuses a patch with a `SET2` of the same kind as its `SET3`, so the line is `[ ON]` or `[OFF]`, and named as `SET2` lines are, `Enhanced colours` or `Language`; `HLP1`'s `colours` or `language` is its help. A reader that finds such a `SET2` anyway refuses the patch as damaged. A reader offers the first `SET3` it can apply and passes over any other, as a writer never makes two.
+**Its kind's line is its own:** a writer refuses a patch with a `SET2` of the same kind as its `SET3`s, so the line is `[ ON]` or `[OFF]` with one, or steps through their names with several, and is named as `SET2` lines are, `Enhanced colours` or `Language`; `HLP1`'s `colours` or `language` is its help. A reader that finds such a `SET2` anyway refuses the patch as damaged. A reader offers the `SET3`s of the kind of the first it can apply, in file order, and passes over any of another kind, as a writer never makes them. A reader before alternatives (`option-ram-rule` 8f4ed97) offers the first only, as `[ ON]`: still a whole, correct choice.
 
 **Rules.** In this version an `OPR1` rule may not name a `SET3` option: a reader refuses one that does as damage, and a writer does not make it. A `SET3` option is on with any `SET2`, toggle or trainer it does not overlap.
 

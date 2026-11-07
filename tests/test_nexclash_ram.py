@@ -89,6 +89,20 @@ class BigLoader(T.Base):
                 self.assertFalse(failed, message)
                 self.assertEqual(bytes(m.written[NEX]), nxc.apply(self.patch2, game=self.tap, **args))
 
+    def test_alternatives(self) -> None:
+        patch, nex, tap, big = R.build(alt=lambda n: R.big_build(n, ((0x2300, 0x66),)))
+        for keys, name in ((["2", "enter"], "Enhanced"), (["2", "2", "enter"], "Orig. pace"), (["2", "2", "2", "enter"], None)):
+            with self.subTest(keys=keys):
+                m, failed, message = self.go(keys, patch=patch)
+                self.assertFalse(failed, message)
+                self.assertEqual(m.clean(), [])
+                self.assertEqual(bytes(m.written[NEX]), nxc.apply(patch, game=tap, colours=name))
+        m, failed, message = self.go(["2", "2", "enter"], patch=patch)
+        self.assertIn(T.row("2", "Enhanced colours", "[Orig. pace]"), m.screens[-2])
+        m, failed, message = self.go(["2", "enter"], patch=patch, total_pages=96)
+        self.assertIn(T.row("2", "Enhanced colours", "[N/A]"), m.screens[-2])
+        self.assertEqual(bytes(m.written[NEX]), nex)
+
     def test_the_loader_before_set3(self) -> None:
         binary, symbols = old_loader("ea2a22f")
         m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["3", "enter"], binary=binary, symbols=symbols)
