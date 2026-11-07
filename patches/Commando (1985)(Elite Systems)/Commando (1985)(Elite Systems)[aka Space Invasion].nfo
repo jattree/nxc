@@ -23,6 +23,14 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Note        Known issues: the rock snipers are left as the game draws them,
+              not as sprites (Dean's design), so their colour clash is not
+              removed; not yet checked in full on NextZXOS v2.10: it lacks the
+              start-up fix for v2.10's ROM changes that Cyclone and Chuckie
+              Egg needed. Missing: no Enhanced colour set; pace not measured
+              against the original; the value-asking cheats (lives, grenades)
+              are not on the menu; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Infinite grenades

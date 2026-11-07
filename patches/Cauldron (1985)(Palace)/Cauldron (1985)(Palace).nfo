@@ -46,7 +46,11 @@
               hardware sprites with a black outline; the scenery keeps its
               colours. A figure's old sprite stays until its new one replaces
               it, in one switch timed to the beam, so no figure vanishes for a
-              frame. Loading screen from the tape.
+              frame. Loading screen from the tape. Known issues: in 3 of 30
+              pace trials the game held interrupts off longer than the
+              original (60 ms against 40). Missing: no Enhanced colour set;
+              Dean ran 1.0 on a Next, but 1.1 has not been run on one;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

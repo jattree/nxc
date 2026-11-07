@@ -37,15 +37,14 @@
               Next sprites: white bodies, black detail, no outline, the look
               the owner approved; scenery, stars and panel keep the original's
               colours. The game plays at the original's pace, slowdowns and
-              beeper timing included. The pace was measured with the random-
-              number call in the frame wait and the lives decrement removed in
-              both the original and the build, so both played the same game.
-              It starts from the tape's own BASIC, as on a 48K: if Enter from
-              the browser is still held, the loading screen may go straight to
-              the credits. Enhanced colour rated HARD (no Spec256 file,
-              silhouette figures, scenery drawn by code) and not offered. The
-              archive's Infinite Lives also pokes a graphics pointer (34925);
-              its one-poke version is used. Not tested on hardware.
+              beeper timing included. It starts from the tape's own BASIC, as
+              on a 48K. The archive's Infinite Lives also pokes a graphics
+              pointer (34925); its one-poke version is used. Known issues: if
+              Enter from the Browser is still held, the loading screen may go
+              straight to the credits. Missing: no Enhanced colour set (rated
+              hard: no Spec256 file, silhouette figures, scenery drawn by
+              code); not yet checked: define keys, the joystick options and
+              the boss of level type 2; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

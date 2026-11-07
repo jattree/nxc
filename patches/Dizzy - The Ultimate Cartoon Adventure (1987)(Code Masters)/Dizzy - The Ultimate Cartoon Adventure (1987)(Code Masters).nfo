@@ -23,6 +23,16 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Note        Known issues: the game reads a few ROM bytes as data and gets
+              the Next ROM's values, not the 48K ROM's (found by replay;
+              effect on play not established); not yet checked in full on
+              NextZXOS v2.10: it lacks the start-up fix for v2.10's ROM
+              changes that Cyclone and Chuckie Egg needed. Missing: no
+              Enhanced colour set, though the Spec256 version has colours for
+              this game; pace not measured against the original; an earlier
+              build ran on a real Next for Dean (2026-10-14), but this one has
+              not; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Immunity

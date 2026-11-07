@@ -43,13 +43,18 @@
 
   Note        Plays at the original's pace, never faster: a limiter makes each
               figure's drawing take the original's time, waiting on the video
-              line for what the sprites save. JNext 1.2.0 and 1.1.104, 10 runs
-              a scene: busy play +0.83%, with sound +0.53%; quiet play
-              +14.53%, set by the enemies that turned up (runs without them
-              -0.3 to +1.2%). Enemies differ from run to run even on the same
-              keys: the game takes chance from the R register, which the
-              patch's hooks change. With QAOP + Space on, Space fires, so only
-              Caps Shift pauses.
+              line for what the sprites save. With QAOP + Space on, Space
+              fires, so only Caps Shift pauses. Known issues: quiet play
+              measured +14.5% in JNext, set by which enemies turned up (runs
+              without them -0.3 to +1.2%); enemies differ from run to run even
+              on the same keys, because the game takes chance from the R
+              register, which the hooks change; the game reads a few ROM bytes
+              as data and gets the Next ROM's values, not the 48K ROM's (found
+              by replay; effect on play not established); not yet checked in
+              full on NextZXOS v2.10: it lacks the start-up fix for v2.10's
+              ROM changes that Cyclone and Chuckie Egg needed. Missing: a
+              quiet-play pace check with the same enemies in both games;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -32,6 +32,15 @@
 
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
 
+  Note        Works on NextZXOS v2.10 from 1.1. Known issues: the game reads a
+              few ROM bytes as data and gets the Next ROM's values, not the
+              48K ROM's (found by replay; effect on play not established).
+              Missing: pace not measured against the original; the Enhanced
+              colours (from the Spec256 version) were judged by eye in one
+              room only; the archive's Pass level cheat is left out (a level
+              finished by collecting the eggs would take the death path);
+              hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Infinite bonus

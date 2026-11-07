@@ -34,7 +34,11 @@
               longer takes the colours of the scenery he walks through; his
               plot hook now runs at 28 MHz. The game's own table at 0x5B00
               (mirrored objects) is put back after loading. Loading screen
-              from the tape.
+              from the tape. Known issues: where the original's eraser leaves
+              a small hole in the background, this build does not (5 of
+              101,594 pixel checks). Missing: no Enhanced colour set (rated
+              easy, from Treasure Island Dizzy's Spec256 colours); only the
+              first rooms checked in testing; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

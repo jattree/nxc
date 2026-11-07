@@ -37,7 +37,13 @@
               Treasure Island Dizzy builder: Dizzy is four hardware sprites,
               so he no longer takes the colours of the scenery he walks
               through; his hooks now run at 28 MHz. Loading screen from the
-              tape.
+              tape. Known issues: Dizzy is light grey (Dean's palette) where
+              the original's cell is bright white. Missing: no Enhanced colour
+              set, though the Spec256 version colours Dizzy (rated easy); one
+              cheat only, Immunity (the archive's others reset the game,
+              showed no clear effect or poke text in this release); only the
+              first rooms and the sea bed checked in testing; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Immunity

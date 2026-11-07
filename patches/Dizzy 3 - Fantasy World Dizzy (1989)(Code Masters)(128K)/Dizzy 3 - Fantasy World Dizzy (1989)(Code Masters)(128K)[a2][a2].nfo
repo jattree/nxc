@@ -37,6 +37,13 @@
               World Dizzy build: Dizzy is four hardware sprites, so he no
               longer takes the colours of the scenery he walks through; his
               plot hook now runs at 28 MHz. Loading screen from the tape.
+              Known issues: when Dizzy stands in the animated fire, his sprite
+              can be a frame out of step with the fire drawn under him (3
+              frames in 300; he stays whole). Missing: no Enhanced colour set
+              (rated easy: Dizzy's frames match Treasure Island Dizzy's
+              Spec256 colours); five immunity cheats checked only at their
+              code, as their rooms were not reached; only the dungeon and the
+              first rooms checked in testing; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
