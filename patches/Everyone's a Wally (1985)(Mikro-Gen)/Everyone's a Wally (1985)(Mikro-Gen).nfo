@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Everyone's a Wally
   Publisher   Mikro-Gen, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,13 +31,23 @@
               from an older Spec256 conversion (the EmuZWin games package),
               painter not established.
 
-  Note        Known issues: a yellow figure stays on the TOUGH LUCK game over
-              screen (not in the plain build); not yet checked in full on
-              NextZXOS v2.10: it lacks the start-up fix for v2.10's ROM
-              changes that Cyclone and Chuckie Egg needed. Missing: the
-              Enhanced set was carried over from Dean's build and not replayed
-              on its own; pace not measured against the original; puzzles not
-              reached in testing (few rooms walked); hardware untested.
+  Pace        original (+0.85% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same start
+              state; probe 0xB716 (found automatically), Sinclair keys keyed
+              to updates; no state addresses, so lockstep not checked)
+
+  Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11); the hooks hand
+              back the CPU speed the game was running at
+
+  Note        Plays at the original's pace: +0.9% and +0.7% over 180 and 280
+              game updates (Enhanced +0.9%), the same as 1.0 (+0.00% against
+              it), in JNext, 2026-11-07. Works on NextZXOS v2.10 from 1.1.
+              Known issues: a yellow figure stays on the TOUGH LUCK game over
+              screen (not in the plain build). Missing: the Enhanced set was
+              carried over from Dean's build and not replayed on its own (its
+              bytes are 1.0's, on the new hooks); the pace runs could not be
+              checked for lockstep (no state addresses); puzzles not reached
+              in testing (few rooms walked); hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -57,20 +67,31 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      2 bot recordings, 16000 frames: IDENTICAL, 12770 plots, 2885156
-              Layer 2 pixels. Dean's recording from its own snapshot:
+  Replay      1.1 (NexClash main 102091f): selftest --game
+              everyones_a_wally_updated --verify: 1 recording IDENTICAL
+              (15,225 frames), unit PASS, negative control 3/3; from this
+              release's start state: 2 bot recordings IDENTICAL (16,002
+              frames, 4,800 commits, 2,885,156 Layer 2 pixels), negative
+              control 3/3; the v2.10 fix checked in NexClash's Next model: no
+              fix-up site holds v2.10's bytes. The Enhanced set is 1.0's bytes
+              on the rebuilt build: no byte it changes is one the rebuild
+              changed. 2 bot recordings, 16000 frames: IDENTICAL, 12770 plots,
+              2885156 Layer 2 pixels. Dean's recording from its own snapshot:
               IDENTICAL. Negative controls 3/3 detected
 
-  Emulator    JNext 1.1.104 headless: reaches play; a yellow figure stays on
-              the TOUGH LUCK game over screen, not on the plain build. Nobody
-              played; with the loading screen: JNext 1.1.104 headless through
-              the real loader, MD5 exact, reached the screen, the game and
-              play frames, viewed; no person played it; JNext 1.1.104 headless
-              through the real loader, 2026-11-03: chosen in the Browser with
-              every cheat on and with Enhanced, /tmp/NEXCLASH.NEX equal to
-              apply
+  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card, default and
+              Enhanced: menu v1.1, loading screen, play in the first room;
+              /tmp/NEXCLASH.NEX equal to apply for both. JNext 1.1.104
+              headless: reaches play; a yellow figure stays on the TOUGH LUCK
+              game over screen, not on the plain build. Nobody played; with
+              the loading screen: JNext 1.1.104 headless through the real
+              loader, MD5 exact, reached the screen, the game and play frames,
+              viewed; no person played it; JNext 1.1.104 headless through the
+              real loader, 2026-11-03: chosen in the Browser with every cheat
+              on and with Enhanced, /tmp/NEXCLASH.NEX equal to apply
 
   Coverage    Bots walk only: few rooms, no puzzles. Game over screen not in
               the replays and a figure stays on it in JNext. Run as a 128K
