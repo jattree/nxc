@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Renegade
   Publisher   Imagine, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,12 +29,17 @@
               detail. Source: Enhanced colours from the MVV package's older
               Spec256 conversion, painter not established.
 
-  Note        Known issues: not yet checked in full on NextZXOS v2.10: it
-              lacks the start-up fix for v2.10's ROM changes that Cyclone and
-              Chuckie Egg needed. Missing: pace not measured against the
-              original; the music was not listened to in testing; the cheats
-              are the archive's 128K POKEs and have not been played; not yet
-              checked: joysticks and the ending; hardware untested.
+  Changes     1.1: the game keeps its own CPU speed after each sprite update
+              instead of being set back to 3.5 MHz; works on NextZXOS v2.10
+              (System/Next 26.11).
+
+  Note        Known issues: none found in testing; pace in JNext -2.1 to +1.6%
+              against the original over 600 game updates in 3 runs, default
+              and Enhanced alike (the runs drift apart, so scenes are not
+              compared like for like). Missing: the music was not listened to
+              in testing; the cheats are the archive's 128K POKEs and have not
+              been played; not yet checked: joysticks and the ending; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -57,16 +62,24 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      4 bot recordings, 106055 frames, against the original: IDENTICAL
+  Replay      1.1 (2026-11-07, nexclash main 102091f, hooks give back the
+              caller's CPU speed): 4 recordings, 106055 frames, IDENTICAL, 13
+              of 13 negatives detected, unit tests pass. 1.0: 4 bot
+              recordings, 106055 frames, against the original: IDENTICAL
               within the counted allowances in games/renegade128.md; hooks
               ran; 13 of 13 negatives detected; stamped 2026-11-03
 
-  Emulator    JNext 1.1.104 headless: original, plain and sprite builds reach
-              play; sprite build reaches game over, the menu and a restart;
-              all four levels, every trainer and Enhanced seen; keys by
-              script, no human; music not heard
+  Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu with Enhanced on,
+              ENTER: /tmp/NEXCLASH.NEX equal to the bare Enhanced build
+              (001b8f0c), control menu and level 1 play reached, frames
+              viewed; no person played it. 1.0: JNext 1.1.104 headless:
+              original, plain and sprite builds reach play; sprite build
+              reaches game over, the menu and a restart; all four levels,
+              every trainer and Enhanced seen; keys by script, no human; music
+              not heard
 
   Coverage    all four levels and past the last boss by a bot with cheats;
               ending frames not looked at; joysticks not exercised
