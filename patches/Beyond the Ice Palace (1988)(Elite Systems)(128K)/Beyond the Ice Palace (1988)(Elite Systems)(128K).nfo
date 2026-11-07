@@ -1,0 +1,85 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Beyond the Ice Palace
+  Publisher   Elite Systems, 1988
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Beyond the Ice Palace (1988)(Elite Systems)(128K).z80
+  MD5         1c1af4775bc0114f7b94edb7de2d4070
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original
+
+  Note        Original colours with the colour clash removed: the figures are
+              Next sprites drawn from the game's own masks and pictures, and
+              the scenery keeps its attributes. Original pace (a limiter caps
+              the faster drawing) and the original loading screen. With Start
+              with 99 lives the display still shows at most nine hearts, as
+              the original does. Known issues: sound effects use the same AY
+              writes in the same order, but their timing within an update can
+              differ from the original by a few milliseconds; one of the eight
+              hook sites (a screen-copy caller) was only checked by a direct
+              test, not in play. Missing: no Enhanced colour set; not every
+              level was played to completion; tested through the loader on
+              NextZXOS v2.09, not yet checked on v2.10; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Start with 99 lives
+   2  Infinite lives
+   3  Immunity
+   4  Immune to bats
+   5  Infinite spirits
+
+  The archive's POKEs for this release use 48K addresses that do not match
+  this 128K version; these five were translated to its code and each one was
+  tested.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Elite Systems, 1988, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved
+
+  Replay      3 RZX recordings, 24700 frames, 105855 paired hook calls. CPU
+              registers including R, working RAM and original sound I/O match.
+              Independent original-plotter pixel oracle passes the same
+              recordings.
+
+  Emulator    JNext 1.1.104. Boot and NEXLOAD printer-buffer restoration pass;
+              native same-update bitmap and palette checks pass. Real-loader
+              result is recorded separately.
+
+  Coverage    Menus, controls, forest and cave play, shooting, jumping, spirit
+              use, death, game over and attract scenes. One-life death fixture
+              is labelled. 7 of 8 hook sites reached by recordings; all 8
+              tested at four incoming speeds. 298 figure/edge tests cover all
+              50 large IDs and 14 small IDs. Full natural completion of all
+              levels is not claimed.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
