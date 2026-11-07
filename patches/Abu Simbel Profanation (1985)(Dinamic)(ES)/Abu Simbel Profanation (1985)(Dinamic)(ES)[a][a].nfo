@@ -1,0 +1,114 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Abu Simbel Profanation
+  Publisher   Dinamic, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Abu Simbel Profanation (1985)(Dinamic)(ES)[a][a].z80
+  MD5         2909c2f0f18eca08479a74ad6dc8d193
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on every figure: Johny Jones
+              and the temple's creatures in their own colours over the game's
+              unchanged rooms; the colour table of the build approved on
+              2026-11-03, byte for byte. Source: Enhanced colours: from
+              Spectrum Magic's older Spec256 conversion, painter not
+              established.
+
+  Pace        original (-1.24% measured in JNext 1.1.104, against the original
+              .z80 on a 48K machine, game state in lockstep)
+
+  Changes     1.0: figures as Next sprites; the game's plotter runs whole at
+              28 MHz with its screen writes kept off the shown screen, and a
+              pace window keeps every plot a little under the original's time,
+              so the game is never slower; Sinclair's 48K ROM as the whole alt
+              ROM (no dependence on NextZXOS's ROM3, 26.11 included); the
+              game's speed restored after every hook; R kept as the
+              original's; the Spec256 Enhanced colours approved on 2026-11-03,
+              unchanged; the English text set; three tested cheats
+
+  Note        Keys: on the menu hold 3 for the keys or 2 for a Kempston
+              joystick (the tune reads its keys between notes; there is no
+              option 1, as in the original). In play O left, P right, Q to T a
+              low jump, A to G a high jump, CAPS SHIFT+SPACE quits. Every
+              figure, Johny Jones and the temple's creatures, is a Next sprite
+              in the game's own colours, so the rooms keep theirs; figures
+              still sink behind water and ice as in the original. Enhanced
+              colours (off by default): the Spec256 conversion's colours on
+              the figures. Language: Spanish, as the game is, or English text.
+              Known issues: in JNext it runs 0.7-1.7% faster than the original
+              by scene; quiet stretches of one room up to 2.1% faster, and one
+              attract-mode stretch 0.2% slower. Missing: hardware testing; the
+              tape's loading screen; a natural playthrough to the ending; the
+              archive's Lives (0-255) cheat (it asks for a number),
+              Invulnerability (hangs in water) and Transform yourself (unclear
+              in testing).
+
+-- MENU ----------------------------------------------------------------------
+   1  Immunity
+   2  Infinite lives
+   3  No enemies
+
+  The archive's POKEs for this release, each tested alone in the simulator,
+  same keys with and without it: Immunity (no deaths), Infinite lives (lives
+  never fall), No enemies (the archive's 'Transform objects': the moving
+  enemies are neither moved nor drawn). Left out: a second infinite lives (the
+  same effect), Lives (0-255) (asks for a number), Invulnerability (hangs in
+  water), Transform yourself (more deaths in one test).
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: from
+              Spectrum Magic's older Spec256 conversion, painter not
+              established
+  Original    Dinamic, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      The look approved by the owner in JNext 2026-11-03 ('game is
+              good'); v1.0 played by the owner in JNext 2026-11-07: approved
+
+  Replay      10 scripted recordings (attract, game over, play, 6 start
+              rooms), 69,928 frames: 75,427 plots and 87 screen clears run
+              original and build from one state each: every register including
+              R, all memory but the screen and the stack below SP, 6,367,816
+              figure pixels against the sprites: IDENTICAL; with the Enhanced
+              table on 3 of them (18,609 frames) IDENTICAL; 18 broken builds
+              caught; each hook entered at all 4 CPU speeds
+
+  Emulator    JNext 1.1.104 headless: base, Enhanced, English and all options
+              together through the real .NEXCLASH loader on private card
+              copies, each output byte for byte as nxc.py makes it, reaching
+              play
+
+  Coverage    Enemies in all 44 rooms that have them (attract); the player in
+              the rooms the scripted runs reached; deaths, game over and the
+              return to the menu; not reached: the ending, the loader's code
+              prompt, a natural full playthrough
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
