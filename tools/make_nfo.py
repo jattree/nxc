@@ -124,7 +124,10 @@ def nfo(d, base):
         for i, t in enumerate(trainers, 1):
             o.append('  %2d  %s' % (i, asc(t)))
         o.append('')
-        o.append('  Cheats come from the archive\'s POKEs for this release.')
+        if inf.get('cheats_source'):
+            o.extend('  ' + l for l in textwrap.wrap(asc(inf['cheats_source']).strip(), W - 2))
+        else:
+            o.append('  Cheats come from the archive\'s POKEs for this release.')
     else:
         o.append('  No cheats.')
     rule(o, 'CREDITS')

@@ -1607,7 +1607,7 @@ def set_version(f, game, version):
 
 NOTE_MAX = 1024     # INF1's notes, enhanced_N, changes and tested: one line each, for the .nfo
 INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version', 'build', 'nex_md5', 'nexclash', 'credit',
-             'game_language', 'language_codes', 'text_by', 'trainers_played', 'notes', 'changes', 'tested')   # and enhanced_N
+             'game_language', 'language_codes', 'text_by', 'trainers_played', 'cheats_source', 'notes', 'changes', 'tested')   # and enhanced_N
 NOTE_KEYS = ('notes', 'changes', 'tested')
 PACE_TARGETS = {'ORIGINAL': 'original', 'SLOWDOWN REMOVED': 'slowdown removed', 'TURBO': 'turbo'}
 CHANGE_SEP = ' | '; PACE_SEP = '; '
