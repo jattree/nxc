@@ -1,0 +1,92 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Cybernoid II - The Revenge
+  Publisher   Hewson Consultants, 1988
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Cybernoid II - The Revenge (1988)(Hewson Consultants)(128K).z80
+  MD5         23f65550c22b654775a6f0dba9a76a4e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Armando Quaranta's Spec256 colours on the figures: the ship,
+              enemies, weapons and effects in fuller colour over the game's
+              own scenery, as approved for the earlier build. A painted set,
+              colourist not named.
+
+  Pace        original
+
+  Changes     1.1: the 128K release with AY music; the original's pace kept by
+              a limiter; works on NextZXOS v2.10; verified 128K cheats; the
+              approved Enhanced colours unchanged
+
+  Note        128K release with AY sound. Original colours with the clash
+              removed by default; approved Enhanced colours optional and off
+              by default. Known issues: none found in testing; two more tested
+              cheats don't fit the loader's eight cheat lines. Missing:
+              hardware testing, natural full-game completion, and the
+              archive's cheat variants that don't apply to this release.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite time
+   3  Infinite weapons
+   4  Immunity
+   5  No guns
+   6  No lifts
+   7  No snakes
+   8  No rockets
+   9  No flying aliens
+  10  No passage aliens
+
+  The archive's POKEs, checked against this 128K release, using its own
+  addresses for lives, time, weapons and immunity rather than the 48K ones.
+  Two more tested cheats (No flying aliens, No passage aliens) are in the
+  patch but beyond the loader's eight cheat lines.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Hewson Consultants, 1988, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved. Differential
+              replays, figure and edge tests, deliberately broken builds,
+              JNext pace and AY checks, and the real loader (default,
+              Enhanced, all eight cheats) on disposable card copies.
+
+  Replay      All registers including R, working RAM and sprite pixels
+              compared against the original drawing routines: 23,816 replay
+              frames over menus, play, death, game over and restart, 59 room-
+              start fixtures; 13 deliberately broken builds detected.
+
+  Emulator    JNext 1.1.104; four incoming speed values and both IFF states;
+              exact ordered AY stream after accounting for startup phase;
+              direct/NEXLOAD boot checked.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
