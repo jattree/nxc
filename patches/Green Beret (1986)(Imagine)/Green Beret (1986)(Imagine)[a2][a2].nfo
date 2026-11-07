@@ -34,23 +34,21 @@
               pixel white edge around each outline); Sinclair's 48K ROM as the
               whole alt ROM; the game's speed restored after every hook
 
-  Note        Keys: 1 on the game's menu for the keyboard, then the six keys
-              you want (up, down, left, right, stab, shoot), Y, then stab to
-              start. The player, the soldiers, dogs and explosions are Next
-              sprites in white and black over their own pixels, so they no
-              longer take on the scenery's colours; the scenery, panel and
-              text keep the original's colours. Each figure keeps a 1 pixel
-              white edge around its outline so it stays clear of dark scenery;
-              the wider white areas some enemies had behind them in earlier
-              builds are gone. In the sky, where the original draws figures
-              without a mask, their white bodies are solid. The weapon shot
-              stays on the Spectrum screen, behind the figures. The game's own
-              speed is restored after every hook. The hooks take under 2
-              percent of the game's time; the game waits for the next frame
-              each update, so its pace is the original's, but its beeper sound
-              loops run until that frame starts, so the build makes 5 to 7
-              percent fewer beeper writes than the original (measured in
-              JNext). Not tested on hardware.
+  Note        Keys: 1 on the game's menu for the keyboard, then your six keys
+              (up, down, left, right, stab, shoot), Y, then stab to start. The
+              player, soldiers, dogs and explosions are Next sprites in white
+              and black over their own pixels; scenery, panel and text keep
+              the original's colours. Each figure keeps a 1 pixel white edge
+              so it stays clear of dark scenery. Pace is the original's (the
+              game waits for each frame). Known issues: the beeper makes 5 to
+              7 percent fewer writes than the original, so some sound effects
+              may sound slightly different; in the sky the figures' white
+              bodies are solid, because the original draws them there without
+              a mask; the weapon shot is drawn behind the figures. Missing: no
+              Enhanced colour set yet (figures are white and black only); no
+              loading or title screen on the menu; the cheats are the
+              archive's POKEs and were not re-checked in this build. Tested in
+              JNext on NextZXOS v2.09 and v2.10; not tested on hardware.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
