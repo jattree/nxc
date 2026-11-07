@@ -36,30 +36,20 @@
               1.1: QUIT and PAUSE can be redefined (option, on by default)
 
   Note        Keys: a key on the loading screen, then ENTER on the menu. In
-              play A left, S right, SPACE jump, P pause, Q quit (the
-              defaults). On by default, all five can be set on the game's own
-              define-keys page (D on its menu), which now asks for QUIT and
-              PAUSE after LEFT, RIGHT and JUMP, in its own style, and no
-              longer warns about Q and P; the patch's menu line "Original keys
-              (Q,P fixed)" gives v1.0's game exactly. As in the original, the
-              page takes any key, a repeat included, and the game's menu and
-              instructions show the default keys. The "Disable Q quit key"
-              cheat disables whichever key is set for QUIT. Dan is a Next
-              sprite in bright cyan over his own pixels, the look the owner
-              approved, and in the airship room the hull and cables are drawn
-              in front of him, so he stands inside the basket; the rooms,
-              enemies and panel keep the original's colours. The hook costs
-              about 0.1 percent of the game's pace (never faster); the game
-              has no padding to repay it from. It starts from the tape's own
-              BASIC. Cheats from the archive's POKEs for this release (two
-              names shortened for the menu: Energy bar never decreases,
-              Disable "Q Quit" key); dropped: Manipulate teleports, Water
-              can't kill you, Picked up oxygen bottle and Speed up game (their
-              code was never reached in the simulator's play, so not shown to
-              work), Dynamite sticks found (asks for a value). Dan's sprite
-              moves as his plot starts, so once in a few hundred frames it is
-              a frame ahead of the game's own pixels under it. Not tested on
-              hardware.
+              play A left, S right, SPACE jump, P pause, Q quit. On by
+              default, all five can be set on the game's own define-keys page
+              (D on its menu), which now also asks for QUIT and PAUSE; the
+              menu line "Original keys (Q,P fixed)" gives 1.0's game exactly.
+              The "Disable Q quit key" cheat disables whichever key is set for
+              QUIT. Dan is a bright cyan Next sprite over his own pixels, and
+              in the airship room the hull and cables are drawn in front of
+              him; rooms, enemies and panel keep the original's colours. It
+              starts from the tape's own BASIC. Known issues: about 0.1 to 0.2
+              percent slower than the original (the game has no padding to
+              repay the hook from); once in a few hundred frames Dan's sprite
+              is a frame ahead of his own pixels. Missing: no Enhanced colour
+              set; five archive cheats (never shown to work, or ask for a
+              value); the ending not reached in testing; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

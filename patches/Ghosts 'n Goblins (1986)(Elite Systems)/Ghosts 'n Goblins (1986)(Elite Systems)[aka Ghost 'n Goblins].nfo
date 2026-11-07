@@ -47,11 +47,15 @@
 
   Note        0 starts/fires; 5 left, 8 right, 7 up, 6 down, SPACE jump. J
               joystick, R redefine. Enhanced off by default. Original pace and
-              loading screen. Hardware untested. Known issue: in one spot on
-              level 3 a ladder can blink for a frame as the scenery scrolls
-              (the sprite engine delays the game's redraw of it until after
-              the screen has been drawn there); the original does not do this;
-              a fix is planned.
+              loading screen. Known issues: in one spot on level 3 a ladder
+              can blink for a frame as the scenery scrolls (the sprite engine
+              delays the game's redraw of it until after the screen has been
+              drawn there); the original does not do this; a fix is planned.
+              The mean pace is within 0.3% of the original's, but short
+              stretches with sound measured up to 7.5% slower. Missing:
+              Enhanced colours for the scenery (planned); not yet checked: the
+              ending, the late bosses, joystick and redefine; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

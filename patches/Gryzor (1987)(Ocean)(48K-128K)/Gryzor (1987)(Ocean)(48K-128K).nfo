@@ -34,21 +34,18 @@
   Note        Keys: hold 0 on the menu to start (the menu checks the keyboard
               every few frames); cursor keys 5 left, 8 right, 7 jump, 6 down,
               0 fire. The player, enemies and bullets are Next sprites with a
-              black outline, so they show one colour across the jungle's bands
-              instead of taking the paper of each row; scenery, stars, objects
-              and text keep the original's colours. The outline is black at
-              the owner's request in place of the white one he approved: the
-              same pixels, around each figure inside its own image. In the
-              yellow forest the black outline meets the forest's black pattern
-              and figures read less well than with the white one. The game
-              plays at the original's pace (hooks at 28 MHz, the speed you
-              chose restored after each, the original's own slowdowns kept)
-              and gives the same enemies for the same keys. While the scenery
-              scrolls, a figure can show a frame behind it now and then. This
-              is the 48K form: the first section only; the next needs the
-              tape. Cheats are the archive's, checked on a simulator only.
-              Enhanced colour rated HARD and not offered. Not tested on
-              hardware.
+              black outline (the owner's choice), so they show one colour
+              across the jungle's bands; scenery, stars, objects and text keep
+              the original's colours. Plays at the original's pace (hooks at
+              28 MHz, your speed restored) and gives the same enemies for the
+              same keys. Known issues: in the yellow forest the black outline
+              meets the forest's black pattern, so figures read less well
+              there; while the scenery scrolls, a figure can show a frame
+              behind it now and then. Missing: this is the 48K form, so the
+              first section only and no 128K music; no Enhanced colour set (a
+              trial set was shelved); the cheats are the archive's, checked on
+              a simulator only; not yet checked: Kempston and define keys;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -31,7 +31,15 @@
               colourist not named.
 
   Note        No outline on the figures, in both default and Enhanced: the
-              owner chose that for this game.
+              owner chose that for this game. Known issues: the game reads a
+              few ROM bytes as data and gets the Next ROM's values, not the
+              48K ROM's (found by replay; effect on play not established); not
+              yet checked in full on NextZXOS v2.10: it lacks the start-up fix
+              for v2.10's ROM changes that Cyclone and Chuckie Egg needed.
+              Missing: no AY music, as this snapshot is the game's 48K form;
+              pace not measured against the original; the cheats are the
+              archive's and have not been played; not yet checked: a level end
+              and driving a tank; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

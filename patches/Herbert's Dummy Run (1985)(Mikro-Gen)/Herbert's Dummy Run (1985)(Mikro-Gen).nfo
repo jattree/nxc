@@ -40,7 +40,11 @@
   Note        Controls: Q and W move, Caps Shift jumps. Herbert's drawing code
               is the same family as Everyone's a Wally and Three Weeks in
               Paradise, so this patch builds on theirs. Plays at the
-              original's pace.
+              original's pace. Known issues: busy rooms measured about 1.2%
+              slower than the original, and the cube room about 1.8% with
+              Enhanced (measured on 1.2; 1.3 changes colours only). Missing:
+              not a complete walkthrough, so later rooms and the ending are
+              not checked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

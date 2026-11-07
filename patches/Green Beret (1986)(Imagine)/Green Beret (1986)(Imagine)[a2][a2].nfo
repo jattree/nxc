@@ -40,15 +40,15 @@
               and black over their own pixels; scenery, panel and text keep
               the original's colours. Each figure keeps a 1 pixel white edge
               so it stays clear of dark scenery. Pace is the original's (the
-              game waits for each frame). Known issues: the beeper makes 5 to
-              7 percent fewer writes than the original, so some sound effects
-              may sound slightly different; in the sky the figures' white
-              bodies are solid, because the original draws them there without
-              a mask; the weapon shot is drawn behind the figures. Missing: no
-              Enhanced colour set yet (figures are white and black only); no
-              loading or title screen on the menu; the cheats are the
-              archive's POKEs and were not re-checked in this build. Tested in
-              JNext on NextZXOS v2.09 and v2.10; not tested on hardware.
+              game waits for each frame). Tested in JNext on NextZXOS v2.09
+              and v2.10. Known issues: the beeper makes 5 to 7 percent fewer
+              writes than the original, so some sound effects may sound
+              slightly different; in the sky the figures' white bodies are
+              solid, because the original draws them there without a mask; the
+              weapon shot is drawn behind the figures. Missing: no Enhanced
+              colour set yet (figures are white and black only); no loading or
+              title screen on the menu; the cheats are the archive's POKEs and
+              were not re-checked in this build; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -31,6 +31,14 @@
               from an older Spec256 conversion (the EmuZWin games package),
               painter not established.
 
+  Note        Known issues: a yellow figure stays on the TOUGH LUCK game over
+              screen (not in the plain build); not yet checked in full on
+              NextZXOS v2.10: it lacks the start-up fix for v2.10's ROM
+              changes that Cyclone and Chuckie Egg needed. Missing: the
+              Enhanced set was carried over from Dean's build and not replayed
+              on its own; pace not measured against the original; puzzles not
+              reached in testing (few rooms walked); hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Immunity

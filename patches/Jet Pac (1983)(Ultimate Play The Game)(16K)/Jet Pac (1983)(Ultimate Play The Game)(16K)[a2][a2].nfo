@@ -33,7 +33,9 @@
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
 
-  Note        Coloured build (not Dean's Jetpac build).
+  Note        Coloured build (not Dean's Jetpac build). Known issues: none
+              found in testing. Missing: pace not measured against the
+              original; two-player games not checked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

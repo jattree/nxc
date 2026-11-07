@@ -38,7 +38,13 @@
               longer takes the colours of the scenery he walks through; the
               mirrored Dizzy in Double Trouble stays on the screen as in the
               original. His plot hook now runs at 28 MHz. Loading screen from
-              the tape.
+              the tape. Known issues: where the original's eraser leaves a
+              small hole in an object drawn over Dizzy, this build keeps it
+              whole (5 of 171,382 pixel checks). Missing: no Enhanced colour
+              set (rated easy); the archive's Animation speed and second
+              Infinite lives cheats (one asks for a value, the other stops the
+              game); only the start rooms and Double Trouble checked in
+              testing; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

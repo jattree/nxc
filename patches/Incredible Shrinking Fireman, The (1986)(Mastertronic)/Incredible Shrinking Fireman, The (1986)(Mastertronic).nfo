@@ -25,6 +25,12 @@
 
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
 
+  Note        Works on NextZXOS v2.10 from 1.1. Known issues: none found in
+              testing. Missing: no Enhanced colour set; pace not measured
+              against the original; earlier builds ran on a real Next for
+              Dean, and the faults he found were fixed, but this build has
+              not; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Immunity
