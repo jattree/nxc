@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Sabre Wulf
   Publisher   Ultimate, 1984
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,17 +30,12 @@
               rhino; the jungle unchanged. No white outlines or edges. The
               orchids bloom in the game's own colours, and Sabreman's helmet,
               shirt and trousers take the colour the game gives him while an
-              orchid acts, as in the original. Source: Enhanced colours: from
-              the Spec256 conversion (the Spectrum Magic package, credited to
-              Spec256), painter not established.
+              orchid acts, as in the original. Optional with it: Jungle floor,
+              a dim floor under the jungle. Source: Enhanced colours: from the
+              Spec256 conversion (the Spectrum Magic package, credited to
+              Spec256), painter not established; Jungle floor art: Jon Attree.
 
-  Pace        original (+1.67% measured in JNext 1.1.104 headless; probe 39453
-              (the end of a round of the object loop: enemy pace); input keyed
-              to rounds; 10 trials per scene; a fixture with the game's time
-              sources read from its round counter in both runs; 1.2's Enhanced
-              against 1.1's: 30 trials, -0.01 to +0.03%, 29 in lockstep
-              throughout; against the original: quiet +1.61%, busy +1.72%,
-              sound +1.66% (4 trials each))
+  Pace        original
 
   Changes     1.0: figures as Next sprites; Sinclair's 48K ROM as the whole
               alt ROM, so the game starts from its own BASIC; the game's speed
@@ -49,22 +44,26 @@
               the Enhanced set. 1.1: QAOP + Space option. 1.2: Enhanced
               colours: orchids show their real colours as they bloom, and
               Sabreman shows his orchid effects as in the original (reported
-              by Catcher40)
+              by Catcher40). 1.3: Jungle floor, an option with Enhanced
+              colours: small dim grass tufts, stones and twigs on the ground,
+              and pebbles in the caves
 
   Note        Keys: any key on the loading screen, then 0 on the menu (1 or 2
               players, 3-6 controls). In play Q left, W right, E up, R down, T
-              fight, SPACE pause. With QAOP + Space on (menu, off by default;
-              keyboard chosen, 3): Q up, A down, O left, P right, Space fight,
-              Caps Shift pause; W, E, R and T do nothing; joysticks pause on
-              Caps Shift too. Every moving figure is a Next sprite in the
-              game's own colours; the jungle, panel and text keep the
-              original's. It starts from the tape's own BASIC, as on a 48K.
-              Known issues: about 1.5 to 1.7 percent slower than the original,
-              single trials up to 2.1% (the game has no frame cap to repay the
-              hooks from), so enemies move a little slower. Missing: ten of
-              the archive's cheats (they freeze the game, have no effect,
-              misbehave or ask for a value); not reached in testing: the
-              amulet by play, the cave, joysticks; hardware untested.
+              fight, SPACE pause. QAOP + Space (menu, off by default; keyboard
+              chosen): Q up, A down, O left, P right, Space fight, Caps Shift
+              pause. Every moving figure is a Next sprite in the game's own
+              colours; the jungle, panel and text keep the original's. Jungle
+              floor (menu, off by default; needs Enhanced): a dim floor of
+              grass tufts, stones and twigs on each room's black ground, with
+              pebbles in the caves. Known issues: about 1.5 to 1.7 percent
+              slower than the original, single trials up to 2.1%, so enemies
+              move a little slower; with Jungle floor the floor shows between
+              the plants' leaves, and the first title screen waits about a
+              tenth of a second while it is drawn. Missing: ten of the
+              archive's cheats (they freeze the game, do nothing, misbehave or
+              ask for a value); not reached in testing: the amulet by play,
+              joysticks; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  [P1]Infinite lives
@@ -80,7 +79,7 @@
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
               bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: from the
               Spec256 conversion (the Spectrum Magic package, credited to
-              Spec256), painter not established
+              Spec256), painter not established; Jungle floor art: Jon Attree
   Original    Ultimate, 1984, by its original authors. All rights to the game
               remain theirs.
 
@@ -88,7 +87,8 @@
   Tested      Played by the owner in JNext 2026-11-05, with and without QAOP +
               Space: approved; 1.2's Enhanced colours (orchids and Sabreman's
               effect colours) played by the owner in JNext 2026-11-07:
-              approved
+              approved; 1.3's Jungle floor played by the owner in JNext
+              2026-11-07: approved
 
   Replay      IDENTICAL on 5 recordings, 123,765 frames, in both colour sets:
               142,954 moves, 5,363 toggles, 91 saved-image toggles, 133,780
@@ -108,7 +108,20 @@
               trousers in the game's colour under an orchid (505,583) and
               painted otherwise, against the original's attributes too (cells
               it has not yet repainted at most 4 frames); 4 colour negatives
-              detected, 1.1's Enhanced among them
+              detected, 1.1's Enhanced among them; 1.3 (2026-11-07), Jungle
+              floor (display only): off, every build is 1.2's byte for byte;
+              on, its bytes are e_clr's CALL and a block in the state page,
+              the same on all four builds. At all 821 clears of the 5
+              recordings the original and the floor build ran from the same
+              state: every register with R, game memory, screen writes, slots,
+              clock and stack IDENTICAL; Layer 2 against a model at every room
+              shown (798, 158 in the cave): bank, scroll, order, clip,
+              palettes and the 96K pictures, and each room's finished picture
+              composed as the Next shows it: the floor only where the ULA is
+              black; all 256 rooms' arrangement and cave choice in the
+              simulator (caves 135-137, 151-153); 3 negatives detected (the
+              wrong room's arrangement, the floor over the ULA, no cave
+              variant)
 
   Emulator    JNext 1.1.104 headless: loading screen, title and play reached
               from the build's own BASIC start in both colour sets, frames
@@ -120,7 +133,13 @@
               orchids (yellow poked) seen in JNext from room-entry snapshots;
               the real loader on a copy of a NextZXOS v2.09 card wrote the
               exact .nex, default, Enhanced and Enhanced with QAOP + Space,
-              and play was reached
+              and play was reached; 1.3: Enhanced with Jungle floor in JNext
+              1.1.104 headless: six rooms from room-entry snapshots, the cave
+              among them, frames inspected, Layer 2's registers as the model;
+              flicker check clean (300 frames); 15-minute soak: no freeze,
+              loop or crash; the real loader on a copy of a NextZXOS v2.09
+              card, the Jungle floor key alone: Enhanced turned on with it,
+              the exact .nex written, play reached with the floor
 
   Coverage    Bot recordings only, no human play: rooms near the start and 34
               rooms with cheats, deaths, game over, hall of fame, two-player
