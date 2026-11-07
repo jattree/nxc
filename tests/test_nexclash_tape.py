@@ -167,7 +167,7 @@ class TapeLoader(T.Base):
         cases = {"a target missing": (heads(b"\0\x01\0"), DAMAGED), "a target twice": (heads(b"\0\x03\0\x01\x01"), DAMAGED),
                  "a target that is not there": (heads(b"\0\x03\0\x01\x02"), DAMAGED), "no targets": (heads(b"\0\0"), DAMAGED),
                  "no table": (drop, DAMAGED), "a stream twice": (split, DAMAGED), "no tape flag": (opt(b"\x01\x00\x14"), DAMAGED),
-                 "an unknown flag": (opt(b"\x01\x05\x14"), LEVEL)}
+                 "an unknown flag": (opt(b"\x01\x09\x14"), LEVEL), "the rules flag without OPR1": (opt(b"\x01\x05\x14"), DAMAGED)}
         for name, (edit, said) in cases.items():
             with self.subTest(name):
                 patch = T.rekey(self.patch, self.tap, edit)
@@ -190,11 +190,14 @@ class TapeLoader(T.Base):
         one = H.FIRST_PART + self.symbols["ov_size"]
         two = one + self.symbols["tape1_size"]
         menu_at = self.symbols["FILE_MENU_AT"]         # the menu's part, then the menu .nex's writer, follow the tape parts
+        writer_end = self.symbols["FILE_STUB1_AT"]     # then the two stubs, each with its tag
+        stub_end = self.symbols["FILE_STUB2_AT"]
         for name, binary, key_sets in (("no tape parts", self.binary[:one], None), ("the first cut short", self.binary[:two - 1], None),
                                        ("the first mixed", self.binary[:two - 4] + b"XXXX" + self.binary[two:], None),
                                        ("the third mixed", self.binary[:menu_at - 4] + b"XXXX" + self.binary[menu_at:], None),
-                                       ("the writer cut short", self.binary[:-1], (["space"],)),
-                                       ("the writer mixed", self.binary[:-4] + b"XXXX", (["space"],))):
+                                       ("the writer cut short", self.binary[:writer_end - 1], (["space"],)),
+                                       ("the writer mixed", self.binary[:writer_end - 4] + b"XXXX" + self.binary[writer_end:], (["space"],)),
+                                       ("its stub mixed", self.binary[:stub_end - 4] + b"XXXX" + self.binary[stub_end:], (["space"],))):
             for keys in key_sets or (["enter"], ["2", "enter"]):
                 with self.subTest(name, keys=keys):
                     m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=keys, binary=binary)

@@ -818,6 +818,7 @@ class Split(Case):
     def test_the_first_part_is_exactly_what_nextzxos_loads(self) -> None:
         self.assertGreater(len(self.binary), H.FIRST_PART)
         sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size", "tape3_size", "mp_size", "mnx_size")]
+        sizes += [self.symbols["STUB1_LEN"] + 4, self.symbols["STUB2_LEN"] + 4]     # then the two stubs, each with the tag
         self.assertEqual(len(self.binary), H.FIRST_PART + sum(sizes))
         at = H.FIRST_PART
         for size in sizes:                                  # the overlay, a tape's three parts, the menu's, the writer's: each ends in the tag
@@ -915,7 +916,7 @@ class Sets(Case):
                     self.assertFalse(failed, message)
                     self.assertEqual(m.clean(), [])
                     self.assertEqual(bytes(m.written[NEX]), want)
-                    self.assertEqual(m.peak_pages, 6 + 3 * bool(n) + 3 * bool(n2))
+                    self.assertEqual(m.peak_pages, 6 + 3 * bool(n or n2))     # the sets share three pages, however many
 
     def test_with_a_trainer_on_top(self) -> None:
         m, failed, message = self.go(self.patch2, keys=["1", "3", "4", "enter"])
@@ -1100,7 +1101,7 @@ class Sets(Case):
         self.assertEqual(sorted(e["stream"] for e in nxc.sets(self.patch2)), [0, 1, 2, 3])
 
     def test_not_enough_ram(self) -> None:
-        for free, keys, said in ((8, ["3", "enter"], "Needs 72K free RAM"), (11, ["3", "4", "enter"], "Needs 96K free RAM")):
+        for free, keys, said in ((8, ["3", "enter"], "Needs 72K free RAM"), (8, ["3", "4", "enter"], "Needs 72K free RAM")):
             m, failed, message = self.go(self.patch2, keys=keys, free_pages=free)
             self.assert_refused(m, failed, message, said)
             self.assertEqual(m.free_pages, free)
@@ -1109,16 +1110,14 @@ class Sets(Case):
         forged = self.forged_overlap()
         m, failed, message = self.control([("""        and     (hl)
         jp      nz,bad_patch
-        inc     hl
-        inc     de
-        dec     bc
+        ld      a,(de)
+        or      (hl)
 """, """        and     (hl)
         nop
         nop
         nop
-        inc     hl
-        inc     de
-        dec     bc
+        ld      a,(de)
+        or      (hl)
 """)], forged, keys=["3", "4", "enter"])
         self.assertIn(NEX, m.opened, "a loader with no overlap check passed")
         def edit(bl, st):
@@ -1126,14 +1125,14 @@ class Sets(Case):
                 if x[0] == b"SET2" and x[1][0] == 0:
                     x[1] = x[1][:nxc.SET_FIXED + x[1][4]] + T.set_body(st, 0, zlib.crc32(self.plain_nex), [(2, T.chunk_of((100, b"x"))), (5, T.chunk_of((50, b"y")))])
         unordered = T.rekey(self.patch2, self.game, edit)
-        m, failed, message = self.control([("""        ld      hl,set_recs+4
-        call    is_zero32
+        m, failed, message = self.control([("""        pop     hl
         jp      nz,bad_patch
-""", """        ld      hl,set_recs+4
-        call    is_zero32
+        ld      de,REC
+""", """        pop     hl
         nop
         nop
         nop
+        ld      de,REC
 """)], unordered, keys=["3", "enter"])
         self.assertIn(NEX, m.opened, "a loader with no check of order passed")
         # The CRC of a combination taken from the first set alone would be wrong for two.

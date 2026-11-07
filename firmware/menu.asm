@@ -8,7 +8,10 @@
 ; from 32, 8 bytes each, and reads the keyboard through port 0xFE. It changes
 ; nothing else: no NextREG, no border, no palette. Interrupts should be off.
 ;
-; The includer defines MENU_RAM, 13 bytes for the module's variables.
+; The includer defines MENU_RAM, 13 bytes for the module's variables, or
+; MENU_RAM_SIZE with MENU_RULES defined: the menu that keeps to a patch's option
+; rules (OPR1). Without MENU_RULES this assembles to exactly the menu before
+; rules, which a .nex for a patch without OPR1 still carries, byte for byte.
 ;
 ; The description, at HL for menu_run (spec, "The description"):
 ;   flags (bit 0: the main line is fixed ON; bit 1: a version follows patch_by),
@@ -17,7 +20,10 @@
 ;   patch_by (empty: none), and with flags bit 1 the version; then each
 ;   line: kind (0 trainer, 1 main line, 2 a kind of set, 3 a toggle), state,
 ;   the number of sets (kind 2) or 0, then zero-terminated its name, its help,
-;   and for kind 2 each set's name. The states are changed in place.
+;   and for kind 2 each set's name. The states are changed in place. Then
+;   3 bytes for each line, the writer's; and with flags bit 2 (MENU_RULES only)
+;   the rules: their count, then each one's type (1 excludes, 2 needs), line A,
+;   the state that is A on, line B, the state that is B on.
 ;
 ; No Z80N instruction is used, so that it runs on a plain Z80 emulator.
 
@@ -31,6 +37,15 @@ MV_LINE         equ MENU_RAM + 8
 MV_SECT         equ MENU_RAM + 9
 MV_REC          equ MENU_RAM + 10       ; 2: the record being drawn
 MV_VTYPE        equ MENU_RAM + 12
+        ifdef MENU_RULES
+MV_KEPT         equ MENU_RAM + 13       ; 2: a bit for each line a key's rules may not change
+MV_ALSO         equ MENU_RAM + 15       ; 2: the lines the rules changed, each its number + 1, bit 7 on
+MV_CHG          equ MENU_RAM + 17       ; a pass changed a line
+MENU_RAM_SIZE   equ 18
+MD_RULES        equ 2                   ; the flags' bit: rules follow the lines' offsets
+        else
+MENU_RAM_SIZE   equ 13
+        endif
 
 MENU_LINES_MAX  equ 10
 MENU_TITLE_ROW  equ 27                  ; a title's characters in a bar row, before the stripes
@@ -56,6 +71,10 @@ menu_run:
         ld      (MV_FONT),de
         xor     a
         ld      (MV_SEL),a
+        ifdef MENU_RULES
+        ld      (MV_ALSO),a
+        ld      (MV_ALSO+1),a
+        endif
 .draw:  call    menu_draw
 .wait:  call    menu_release
 .poll:  call    menu_key
@@ -78,6 +97,9 @@ menu_run:
         ld      a,c
         ld      (MV_SEL),a
         call    md_act
+        ifdef MENU_RULES
+        call    md_rules
+        endif
         jr      .draw
 .go:    sub     13                      ; A: 0 ENTER, not 0 SPACE
         push    af
@@ -143,6 +165,197 @@ md_act: call    md_line
         rra
         ret     c                       ; fixed on
         jr      .flip
+
+        ifdef MENU_RULES
+; After line MV_SEL's key: with rules, lines are changed until every rule is kept,
+; never the keyed line or one already changed (MV_KEPT), so each at most once.
+; Excludes, both on: B off, or A if B is kept. Needs, A on and B not: B on, or A
+; off if B is kept. A rule that can be kept no other way turns every set and toggle off,
+; which keeps them all; a writer makes sure that never happens. tools/nxc.py
+; menu_settle is the same.
+md_rules:
+        xor     a
+        ld      (MV_ALSO),a
+        ld      (MV_ALSO+1),a
+        ld      hl,(MV_DESC)
+        bit     MD_RULES,(hl)
+        ret     z
+        ld      a,(MV_SEL)
+        call    md_line
+        ld      a,(hl)
+        cp      2
+        ret     c                       ; a trainer, the main line
+        ld      a,(MV_SEL)
+        call    md_bit
+        ld      (MV_KEPT),hl
+.pass:  xor     a
+        ld      (MV_CHG),a
+        call    md_count                ; the rules, after the lines' 3 bytes each
+        push    af
+        call    md_line
+        pop     af
+        ld      c,a
+        add     a,a
+        add     a,c
+        ld      c,a
+        ld      b,0
+        add     hl,bc
+        ld      b,(hl)
+        inc     b
+.r:     inc     hl
+        dec     b
+        jr      z,.end
+        push    bc
+        push    hl
+        call    md_rule
+        pop     hl
+        pop     bc
+        jr      c,.fail
+        inc     hl
+        inc     hl
+        inc     hl
+        inc     hl
+        jr      .r
+.end:   ld      a,(MV_CHG)
+        or      a
+        jr      nz,.pass
+        ret
+.fail:  call    md_count
+        ld      b,a
+        ld      c,0
+.f:     ld      a,c
+        push    bc
+        call    md_line
+        pop     bc
+        ld      a,(hl)
+        cp      2
+        jr      c,.fn
+        inc     hl
+        ld      (hl),0
+.fn:    inc     c
+        djnz    .f
+        xor     a
+        ld      (MV_ALSO),a
+        ld      (MV_ALSO+1),a
+        ret
+
+; The rule at HL, kept. Carry: it cannot be.
+md_rule:
+        push    hl
+        pop     ix
+        ld      a,(ix+3)
+        call    md_state
+        ld      a,(ix+4)
+        sub     (hl)
+        ld      e,a                     ; 0: B on
+        ld      a,(ix+1)
+        call    md_state
+        ld      a,(ix+2)
+        sub     (hl)
+        jr      nz,.ok                  ; A off: it holds
+        ld      a,(ix+0)
+        dec     a
+        ld      a,e
+        jr      nz,.needs
+        or      a                       ; excludes, B off: it holds
+        ret     nz
+        ld      a,(ix+3)
+        call    md_kept
+        ld      a,(ix+3)
+        jr      z,md_off
+        ld      a,(ix+1)
+        call    md_kept
+        ld      a,(ix+1)
+        jr      z,md_off
+        scf
+        ret
+.needs: or      a                       ; B on: it holds
+        ret     z
+        ld      a,(ix+3)
+        call    md_kept
+        jr      z,.on
+        ld      a,(ix+1)
+        call    md_kept
+        scf
+        ret     nz                      ; A kept too: it cannot
+        ld      a,(ix+1)
+        jr      md_off
+.on:    ld      a,(ix+3)
+        ld      c,(ix+4)
+        jr      md_on
+.ok:    or      a
+        ret
+
+; HL at line A's state.
+md_state:
+        call    md_line
+        inc     hl
+        ret
+
+; HL = 1 << A.
+md_bit: ld      hl,1
+        or      a
+        ret     z
+.s:     add     hl,hl
+        dec     a
+        jr      nz,.s
+        ret
+
+; NZ when line A is kept.
+md_kept:
+        call    md_bit
+        ld      a,(MV_KEPT)
+        and     l
+        ld      l,a
+        ld      a,(MV_KEPT+1)
+        and     h
+        or      l
+        ret
+
+; Line A off; line A to state C: kept, and noted for the help rows. Carry clear.
+md_off: ld      c,0
+md_on:  push    af
+        push    bc
+        call    md_state
+        pop     bc
+        ld      (hl),c
+        pop     af
+        push    af
+        call    md_bit
+        ld      a,(MV_KEPT)
+        or      l
+        ld      (MV_KEPT),a
+        ld      a,(MV_KEPT+1)
+        or      h
+        ld      (MV_KEPT+1),a
+        pop     af
+        inc     c
+        dec     c
+        jr      z,md_note
+        ld      c,$80
+md_note:
+        ld      b,a
+        ld      a,1
+        ld      (MV_CHG),a
+        inc     b                       ; the line's number + 1
+        ld      a,b
+        or      c
+        ld      c,a
+        ld      hl,MV_ALSO
+        ld      e,2
+.n:     ld      a,(hl)
+        and     $7f
+        jr      z,.put
+        cp      b
+        jr      z,.put
+        inc     hl
+        dec     e
+        jr      nz,.n
+        jr      .done
+.put:   ld      (hl),c
+.done:  or      a
+        ret
+        endif
 
 ; NZ when the main line is on, or there is none.
 md_fix_on:
@@ -399,8 +612,16 @@ menu_draw:
         call    md_skipz
         ld      a,(hl)
         pop     hl
+        ifdef MENU_RULES
+        ld      bc,(MV_ALSO)            ; or lines the rules changed
+        or      c
+        endif
         or      a
+        ifdef MENU_RULES
+        jp      z,.credits
+        else
         jr      z,.credits
+        endif
         ld      a,(MV_ROW)                  ; still the keys' row: a blank after it,
         add     a,2                         ; unless the help would then pass row 19
         cp      MENU_HELP_ROW + 1
@@ -418,6 +639,47 @@ menu_draw:
         call    md_skipz                ; HL at the help
         ld      a,A_TEXT
         ld      (MV_ATTR),a
+        ifdef MENU_RULES
+        ld      a,(MV_ALSO)             ; the rules changed lines: they, not the help
+        or      a
+        jr      z,.plain
+        ld      hl,MV_ALSO
+        ld      b,2
+.also:  push    bc
+        push    hl
+        ld      a,(MV_ROW)
+        inc     a
+        ld      (MV_ROW),a
+        ld      c,0
+        call    at
+        pop     hl
+        push    hl
+        ld      a,(hl)
+        and     $7f
+        jr      z,.an
+        dec     a
+        push    af
+        ld      a,(hl)
+        ld      hl,s_also_on
+        rla
+        jr      c,.ao
+        ld      hl,s_also_off
+.ao:    ld      b,10
+        call    puts_max
+        pop     af
+        call    md_line
+        inc     hl
+        inc     hl
+        inc     hl
+        ld      b,22
+        call    puts_max
+.an:    pop     hl
+        inc     hl
+        pop     bc
+        djnz    .also
+        jr      .credits
+.plain:
+        endif
         ld      b,2
 .help:  push    bc
         ld      a,(MV_ROW)
@@ -886,6 +1148,10 @@ s_break:        db "BREAK exit",0
 s_colours:      db "Colours: "
 s_patch:        db "Patch: "
 s_values:       db A_OFF,"OFF",A_ON," ON",A_TEXT,"N/A"
+        ifdef MENU_RULES
+s_also_on:      db "Also on: ",0
+s_also_off:     db "Also off: ",0
+        endif
 s_stripes:      db $4a,$56,$74,$65      ; blue|red, red|yellow, yellow|green, green|cyan
 g_stripe:       db $01,$03,$07,$0f,$1f,$3f,$7f,$ff
 g_blank:        db 0,0,0,0,0,0,0,0

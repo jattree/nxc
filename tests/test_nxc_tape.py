@@ -353,7 +353,8 @@ class Structure(unittest.TestCase):
                         e[1] = value
             return edit
         self.refused(self.edited(opt(b"\x01\x00\x14")), "only tape targets")
-        self.refused(self.edited(opt(b"\x01\x05\x14")), "newer loader")
+        self.refused(self.edited(opt(b"\x01\x09\x14")), "newer loader")
+        self.refused(self.edited(opt(b"\x01\x05\x14")), "option rules")
         self.assertEqual(nxc.apply(self.edited(opt(b"\x01\x01\x14")), game=self.tap), self.nex)
 
     def test_a_reader_without_tapes_says_it_needs_a_newer_one(self) -> None:

@@ -104,7 +104,7 @@ class ToggleLoader(T.Base):
         self.assertEqual(bytes(m.written[NEX]), self.nex)
 
     def test_controls(self) -> None:
-        # The menu not counting choices: the third is taken, and the loader has no slot for it.
+        # The menu not counting choices, for a patch without OPR1: the third is taken, as a menu with the limit never would.
         binary, symbols = H.assemble([("""        pop     hl
         ret     z
         ret     c
@@ -114,10 +114,12 @@ class ToggleLoader(T.Base):
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed or bytes(m.written.get(NEX, b"")) != self.want(PAINT, SMOOTH), "a loader taking a third choice passed")
         # A toggle's slot left with the colours' kind: the wrong block found, or none.
-        binary, symbols = H.assemble([("""        ld      a,(hl)
-        ld      (de),a
-        ld      de,TOGGLES_MAX""", """        ld      a,(hl)
-        ld      de,TOGGLES_MAX""")])
+        binary, symbols = H.assemble([("""        ld      hl,slot_kinds+KINDS
+        add     hl,bc
+        ld      (hl),a
+""", """        ld      hl,slot_kinds+KINDS
+        add     hl,bc
+""")])
         m = self.machine({"patch.nxc": self.patch, "game.tap": self.tap}, keys=["4", "enter"], binary=binary, symbols=symbols)
         failed, message = m.run('"patch.nxc"')
         self.assertTrue(failed or bytes(m.written.get(NEX, b"")) != self.want(SMOOTH), "a loader not saying a slot's kind passed")

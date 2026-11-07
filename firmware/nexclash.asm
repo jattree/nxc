@@ -92,6 +92,7 @@ NR_MMU5         equ $55
 LOADER_LEVEL    equ 2                       ; 1: .z80; 2: and a loading screen; 3 adds .sna only
 OPT_TAPE        equ 1                       ; OPT1's flag for a patch only a tape can play: this loader reads tapes
 OPT_TAPE_SET    equ 2                       ; and for one whose targets are all sets of tape files: it reads those too
+OPT_RULES       equ 4                       ; and for one whose OPR1 a reader without it could break: it keeps to OPR1
 KIND_SET        equ $80                     ; a target's kind with this bit: a set of tape files, the first of that kind
 SET_FILES_MAX   equ 8
 KIND_Z80        equ 1                       ; the containers this loader reads: .z80,
@@ -111,13 +112,17 @@ TARGET_FIXED    equ 30
 BANK_SIZE       equ 16384
 PAGES           equ 6
 SET_PAGES       equ 3                       ; more, for each set chosen
-KINDS           equ 2                       ; colours, language: also the sets or toggles chosen at once
+KINDS           equ 2                       ; colours, language
+SLOTS           equ KINDS + TOGGLES_MAX     ; what can be chosen at once: a set of each kind, each toggle
+RULES_MAX       equ 32                      ; OPR1's rules, 5 bytes each after their count
 KIND_TOGGLE     equ 3                       ; a toggle: 3 display only, 4 changes the logic
 TOGGLES_MAX     equ 4
 SET_FIXED       equ 5                       ; stream index, kind, choice, base, name's length
 SET_CRC_INDEX   equ 255                     ; the stream of a set's CRC; a chunk's is its bank
 BITMAP          equ 2048                    ; a chunk's first part: one bit for each byte of a bank
 REC             equ 9                       ; a chosen set's cursor: position 4, left 4, stream 1
+SET_END         equ WORK + BITMAP + BANK_SIZE ; a chunk is decoded no further than this,
+ACC             equ TABLE_END - BITMAP      ; so this, in the same pages, is free for the bits taken so far
 BASE_SPRITE     equ 1                       ; the sprite build: the one base a set here may have
 CREDIT_NAME     equ 32                      ; of a name, as "Colours: " leaves 32
 FIX_LABEL_MAX   equ 25                      ; INF1's fix_label: a toggle's name's length, so [ON] keeps its column
@@ -220,7 +225,7 @@ name:   ld      hl,cur_fi
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A4B
+vars            equ $3A27
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -235,7 +240,7 @@ game_b          equ patch_path              ; once open, its extension becomes .
         VAR     mapped, 1
         VAR     page_count, 1               ; with the menu's page, all_pages[0]
         VAR     all_pages, 1
-        VAR     page_list, PAGES + KINDS * SET_PAGES + TAPE_PAGES ; WORK x 2, I/O, sites x 3, each set x 3, a tape's x 3
+        VAR     page_list, PAGES + SET_PAGES + TAPE_PAGES ; WORK x 2, I/O, sites x 3, the sets' x 3, a tape's x 3
         VAR     menu_route, 1               ; 1: the .nex written carries its menu
         VAR     ph, 1                       ; handles; 0: not open
         VAR     gh, 1
@@ -257,10 +262,9 @@ game_kind       equ target_kinds
         VAR     trainer_count, 1
         VAR     ver_original, 1             ; the clash fix is off
         VAR     set_counts, KINDS           ; how many sets each kind offers
-        VAR     set_choices, KINDS          ; 0: off; n: its nth
-        VAR     set_bases, 2 * KINDS        ; the pages in page_list of each chosen; 0: none
-        VAR     set_lens, 2 * KINDS         ; the length of each one's chunk for this bank; 0: none
-        VAR     set_recs, REC * KINDS       ; each one's next chunk
+        VAR     set_choices, SLOTS          ; slot 0 colours, 1 language, 2 on the toggles: 0 off; n: its nth
+        VAR     slot_kinds, SLOTS + 1       ; the SET2 kind each slot holds; [SLOTS] for the menu
+        VAR     set_recs, REC * SLOTS       ; each one's next chunk
         VAR     set_crc_too, 1
         VAR     set_tag, 4                  ; a set's streams: "SEB", then its stream index
         VAR     mode_changed, 1
@@ -335,6 +339,8 @@ game_kind       equ target_kinds
         VAR     tg_rank, TOGGLES_MAX        ; and its place among the toggles of that kind, from 1
         VAR     tg_seen, 2                  ; how many of kind 3, and of 4, so far
         VAR     dir_h, 1                    ; the folder being scanned for the game
+        VAR     opr_seen, 1                 ; OPR1: there is one,
+        VAR     opr_rec, 8                  ; and its place and length
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -356,7 +362,6 @@ var_at          =   $3F00
         VAR     set_kinds, 1                ; a bit for each file of the set that is a .tzx
         VAR     cur_fi, 1                   ; which of them gh has open
         VAR     readable_kind, 1            ; KIND_Z80; the set's kind once a set is the game
-        VAR     slot_kinds, 3               ; the SET2 kind each set slot holds: 1, 2 or a toggle's; [2] for the menu
         VAR     set_len1, 4                 ; before the menu: a set's first file's length
         VAR     text_at, 4                  ; and where its text starts in the patch
         VAR     fix_label, FIX_LABEL_MAX + 1 ; up to the menu: INF1's name for the main line; 0: "Colour clash fix"
@@ -1290,7 +1295,7 @@ read_header:
 walk_first:
         call    walk_begin
 .next:  call    walk_next
-        jr      z,.end
+        jp      z,.end
         ld      de,first_tags
         ld      hl,seen
         ld      b,5
@@ -1318,6 +1323,9 @@ walk_first:
         ld      de,magic_tap1_p
         call    tag_is
         call    z,note_tape
+        ld      de,magic_opr1
+        call    tag_is
+        call    z,note_rules
         ld      de,magic_scr1_p
         call    tag_is
         jr      nz,.next
@@ -1405,11 +1413,31 @@ walk_first:
         and     OPT_TAPE_SET
         jp      z,bad_patch
 .sets_ok:
+        ld      a,(opr_seen)                ; OPT1's rules flag only with an OPR1
+        or      a
+        jr      nz,.opr_ok
+        ld      a,(opt_flags)
+        and     OPT_RULES
+        jp      nz,bad_patch
+.opr_ok:
         ld      a,(target_kinds)            ; targets, and none this loader can read
         or      a
         ret     nz
         ld      hl,msg_level
         jp      fail_hl
+
+; OPR1: once. Its place is kept for the menu, which reads and checks it.
+note_rules:
+        ld      hl,opr_seen
+        ld      a,(hl)
+        or      a
+        jp      nz,bad_patch
+        inc     (hl)
+        ld      hl,blk_pos
+        ld      de,opr_rec
+        ld      bc,8
+        ldir
+        ret
 
 ; A TAP1's clear head: its stream index unique, 1 to 32 targets, each named once, and a table
 ; after them. Whether each is a tape target is known at the end.
@@ -2060,7 +2088,7 @@ first_opt1:
         ld      (ram_bank),a
         ld      a,(smallbuf+1)
         ld      (opt_flags),a
-        and     ~(OPT_TAPE | OPT_TAPE_SET) & $ff
+        and     ~(OPT_TAPE | OPT_TAPE_SET | OPT_RULES) & $ff
         ld      hl,msg_level
         jp      nz,fail_hl
         ld      a,(smallbuf)
@@ -2564,12 +2592,12 @@ toggle_find:
         ld      hl,tg_kind
         add     hl,de
         ld      a,(hl)
-        ld      (slot_kinds+2),a
+        ld      (slot_kinds+SLOTS),a
         ld      hl,tg_rank
         add     hl,de
         ld      a,(hl)
         ld      (cur_n),a
-        ld      a,2
+        ld      a,SLOTS
         ld      (cur_kind),a
         jp      find_set
 
@@ -2583,8 +2611,11 @@ toggle_bit:
         ld      hl,tg_on
         ret
 
-; A: how many sets and toggles are chosen.
+; Each toggle on into its slot, KINDS + its number, with the fix on.
 toggles_to_slots:
+        ld      a,(ver_original)
+        or      a
+        ret     nz
         ld      a,(tg_count)
         or      a
         ret     z
@@ -2595,29 +2626,19 @@ toggles_to_slots:
         call    toggle_bit
         and     (hl)
         jr      z,.n
-        ld      hl,set_choices
-        ld      de,slot_kinds
-        ld      a,(hl)
-        or      a
-        jr      z,.free
-        inc     hl
-        inc     de
-        ld      a,(hl)
-        or      a
-        jp      nz,bad_patch                ; cannot be: the menu counted
-.free:  pop     bc
-        push    bc
-        push    hl
+        ld      b,0                         ; toggle C on: slot KINDS + C, its kind and rank
         ld      hl,tg_kind
-        ld      b,0
         add     hl,bc
         ld      a,(hl)
-        ld      (de),a
         ld      de,TOGGLES_MAX
         add     hl,de
-        ld      a,(hl)
-        pop     hl
+        ld      e,(hl)
+        ld      hl,slot_kinds+KINDS
+        add     hl,bc
         ld      (hl),a
+        ld      hl,set_choices+KINDS
+        add     hl,bc
+        ld      (hl),e
 .n:     pop     bc
         inc     c
         djnz    .t
@@ -2677,6 +2698,7 @@ parse_name:
 
 magic_trn1:     db "TRN1"
 magic_scr1_p:   db "SCR1"
+magic_opr1:     db "OPR1"
 magic_tap1_p:   db "TAP1"
 key_title:      db "title=",0
 key_publisher:  db "publisher=",0
@@ -2824,8 +2846,8 @@ nexclash_chosen:
         call    map_iopage
         jr      .emit
 .patch: call    decode_patch_bank
-.emit:  call    bank_sets
-        call    apply_sets
+.emit:  ld      a,1
+        call    bank_sets
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
@@ -3220,18 +3242,10 @@ close_out:
 
 ; Pages, the 8K's stack, 0x6000-0xBFFF mapped: the key state, CRC tables.
 work_begin:
-        ld      a,(set_choices)
-        or      a
+        call    any_set                     ; three pages for the sets, however many
         ld      b,PAGES
-        jr      z,.second
-        ld      b,PAGES + SET_PAGES
-.second:
-        ld      a,(set_choices+1)
-        or      a
         jr      z,.tape
-        ld      a,b
-        add     a,SET_PAGES
-        ld      b,a
+        ld      b,PAGES + SET_PAGES
 .tape:  ld      a,(game_kind)               ; a tape's table, after all the others
         cp      KIND_TAP
         jr      c,.alloc
@@ -4043,7 +4057,11 @@ decode_nex_header:
 ; A table into its three pages (page_list at t_base): the record at HL, tag DE,
 ; index C. HL comes back with its length, the pages still mapped.
 decode_table:
+        ld      a,high TABLE_END
+; The same, ending no later than A x 256.
+decode_to:
         push    hl
+        push    af
         push    de
         push    bc
         call    use_smallbuf
@@ -4053,8 +4071,10 @@ decode_table:
         call    stream_open                 ; before the table's pages cover the base
         ld      hl,(t_base)
         call    map3
+        pop     af
+        ld      h,a
+        ld      l,0
         ld      de,WORK
-        ld      hl,TABLE_END
         call    zx_bounds
         pop     hl
         call    block_decode_open
@@ -4085,15 +4105,24 @@ decode_sites:
         ret     nc
         jp      bad_patch
 
+; NZ when a set or toggle is chosen.
+any_set:
+        ld      hl,set_choices
+        ld      b,SLOTS
+        xor     a
+.o:     or      (hl)
+        inc     hl
+        djnz    .o
+        or      a
+        ret
+
 ; The chosen sets, before any file is made: each one's CRC taken into what the output must
 ; be, then every chunk of each decoded and checked in the order they will be needed. A chunk
 ; in the wrong order, or for a bank the header does not list, is never reached, and being left
 ; over is damage. As they touch different bytes and the file's length and layout are the same:
 ; CRC(all) = CRC(base) XOR each (CRC(set) XOR CRC(base)).
 check_sets:
-        ld      a,(set_choices)
-        ld      hl,set_choices+1
-        or      (hl)
+        call    any_set
         ret     z
         ld      a,1
         call    sets_open
@@ -4101,28 +4130,35 @@ check_sets:
 .order: push    bc
         call    order_bank
         call    header_has
+        ld      a,0
         call    nz,bank_sets
         pop     bc
         inc     b
         ld      a,b
         cp      112
         jr      c,.order
-        ld      hl,set_recs+4
+        ld      hl,set_recs+4               ; nothing left of any
+        ld      b,SLOTS
+.left:  push    hl
         call    is_zero32
+        pop     hl
         jp      nz,bad_patch
-        ld      hl,set_recs+REC+4
-        call    is_zero32
-        jp      nz,bad_patch
+        ld      de,REC
+        add     hl,de
+        djnz    .left
         xor     a                           ; from the start again, to write
-; Each chosen set's cursor at its first chunk, and its pages. A not 0: its CRC taken in too.
+; Each chosen set's cursor at its first chunk, the others' at none. A not 0: its CRC taken in too.
 sets_open:
         ld      (set_crc_too),a
         ld      hl,'S' + 'E' * 256
         ld      (set_tag),hl
         ld      a,'B'
         ld      (set_tag+2),a
-        ld      hl,page_list+3+SET_PAGES
-        ld      (next_base),hl
+        ld      hl,set_recs
+        ld      b,REC * SLOTS
+.clr:   ld      (hl),0
+        inc     hl
+        djnz    .clr
         xor     a
 .kind:  ld      (cur_kind),a
         ld      c,a
@@ -4133,11 +4169,6 @@ sets_open:
         or      a
         jp      z,.none
         ld      (cur_n),a
-        ld      hl,(next_base)
-        ld      (t_base),hl
-        ld      de,SET_PAGES
-        add     hl,de
-        ld      (next_base),hl
         call    find_set
         ld      a,(tagbuf+4)                ; past its fixed part and name
         add     a,SET_FIXED
@@ -4199,100 +4230,90 @@ sets_open:
         ldir
         ld      a,(cur_stream)
         ld      (de),a
-        ld      a,(cur_kind)
-        add     a,a
-        ld      c,a
-        ld      b,0
-        ld      hl,set_bases
-        add     hl,bc
-        ld      de,(t_base)
-        ld      (hl),e
-        inc     hl
-        ld      (hl),d
 .none:  ld      a,(cur_kind)
         inc     a
-        cp      KINDS
+        cp      SLOTS
         jp      c,.kind
         ret
 
-; HL at kind (cur_kind)'s cursor.
+; HL at slot (cur_kind)'s cursor.
 rec_of_kind:
-        ld      hl,set_recs
         ld      a,(cur_kind)
-        or      a
-        ret     z
-        ld      hl,set_recs+REC
-        ret
-
-; t_base and t_len for kind (cur_kind). Z when it is not chosen.
-set_of_kind:
-        ld      a,(cur_kind)
+        ld      l,a
         add     a,a
-        ld      e,a
-        ld      d,0
-        ld      hl,set_lens
+        add     a,a
+        add     a,a
+        add     a,l
+        ld      l,a
+        ld      h,0
+        ld      de,set_recs
         add     hl,de
-        ld      c,(hl)
-        inc     hl
-        ld      b,(hl)
-        ld      (t_len),bc
-        ld      hl,set_bases
-        add     hl,de
-        ld      c,(hl)
-        inc     hl
-        ld      b,(hl)
-        ld      (t_base),bc
-        ld      a,b
-        or      c
         ret
 
-; Bank (cur_bank): the chunk of each chosen set that has one, decoded and checked. Sets chosen
-; together must touch different bytes, even if they write the same: that is what lets their
-; CRCs be combined. So no bit may be set in both bitmaps.
+; Bank (cur_bank): each chosen set's chunk for it, if it has one, decoded and checked one at a
+; time in the same three pages, and with A not 0 applied to WORK as it comes. Sets chosen together
+; must touch different bytes, even if they write the same: that is what lets their CRCs be
+; combined. So no bit may be set in two: the bits taken so far are kept at ACC, after the most a
+; chunk decodes to. t_len is the last one's length, 0 for none, for the .nex writer.
 bank_sets:
+        ld      (set_crc_too),a
+        call    any_set
+        ret     z
+        ld      hl,page_list+3+SET_PAGES
+        ld      (t_base),hl
+        call    map3
+        ld      hl,ACC
+        ld      de,ACC+1
+        ld      bc,BITMAP-1
         xor     a
-.kind:  ld      (cur_kind),a
-        call    set_of_kind
-        call    nz,next_chunk
+        ld      (hl),a
+        ldir
+.slot:  ld      (cur_kind),a
+        call    map_std
         ld      a,(cur_kind)
-        inc     a
-        cp      KINDS
-        jr      c,.kind
-        ld      hl,(set_lens)
-        ld      a,h
-        or      l
-        ret     z
-        ld      hl,(set_lens+2)
-        ld      a,h
-        or      l
-        ret     z
-        ld      hl,(set_bases)
-        ld      e,(hl)
-        ld      a,NR_MMU4
-        call    nr_write
-        ld      hl,(set_bases+2)
+        ld      c,a
+        ld      b,0
+        ld      hl,set_choices
+        add     hl,bc
         ld      a,(hl)
-        call    map_slot5
-        ld      hl,$8000
-        ld      de,$a000
-        ld      bc,BITMAP
+        or      a
+        jr      z,.next
+        call    next_chunk
+        ld      hl,(t_len)
+        ld      a,h
+        or      l
+        jr      z,.next
+        ld      hl,(t_base)
+        call    map3
+        ld      hl,WORK
+        ld      de,ACC
 .both:  ld      a,(de)
         and     (hl)
         jp      nz,bad_patch
+        ld      a,(de)
+        or      (hl)
+        ld      (de),a
         inc     hl
         inc     de
-        dec     bc
-        ld      a,b
-        or      c
+        ld      a,d
+        cp      high TABLE_END
         jr      nz,.both
+        call    map_std
+        ld      a,(set_crc_too)
+        or      a
+        call    nz,apply_chunk
+.next:  ld      a,(cur_kind)
+        inc     a
+        cp      SLOTS
+        jr      c,.slot
         jp      map_std
 
-; Kind (cur_kind)'s next chunk, if it is for bank (cur_bank), into its pages: 1 byte bank, 2
-; bytes stream length, the stream. It must be a bitmap and exactly as many bytes as the bitmap
-; has bits, at least one. t_base is the kind's. Its length goes in set_lens, or 0 if none.
+; Slot (cur_kind)'s next chunk, if it is for bank (cur_bank), into the sets' pages: 1 byte bank,
+; 2 bytes stream length, the stream. It must be a bitmap and exactly as many bytes as the bitmap
+; has bits, at least one. Its length goes in t_len, or 0 if none.
 next_chunk:
         ld      hl,0
-        call    set_chunk_len
+        ld      (t_len),hl
         call    rec_of_kind
         ld      de,blk_pos
         ld      bc,8
@@ -4344,7 +4365,8 @@ next_chunk:
         ld      c,a
         ld      hl,blk_pos
         ld      de,set_tag
-        call    decode_table
+        ld      a,high SET_END
+        call    decode_to
         push    hl
         ld      de,BITMAP+1
         or      a
@@ -4367,36 +4389,8 @@ next_chunk:
         jp      nz,bad_patch
         call    map_std
         pop     hl
-; HL is kind (cur_kind)'s chunk's length.
-set_chunk_len:
-        ex      de,hl
-        ld      a,(cur_kind)
-        add     a,a
-        ld      c,a
-        ld      b,0
-        ld      hl,set_lens
-        add     hl,bc
-        ld      (hl),e
-        inc     hl
-        ld      (hl),d
+        ld      (t_len),hl
         ret
-
-; Bank (cur_bank) with each chosen set's chunk applied. A set bit in the bitmap takes the next
-; byte: nothing else says where a byte goes, so no chunk can reach outside WORK.
-apply_sets:
-        xor     a
-.kind:  ld      (cur_kind),a
-        call    set_of_kind
-        jr      z,.next
-        ld      hl,(t_len)
-        ld      a,h
-        or      l
-        call    nz,apply_chunk
-.next:  ld      a,(cur_kind)
-        inc     a
-        cp      KINDS
-        jr      c,.kind
-        jp      map_iopage
 
 apply_chunk:
         ld      hl,0
@@ -6844,6 +6838,9 @@ mp_main:
 .z:     ld      (de),a
         inc     de
         djnz    .z
+        ld      a,(opr_seen)
+        or      a
+        call    nz,mp_rules
         ld      hl,-MP_DESC
         add     hl,de
         ld      (mp_desc_len),hl
@@ -6968,6 +6965,171 @@ mp_chosen:
         pop     bc
         djnz    .off
         or      a
+        ret
+
+; OPR1, after the lines' offsets at DE: its count, then each rule as the menu takes it, its type,
+; then each option's line and the state that is it on; DE past them. The flags say so, and N is
+; no limit. Damage: a block not 1 + 5 x its count long, more than RULES_MAX, a type not 1 or 2
+; (bit 7 is for readers without OPR1), or an option the menu does not offer, or two on one line.
+mp_rules:
+        ld      hl,MP_DESC
+        set     2,(hl)
+        inc     hl
+        ld      (hl),255
+        ld      hl,opr_rec
+        ld      bc,8
+        push    de
+        ld      de,blk_pos
+        ldir
+        ld      hl,blk_pos
+        call    seek_patch
+        pop     de
+        ld      hl,(blk_len+2)
+        ld      a,h
+        or      l
+        jp      nz,bad_patch
+        ld      hl,(blk_len)
+        ld      bc,1 + 5 * RULES_MAX + 1
+        or      a
+        sbc     hl,bc
+        jp      nc,bad_patch
+        ld      bc,(blk_len)
+        ld      a,b
+        or      c
+        jp      z,bad_patch
+        push    de
+        ex      de,hl
+        call    read_patch                  ; into the description, then made the menu's
+        pop     hl
+        ld      a,(hl)
+        ld      b,a
+        add     a,a
+        add     a,a
+        add     a,b
+        inc     a
+        ld      c,a
+        ld      a,(blk_len)
+        cp      c
+        jp      nz,bad_patch
+        inc     b
+.r:     inc     hl
+        dec     b
+        jr      z,.end
+        ld      a,(hl)
+        and     $7c
+        jp      nz,bad_patch
+        ld      a,(hl)
+        and     3
+        jp      z,bad_patch
+        cp      3
+        jp      z,bad_patch
+        ld      (hl),a
+        inc     hl
+        push    bc
+        call    mp_option
+        call    mp_option
+        dec     hl
+        dec     hl
+        ld      a,(hl)                      ; line B
+        dec     hl
+        dec     hl
+        cp      (hl)                        ; line A
+        jp      z,bad_patch                 ; two options on one line
+        inc     hl
+        inc     hl
+        inc     hl
+        pop     bc
+        jr      .r
+.end:   ex      de,hl
+        ret
+
+; The option at HL, its kind and choice, made its line and state; HL past them.
+mp_option:
+        ld      (mp_optp),hl
+        ld      e,(hl)
+        inc     hl
+        ld      d,(hl)
+        ld      (mp_ok),de
+        ld      a,e
+        dec     a
+        cp      4
+        jp      nc,bad_patch                ; kinds 1 to 4
+        ld      c,0
+        call    walk_begin
+.w:     push    bc
+        call    walk_next
+        pop     bc
+        jp      z,bad_patch                 ; none such
+        ld      de,magic_set2
+        call    tag_is
+        jr      nz,.w
+        push    bc
+        ld      hl,tagbuf
+        ld      bc,SET_FIXED
+        call    read_patch
+        pop     bc
+        ld      a,(tagbuf+3)
+        cp      BASE_SPRITE
+        jr      nz,.w
+        ld      de,(mp_ok)
+        ld      a,(tagbuf+1)
+        cp      e
+        jr      nz,.w
+        inc     c                           ; C: its place among those of its kind
+        ld      a,(tagbuf+2)
+        cp      d
+        jr      nz,.w
+        ld      a,(trainer_count)           ; the first kind's line
+        inc     a
+        ld      b,a
+        ld      a,e
+        cp      KIND_TOGGLE
+        jr      nc,.tg
+        dec     a
+        jr      z,.put                      ; colours
+        ld      a,(set_counts)              ; language: after colours, if offered
+        or      a
+        jr      z,.put
+        inc     b
+        jr      .put
+.tg:    ld      hl,set_counts               ; past the kinds' lines
+        ld      a,(hl)
+        or      a
+        jr      z,.t1
+        inc     b
+.t1:    inc     hl
+        ld      a,(hl)
+        or      a
+        jr      z,.t2
+        inc     b
+.t2:    ld      hl,tg_kind                  ; the toggle of that kind and place
+        ld      a,(tg_count)
+        or      a
+        jp      z,bad_patch
+        ld      d,a
+.ti:    ld      a,(hl)
+        cp      e
+        jr      nz,.tn
+        push    hl
+        push    de
+        ld      de,TOGGLES_MAX
+        add     hl,de
+        ld      a,(hl)
+        pop     de
+        pop     hl
+        cp      c
+        jr      z,.tf
+.tn:    inc     hl
+        inc     b
+        dec     d
+        jr      nz,.ti
+        jp      bad_patch                   ; one the menu does not offer
+.tf:    ld      c,1
+.put:   ld      hl,(mp_optp)
+        ld      (hl),b
+        inc     hl
+        ld      (hl),c
+        inc     hl
         ret
 
 ; A: how many lines the menu has.
@@ -7149,6 +7311,7 @@ mp_help:
         inc     de
         ret
 
+        define  MENU_RULES
         include "menu.asm"
 
 ; After ENTER or SPACE, while the menu is still up: its keys' row, found by its green ENTER (the only
@@ -7183,8 +7346,6 @@ menu_busy:
 s_patching:     db "Patching...            ",0
 s_loading:      db "Loading...             ",0
 
-mp_stub:        incbin "nxcstub.bin"
-MP_STUB_LEN     equ $ - mp_stub
         db      "NXQ1"
 mp_end:
 mp_size         equ mp_end - mp_start
@@ -7195,8 +7356,10 @@ mp_left         equ mp_end + 4
 mp_keyp         equ mp_end + 6
 mp_key          equ mp_end + 8
 mp_keybuf       equ mp_end + 9              ; 12
-MENU_RAM        equ mp_end + 21             ; 13
-MP_FONT         equ mp_end + 34             ; 768
+mp_ok           equ mp_end + 21             ; 2: a rule's option, its kind and choice
+mp_optp         equ mp_end + 23             ; 2: and where it is
+MENU_RAM        equ mp_end + 25             ; MENU_RAM_SIZE
+MP_FONT         equ MENU_RAM + MENU_RAM_SIZE ; 768
 MP_HELP         equ MP_FONT + 768           ; HELP_READ
 MP_DESC         equ MP_HELP + HELP_READ
 MP_DESC_ROOM    equ $C000 - MP_DESC
@@ -7258,8 +7421,16 @@ mnx_start:
         ld      de,mnx_tg
         ld      bc,2 + 2 * TOGGLES_MAX
         ldir
+        ld      a,(MP_DESC)                 ; the stub: the one with rules for a patch with OPR1
+        and     4
+        ld      hl,STUB1_LEN
+        ld      de,file_stub1_at
+        jr      z,.st
+        ld      hl,STUB2_LEN
+        ld      de,file_stub2_at
+.st:    ld      (mnx_stub_len),hl
+        ld      (mnx_stub_at),de
         call    map_iopage
-        ld      hl,MP_STUB_LEN
         ld      de,(mnx_desc_len)
         add     hl,de
         ld      (mnx_desc_end),hl
@@ -7380,17 +7551,30 @@ mnx_shadow_read:
 mnx_write_m0:
         ld      de,WORK
         call    fill_zeros
+        rst     $08                         ; the stub, from this command's own file, with its tag,
+        db      M_GETHANDLE                 ; which the description then covers
+        ld      hl,(mnx_stub_at)
+        call    seek_file
+        ld      bc,(mnx_stub_len)
+        inc     bc
+        inc     bc
+        inc     bc
+        inc     bc
+        ld      hl,WORK
+        call    load_part
         ld      a,(all_pages)
         call    map_slot5
-        ld      hl,mp_stub
-        ld      de,WORK
-        ld      bc,MP_STUB_LEN
-        ldir
+        ld      hl,WORK
+        ld      de,(mnx_stub_len)
+        add     hl,de
+        ex      de,hl
         ld      hl,MP_DESC
         ld      bc,(mnx_desc_len)
         ldir
         call    map_iopage
-        ld      ix,WORK + MP_STUB_LEN - 8   ; the parameters
+        ld      ix,WORK - 8                 ; the parameters
+        ld      de,(mnx_stub_len)
+        add     ix,de
         ld      a,(mnx_m0)
         add     a,a
         ld      (ix+0),a
@@ -7632,8 +7816,9 @@ mnx_set:
         call    order_bank
         call    header_has
         jr      z,.n
+        xor     a
         call    bank_sets
-        ld      hl,(set_lens)
+        ld      hl,(t_len)
         ld      a,h
         or      l
         jr      z,.n
@@ -7643,13 +7828,13 @@ mnx_set:
         ld      hl,mnx_head
         ld      bc,3
         call    write_out
-        ld      hl,(set_bases)
+        ld      hl,(t_base)
         call    map3
         ld      a,(mnx_shadow)
         or      a
         call    nz,mnx_chunk_shadow
         ld      hl,WORK
-        ld      bc,(set_lens)
+        ld      bc,(t_len)
         call    write_out
         call    map_std
 .n:     pop     bc
@@ -7775,7 +7960,9 @@ mnx_fix:
         ld      hl,HDR
         ld      bc,512
         call    mnx_put
-        ld      hl,MP_STUB_LEN - 2          ; the stub's count of banks
+        ld      hl,(mnx_stub_len)           ; the stub's count of banks
+        dec     hl
+        dec     hl
         ld      a,(mnx_count)
         ld      (mnx_one),a
         call    mnx_at_m0
@@ -7783,7 +7970,7 @@ mnx_fix:
         ld      bc,1
         call    mnx_put
         ld      hl,(mnx_ptrs_off)           ; the lines' offsets
-        ld      de,MP_STUB_LEN
+        ld      de,(mnx_stub_len)
         add     hl,de
         call    mnx_at_m0
         ld      a,(mnx_line)
@@ -7826,6 +8013,8 @@ mnx_put:
 
 msg_no_menu:    db "No menu .nex: press ENTE", 'R' | $80
 mnx_v12:        db "V1.2"
+file_stub1_at:  dd FILE_STUB1_AT
+file_stub2_at:  dd FILE_STUB2_AT
         db      "NXQ1"
 mnx_end_code:
 mnx_size        equ mnx_end_code - mnx_start
@@ -7852,7 +8041,9 @@ mnx_count       equ mnx_end_code + 48
 mnx_end         equ mnx_end_code + 49       ; 4
 mnx_ptrs        equ mnx_end_code + 53       ; 30
 mnx_tg          equ mnx_end_code + 83       ; 10
-mnx_vars_end    equ mnx_end_code + 93
+mnx_stub_len    equ mnx_end_code + 93       ; 2
+mnx_stub_at     equ mnx_end_code + 95       ; 2
+mnx_vars_end    equ mnx_end_code + 97
 ; It may run on over the paths, which nothing needs once the banks are written; not the trainers'.
         assert  mnx_vars_end <= trainer_table, "the menu .nex's writer runs into the trainers' table"
         display "menu .nex part: ", /d, mnx_size, ", with its variables: ", /d, mnx_vars_end - z80_part_at, " of ", /d, trainer_table - z80_part_at
@@ -7860,6 +8051,17 @@ mnx_vars_end    equ mnx_end_code + 93
 
 FILE_MENU_AT    equ FIRST_PART + ov_size + tape1_size + tape2_size + tape3_size
 FILE_MNX_AT     equ FILE_MENU_AT + mp_size
+
+; The two stubs of a .nex that carries its menu, each with a part's tag: the one a .nex for a
+; patch without OPR1 has always carried, and the one that keeps to OPR1's rules.
+stub1_file:     incbin "nxcstub.bin"
+STUB1_LEN       equ $ - stub1_file
+        db      "NXQ1"
+stub2_file:     incbin "nxcstub2.bin"
+STUB2_LEN       equ $ - stub2_file
+        db      "NXQ1"
+FILE_STUB1_AT   equ FILE_MNX_AT + mnx_size
+FILE_STUB2_AT   equ FILE_STUB1_AT + STUB1_LEN + 4
 
 ; The highest the code reaches, whichever part is in.
         if      z80_part_at + tape1_size > ov_start_at + ov_size

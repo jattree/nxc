@@ -31,7 +31,7 @@ KIND_Z80 = 1; KIND_SNA = 2; KIND_TAP = 3; KIND_TZX = 4
 KIND_NAMES = {KIND_Z80: 'z80', KIND_SNA: 'sna', KIND_TAP: 'tap', KIND_TZX: 'tzx'}
 SNAPSHOT_KINDS = (KIND_Z80, KIND_SNA); TAPE_KINDS = (KIND_TAP, KIND_TZX)
 LOADER_LEVEL = 3                                   # this tool does all there is; the Z80 loader is level 2
-OPT_TAPE = 1; OPT_TAPE_SET = 2; LOADER_FLAGS = OPT_TAPE | OPT_TAPE_SET   # OPT1 byte 1: what a patch needs besides its level; this tool reads tapes and sets of them
+OPT_TAPE = 1; OPT_TAPE_SET = 2; OPT_RULES = 4; LOADER_FLAGS = OPT_TAPE | OPT_TAPE_SET | OPT_RULES   # OPT1 byte 1: what a patch needs besides its level; this tool reads tapes and sets of them, and keeps to OPR1
 KIND_SET = 0x80; SET_FILES_MAX = 8; FILE_SHIFT = 12; BLOCK_MASK = 0x03FF   # a target of several tape files; a copy's file index, above its block
 TAPE_TAG = b'TAP1'; TAPE_TABLE_MAX = 24576; RESIDUAL_MAX = 8192; TAPE_BLOCKS_MAX = 1024   # a tape table, and the data blocks it may name
 START_SIZE = 55; COPY_SIZE = 10; TAPE_FIXED = 2; MIN_RUN = 16        # a .z80 v2 header; one copy; a TAP1's clear head
@@ -49,7 +49,10 @@ BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain
 SET_FIXED = 5; SET_CRC = 4
 TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
 FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version')   # the main line's name without INF1's fix_label
-VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2   # INF1's version, shown as v and it; the description's flags
+VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2; DESC_RULES = 4   # INF1's version, shown as v and it; the description's flags
+RULES_TAG = b'OPR1'; RULES_MAX = 32; RULE_SIZE = 5; RULE_EXCLUDES = 1; RULE_NEEDS = 2; RULE_MENU_ONLY = 0x80   # OPR1: which options go together
+RULE_WORDS = {RULE_EXCLUDES: 'excludes', RULE_NEEDS: 'needs', RULE_NEEDS | RULE_MENU_ONLY: 'implies', RULE_EXCLUDES | RULE_MENU_ONLY: 'excludes (menu only)'}
+NO_CAP = 255; OLD_HOLD = 2; STATES_MAX = 65536   # the description's N with OPR1; what a reader without OPR1 holds at once; the most menu states a writer goes through
 CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
@@ -831,7 +834,7 @@ def language_info(game_language=None, codes=(), text_by=None, sets=()):
     return out
 
 def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colours=None, trainer_blocks=(), master=None, more_dumps=(), languages=None, highest_bank=None,
-         toggles=None,
+         toggles=None, rules=None,
          start=None, tape_banks=(), residual_max=None, tape_summary=None):
     """A patch from a game file (.z80, .sna, .tap or .tzx) and the .nex built from it. colours and languages: {name: path of
     the .nex with it, or (path, choice)}. more_dumps: (path, target fields) of others accepted. Before anything is returned,
@@ -839,7 +842,9 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     A tape needs start, the .z80 of the state the build starts from, and may name tape_banks: banks the .nex lists beyond
     the game's own that hold blocks of the tape, such as a multiload's, taken from the tape wherever they match it. Refused
     if more than residual_max bytes (RESIDUAL_MAX by default) of the start state are not on the tape. tape_summary, a dict,
-    gets what the tape table holds."""
+    gets what the tape table holds.
+    rules: OPR1's, as set_rules takes them; None for no block. With rules, options the rules never let be on together may
+    change the same bytes, and every combination they allow is built and checked."""
     paths = list(z80) if isinstance(z80, (list, tuple)) else [z80]
     datas = [read_file(x) for x in paths]
     with open(nex, 'rb') as g: out = g.read()
@@ -927,7 +932,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
         bl.append([SET_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges})))
     for i, one in enumerate(made):
         for other in made[i + 1:]:
-            if one[0] != other[0] or one[0] in TOGGLE_KINDS:     # toggles go with everything, even each other
+            if rules is None and (one[0] != other[0] or one[0] in TOGGLE_KINDS):     # toggles go with everything, even each other; with rules, set_rules checks
                 clash = first_overlap(one[2], other[2])
                 if clash: raise ValueError('sets %r and %r can be chosen together but both change bank %d offset %d' % (one[1], other[1], clash[0], clash[1]))
     toggled = [e for e in made if e[0] in TOGGLE_KINDS]
@@ -956,6 +961,7 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     for path, fields in more_dumps:
         if isinstance(path, (list, tuple)): f = add_target(f, game, FileSet([read_file(x) for x in path], [kind_of_name(x) for x in path]), kind_of_name(path[0]), fields)
         else: f = add_target(f, game, read_file(path), kind_of_name(path), fields)
+    if rules is not None: f = set_rules(f, game, rules)
     return f, dict(sites=count, site_bytes=len(sites), whole=[b for b, _ in whole], whole_bytes=sum(len(d) for _, d in whole), sets=sizes)
 
 def lowest_memory(nex):
@@ -1173,6 +1179,207 @@ def languages(f):
     """The names of a patch's language sets, readable without the game."""
     return [e['name'].decode('ascii', 'replace') for e in offered(f, KIND_LANGUAGE)]
 
+# ---------------------------------------------------------------- OPR1: which options go together
+
+def parse_rules(d):
+    """OPR1's rules, [(type, (kind, choice), (kind, choice))], or Wrong if the block is not that shape."""
+    if not d or d[0] > RULES_MAX or len(d) != 1 + RULE_SIZE * d[0]: raise Wrong('the option rules block is damaged')
+    out = []
+    for k in range(d[0]):
+        t, ka, ca, kb, cb = d[1 + RULE_SIZE * k:1 + RULE_SIZE * (k + 1)]
+        if t & ~RULE_MENU_ONLY not in (RULE_EXCLUDES, RULE_NEEDS): raise Wrong('the option rules block is damaged')
+        out.append((t, (ka, ca), (kb, cb)))
+    return out
+
+def rule_options(f):
+    """Every option a rule may name, as the menu offers it: {(kind, choice): (line, state)}, state being what the line
+    reads with it on: a kind's set from 1, a toggle 1."""
+    out = {}
+    for i, (kind, name, key, payload) in enumerate(menu_lines(f)):
+        if kind == 2:
+            for n, e in enumerate(payload): out[(e['kind'], e['choice'])] = (i, n + 1)
+        elif kind == 3: out[(payload['kind'], payload['choice'])] = (i, 1)
+    return out
+
+def rules_of(f):
+    """OPR1's rules, or None for a patch without the block. Wrong if a rule names an option the menu does not offer, one
+    option twice, or two sets of one kind, which cannot be on together anyway."""
+    d = [x for t, x in blocks(f)[1] if t == RULES_TAG]
+    if not d: return None
+    if len(d) > 1: raise Wrong('the option rules block is repeated')
+    rules = parse_rules(d[0]); opts = rule_options(f)
+    for t, a, b in rules:
+        if a not in opts or b not in opts or opts[a][0] == opts[b][0]: raise Wrong('the option rules block is damaged')
+    return rules
+
+def option_name(f, o):
+    for e in sets(f):
+        if (e['kind'], e['choice']) == o and e['base'] == BASE_SPRITE: return e['name'].decode('ascii', 'replace')
+    return '%s %d' % (KIND_NAMES_SET.get(o[0], 'kind %d' % o[0]), o[1])
+
+def rule_text(f, r):
+    return '%s %s %s' % (option_name(f, r[1]), RULE_WORDS[r[0]], option_name(f, r[2]))
+
+def broken_rules(rules, on, hard_only=False):
+    """The rules a set of options {(kind, choice)} breaks; with hard_only, not those the menu alone keeps to."""
+    out = []
+    for r in rules:
+        t, a, b = r
+        if hard_only and t & RULE_MENU_ONLY: continue
+        if (t & ~RULE_MENU_ONLY == RULE_EXCLUDES and a in on and b in on) or (t & ~RULE_MENU_ONLY == RULE_NEEDS and a in on and b not in on):
+            out.append(r)
+    return out
+
+def line_rules(f, rules):
+    """The rules in the menu's own terms, as its description carries them: (type, line A, state A, line B, state B)."""
+    opts = rule_options(f)
+    return [(t & ~RULE_MENU_ONLY,) + opts[a] + opts[b] for t, a, b in rules]
+
+def menu_settle(states, rules, keyed):
+    """What firmware/menu.asm does after line keyed's key has changed its state, with the description's rules (line_rules):
+    lines are changed until every rule is kept, never the keyed line or one already changed, each line at most once. Returns the
+    lines it changed, [(line, on)], or None when the rules cannot be kept that way, and then every set and toggle is off
+    (a writer makes sure that never happens). The spec's "The menu" has the same steps."""
+    kept = {keyed}; also = []
+    def note(line, on):
+        for k, (l_, _) in enumerate(also):
+            if l_ == line: also[k] = (line, on); return
+        also.append((line, on))
+    changed = True
+    while changed:
+        changed = False
+        for t, la, sa, lb, sb in rules:
+            a = states[la] == sa; b = states[lb] == sb
+            if t == RULE_EXCLUDES and a and b:
+                if lb not in kept: off = lb
+                elif la not in kept: off = la
+                else: return None
+                states[off] = 0; kept.add(off); note(off, False); changed = True
+            elif t == RULE_NEEDS and a and not b:
+                if lb in kept:
+                    if la in kept: return None
+                    states[la] = 0; kept.add(la); note(la, False)
+                else:
+                    states[lb] = sb; kept.add(lb); note(lb, True)
+                changed = True
+    return also
+
+def menu_key(states, line, counts, rules):
+    """A set's or toggle's key, with the main line on: the line steps (a toggle turns on or off), then the rules are kept.
+    counts: {line: how many sets it steps through, 1 for a toggle}. Returns menu_settle's list, or None."""
+    states[line] = (states[line] + 1) % (counts[line] + 1)
+    also = menu_settle(states, rules, line)
+    if also is None:
+        for l_ in counts: states[l_] = 0
+    return also
+
+def option_bits(st, e):
+    """{bank: the bitmap of what option e changes, as an int}."""
+    return {b: int.from_bytes(chunk[:BITMAP], 'big') for b, chunk in read_set(st, e)[1]}
+
+def overlap(x, y):
+    return any(b in y and x[b] & y[b] for b in x)
+
+def rules_report(f, st, rules):
+    """What a writer must know of a patch's rules, or Wrong: the menu's states, from all off, by its keys, every one keeping
+    the rules and every option reachable; every pair of options that can be on together changing different bytes; every
+    toggle apart from every trainer's POKEs; and whether a reader without OPR1, holding two at once with no rules, could
+    make a combination the rules forbid that would neither play by them nor be refused for overlapping."""
+    lines = menu_lines(f); opts = rule_options(f); lr = line_rules(f, rules)
+    counts = {i: (len(p) if k == 2 else 1) for i, (k, _, _, p) in enumerate(lines) if k in (2, 3)}
+    by_state = {v: o for o, v in opts.items()}
+    entry = {(e['kind'], e['choice']): e for e in sets(f) if e['base'] == BASE_SPRITE}
+    bits = {o: option_bits(st, entry[o]) for o in opts}
+    order = sorted(counts)
+    total = 1
+    for l_ in order: total *= counts[l_] + 1
+    if total > STATES_MAX: raise Wrong('the menu has %d states, more than a writer checks, %d' % (total, STATES_MAX))
+    def on_of(states): return {by_state[(l_, states[l_])] for l_ in order if states[l_]}
+    start = tuple(0 for _ in range(len(lines))); seen = {start}; todo = [start]; reached = set()
+    while todo:
+        s = todo.pop()
+        for l_ in order:
+            t = list(s); also = menu_key(t, l_, counts, lr)
+            if also is None: raise Wrong('the rules cannot be kept when %s is keyed from %s' % (lines[l_][1], sorted(option_name(f, o) for o in on_of(s)) or 'all off'))
+            if broken_rules(rules, on_of(t)): raise Wrong('the menu would break a rule')
+            t = tuple(t)
+            if t not in seen: seen.add(t); todo.append(t)
+    for s in seen: reached |= on_of(s)
+    missing = [o for o in opts if o not in reached]
+    if missing: raise Wrong('the rules leave %s impossible to turn on' % option_name(f, missing[0]))
+    import itertools
+    allowed = []
+    for combo in itertools.product(*[range(counts[l_] + 1) for l_ in order]):
+        on = {by_state[(l_, v)] for l_, v in zip(order, combo) if v}
+        if not broken_rules(rules, on): allowed.append(on)
+    together = set()
+    for on in allowed:
+        for x in on:
+            for y in on:
+                if x < y: together.add((x, y))
+    for x, y in sorted(together):
+        if overlap(bits[x], bits[y]): raise Wrong('%s and %s can be on together but change the same bytes' % (option_name(f, x), option_name(f, y)))
+    for t_ in trainers(f):
+        for b, o, v in t_[2]:
+            for x in opts:
+                if x[0] in TOGGLE_KINDS and b in bits[x] and bits[x][b] >> (BANK - 1 - o) & 1:
+                    raise Wrong('trainer %r writes a byte toggle %r changes' % (t_[1], option_name(f, x)))
+    old = []                                          # what a reader without OPR1 can make: two on at most, no rules
+    for combo in itertools.product(*[range(counts[l_] + 1) for l_ in order]):
+        on = {by_state[(l_, v)] for l_, v in zip(order, combo) if v}
+        if len(on) > OLD_HOLD or not broken_rules(rules, on): continue
+        if any(overlap(bits[x], bits[y]) for x in on for y in on if x < y): continue     # refused there before any file
+        hard = broken_rules(rules, on, hard_only=True)
+        if hard: old.append((sorted(on), hard))
+    return dict(allowed=allowed, reached=len(seen), old_unsafe=old, lines=lr)
+
+def resolve_option(f, name):
+    """An option by its name on the menu, or KIND:NAME (colours, language, toggle) when two share a name: (kind, choice)."""
+    kind = None
+    if ':' in name and name.split(':', 1)[0] in ('colours', 'language', 'toggle'):
+        kind, name = name.split(':', 1)
+    found = [o for o in rule_options(f) if option_name(f, o) == name and (kind is None or KIND_NAMES_SET[o[0]] == kind)]
+    if not found: raise Wrong('this patch offers no option called %s' % name)
+    if len(found) > 1: raise Wrong('two options are called %s: name it as colours:, language: or toggle:' % name)
+    return found[0]
+
+def rules_block(rules):
+    return bytes((len(rules),)) + b''.join(bytes((t,) + a + b) for t, a, b in rules)
+
+def set_rules(f, game, rules, check_all=True):
+    """The patch with OPR1 holding rules, [(type, option, option)], each option (kind, choice) or a name resolve_option
+    takes; [] writes the block with no rule, which lifts the two-at-once limit on its own; None removes the block. OPT1's
+    bit 2 is set only when a reader without OPR1 could make a combination the rules forbid that it would not refuse.
+    With check_all, every combination the rules allow is built and checked against its CRC. The same nonce and key."""
+    st, bl = check_key(f, game)[:2]
+    out = [[t, d] for t, d in bl if t != RULES_TAG]
+    out[0] = [b'OPT1', bytes((out[0][1][0], out[0][1][1] & ~OPT_RULES, out[0][1][2]))]
+    if rules is None: return seal(f[:CHECK_AT], out, st)
+    plain = seal(f[:CHECK_AT], out, st)
+    made = []
+    for t, a, b in rules:
+        a = a if isinstance(a, tuple) else resolve_option(plain, a); b = b if isinstance(b, tuple) else resolve_option(plain, b)
+        if t & ~RULE_MENU_ONLY not in (RULE_EXCLUDES, RULE_NEEDS) or t & ~(RULE_MENU_ONLY | 3): raise Wrong('a rule is excludes, needs or implies')
+        if a == b: raise Wrong('a rule names %s twice' % option_name(plain, a))
+        if (t, a, b) in made: raise Wrong('a rule is given twice')
+        made.append((t, a, b))
+    if len(made) > RULES_MAX: raise Wrong('a patch has at most %d rules' % RULES_MAX)
+    at = max(i for i, (t, _) in enumerate(out) if t in (b'INF1', b'TRN1', SET_TAG, HELP_TAG, b'TGT1')) + 1
+    out.insert(at, [RULES_TAG, rules_block(made)])
+    g = seal(f[:CHECK_AT], out, st)
+    rules_of(g)
+    report = rules_report(g, st, made)
+    if report['old_unsafe']:
+        out[0] = [b'OPT1', bytes((out[0][1][0], out[0][1][1] | OPT_RULES, out[0][1][2]))]
+        g = seal(f[:CHECK_AT], out, st)
+    if check_all:
+        for on in report['allowed']:
+            apply(g, game=game, colours=next((option_name(g, o) for o in on if o[0] == KIND_COLOURS), None),
+                  language=next((option_name(g, o) for o in on if o[0] == KIND_LANGUAGE), None),
+                  toggles=[option_name(g, o) for o in sorted(on) if o[0] in TOGGLE_KINDS])
+    g = bytes(g); set_rules.report = report
+    return g
+
 def check_structure(bl):
     """Everything that can be checked without the game, in the order a loader meets it: the first step of every route."""
     tags = [t for t, _ in bl]; indices = set()
@@ -1205,6 +1412,9 @@ def check_structure(bl):
     if len(served) != len(set(served)) or set(served) != tapes: raise Wrong('a tape block does not match the tape targets')
     if tapes and not snaps and not opt[1] & OPT_TAPE: raise Wrong('a patch with only tape targets must say so in its options block')
     if kinds and not singles and not opt[1] & OPT_TAPE_SET: raise Wrong('a patch with only sets of tape files must say so in its options block')
+    if tags.count(RULES_TAG) > 1: raise Wrong('the option rules block is repeated')
+    if RULES_TAG in tags: parse_rules(d[RULES_TAG])
+    elif opt[1] & OPT_RULES: raise Wrong('the options block asks for option rules the patch does not have')
 
 class Opened(tuple):
     """What check_key found: (stream, blocks, .nex CRC, .nex length), with .master and .target."""
@@ -1279,18 +1489,22 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
             if not n and len(d) != 3: raise Wrong('a bank block is the wrong length')
             whole[b] = (unzx0(st.block(b'BNK1', b)(d[3:]), n) if n else b'')
             if len(whole[b]) != n: raise Wrong('a bank has the wrong length')
-    selected = []
+    selected = []; picked = []
     for kind, wanted in ((KIND_COLOURS, colours), (KIND_LANGUAGE, language)):
         if wanted is None: continue
         found = [e for e in offered(f, kind) if e['name'] == wanted.encode()]
         if not found: raise Wrong('this patch has no %s set called %s' % (KIND_NAMES_SET[kind], wanted))
-        selected.append(read_set(st, found[0]))
+        selected.append(read_set(st, found[0])); picked.append(found[0])
     on = offered(f, KIND_TOGGLE) + offered(f, KIND_TOGGLE_LOGIC)
     on = sorted(on, key=lambda e: [x['stream'] for x in sets(f)].index(e['stream']))[:TOGGLES_MAX]
     for wanted in toggles or ():
         found = [e for e in on if e['name'] == wanted.encode()]
         if not found: raise Wrong('this patch has no toggle called %s' % wanted)
-        selected.append(read_set(st, found[0]))
+        selected.append(read_set(st, found[0])); picked.append(found[0])
+    rules = rules_of(f)
+    if rules:
+        broken = broken_rules(rules, {(e['kind'], e['choice']) for e in picked}, hard_only=True)
+        if broken: raise Wrong('the patch\'s rules do not allow that: %s' % rule_text(f, broken[0]))
     for i, one in enumerate(selected):
         for two in selected[i + 1:]:
             other = dict(two[1])
@@ -1327,7 +1541,7 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
     if zlib.crc32(bytes(out)) != expected: raise Wrong('the rebuilt .nex fails its checksum')
     written = {}
     for _, chunks in selected[len(selected) - len(toggles or ()):]:
-        for b, chunk in chunks: written[b] = chunk
+        for b, chunk in chunks: written[b] = bytes(x | y for x, y in zip(written.get(b, bytes(BITMAP)), chunk[:BITMAP]))
     for b, o, v in chosen_pokes(f, chosen):
         if b not in offs: raise Wrong('a trainer POKE is in a bank the build does not have')
         if b in written and written[b][o >> 3] & (0x80 >> (o & 7)): raise Wrong('a trainer and a toggle chosen together change the same byte')
@@ -1339,6 +1553,7 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
 MENU_TITLE = 54   # two bar rows of 27
 HELP_TAG = b'HLP1'; HELP_MAX = 64; HELP_READ = 1024; MENU_ROW = 32; MENU_LINES = 10; MENU_HOLD = 2   # help: two rows of 32
 STUB = os.path.join(HERE, '..', 'firmware', 'nxcstub.bin')   # assembled from firmware/nxcstub.asm, with firmware/menu.asm
+STUB_RULES = os.path.join(HERE, '..', 'firmware', 'nxcstub2.bin')   # the same, with MENU_RULES: for a patch with OPR1
 STUB_PARAMS = 8; STUB_DESC_END = 0x1D00; STUB_BLOCK = 57; MENU_ENTRY = 0xC000; NO_DATA = 0xFFFFFF
 STUB_SHADOW = 16; SHADOW_ROOM = ((0x1D40, 0x2000), (0x3F80, 0x4000))   # M0's room for .nexload's bytes below a stack in the entry bank
 
@@ -1422,7 +1637,13 @@ def menu_presets(f, chosen=None, colours=None, language=None, toggles=()):
         if kind == 3 and name in (toggles or ()): out[i] = 1
     for t in toggles or ():
         if not any(l[0] == 3 and l[1] == t for l in lines): raise Wrong('this patch has no toggle called %s' % t)
-    if sum(1 for i, v in out.items() if lines[i][0] >= 2 and v) > MENU_HOLD: raise Wrong('at most %d sets and toggles can be on at once' % MENU_HOLD)
+    rules = rules_of(f)
+    if rules is None:
+        if sum(1 for i, v in out.items() if lines[i][0] >= 2 and v) > MENU_HOLD: raise Wrong('at most %d sets and toggles can be on at once' % MENU_HOLD)
+    else:
+        opts = {v: o for o, v in rule_options(f).items()}
+        broken = broken_rules(rules, {opts[(i, v)] for i, v in out.items() if lines[i][0] >= 2 and v})
+        if broken: raise Wrong('the menu cannot start like that: %s' % rule_text(f, broken[0]))
     return out
 
 def menu_description(f, st=None, presets=None):
@@ -1432,8 +1653,8 @@ def menu_description(f, st=None, presets=None):
     title = next((t['title'] for t in targets(f) if t.get('title')), b'') or b''
     pub = inf1_value(f, 'publisher') or b''
     colours = (inf1_value(f, 'colours_by') or b'') if colour_sets(f) else b''
-    ver = inf1_value(f, 'version') or b''
-    d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0), MENU_HOLD, len(lines)))
+    ver = inf1_value(f, 'version') or b''; rules = rules_of(f)
+    d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0) | (DESC_RULES if rules is not None else 0), MENU_HOLD if rules is None else NO_CAP, len(lines)))
     for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), MENU_TITLE), (pub, MENU_ROW), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
         d += menu_text(v, n) + b'\0'
     if ver: d += menu_text(ver, VERSION_MAX) + b'\0'       # only with its flag, so a patch without one has the description it had
@@ -1450,10 +1671,12 @@ def menu_description(f, st=None, presets=None):
         else:
             for e in (payload if kind == 2 else [payload]): data += set_runs(read_set(st, e)[1])
     for w in where: d += struct.pack('<I', w)[:3]
+    if rules is not None:                           # only with its flag, so a patch without OPR1 has the description it had
+        d += bytes((len(rules),)) + b''.join(bytes(r) for r in line_rules(f, rules))
     return bytes(d), bytes(data)
 
-def stub_binary():
-    with open(STUB, 'rb') as g: return g.read()
+def stub_binary(rules=False):
+    with open(STUB_RULES if rules else STUB, 'rb') as g: return g.read()
 
 def menu_refusal(header, top):
     """Why a build cannot carry its menu, or None."""
@@ -1483,7 +1706,7 @@ def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=()):
     header = bytearray(bare[:512])
     m0 = dict(bl)[b'OPT1'][2] + 1
     desc, data = menu_description(f, st, presets)
-    stub = bytearray(stub_binary())
+    stub = bytearray(stub_binary(rules_of(f) is not None))
     if len(stub) + len(desc) > STUB_DESC_END: raise Wrong('the menu is too big for its bank')
     count = 1 + -(-len(data) // BANK); top = m0 + count - 1
     why = menu_refusal(header, top)
@@ -1791,6 +2014,28 @@ def find_game(patch_path, f=None):
             return paths, FileSet([read_file(p) for p in paths], [k for _, k, _ in e['files']])
     raise Wrong('%s: needs this game file: %s' % ('Wrong game file for this patch' if wrong else 'Game not beside the patch', needs))
 
+def rule_arguments(ap):
+    ap.add_argument('--excludes', action='append', default=[], metavar='A=B', help='options A and B are never on together; turning one on turns the other off. Names as on the menu, or colours:, language:, toggle: and the name; repeatable')
+    ap.add_argument('--needs', action='append', default=[], metavar='A=B', help='A works only with B on: turning A on turns B on, turning B off turns A off; repeatable')
+    ap.add_argument('--implies', action='append', default=[], metavar='A=B', help='as --needs in the menu, for an A that turns B on by itself when it runs, so that A alone still plays, as a reader without rules may make it; repeatable')
+    ap.add_argument('--no-cap', action='store_true', help='write OPR1 even with no rule, so that any options may be on together')
+
+def rules_from(a):
+    """The rules the arguments give, or None when they give none and no --no-cap."""
+    out = []
+    for items, t in ((a.excludes, RULE_EXCLUDES), (a.needs, RULE_NEEDS), (a.implies, RULE_NEEDS | RULE_MENU_ONLY)):
+        for item in items:
+            x, eq, y = item.partition('=')
+            if not eq or not x or not y: raise Wrong('%s is not A=B' % item)
+            out.append((t, x, y))
+    return out if out or a.no_cap else None
+
+def print_rules(f):
+    rules = rules_of(f)
+    if rules is None: return
+    print('options: any together' + ('' if rules else ', no rules') + (' (older loaders refuse it)' if dict(blocks(f)[1])[b'OPT1'][1] & OPT_RULES else ''))
+    for r in rules: print('rule:', rule_text(f, r))
+
 def main(argv):
     try:
         run(argv)
@@ -1879,6 +2124,19 @@ def run(argv):
         with open(a.output, 'wb') as g: g.write(f)
         print('menu line:', credit_line(f)); print('wrote', a.output, len(f), 'bytes')
         return
+    if argv[:1] == ['rules']:
+        ap = argparse.ArgumentParser(prog='nxc.py rules', description="Set which options go together (OPR1), keeping the patch's key. With no rule given, the block is written with none, which lifts the limit of two at once on its own.")
+        ap.add_argument('patch'); ap.add_argument('game'); ap.add_argument('-o', '--output', required=True)
+        ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a set of tapes; repeatable, in order')
+        rule_arguments(ap)
+        ap.add_argument('--remove', action='store_true', help='remove the block: the menu holds two at once again')
+        a = ap.parse_args(argv[1:])
+        refuse_same(a.output, a.patch, a.game, *a.also)
+        rules = None if a.remove else (rules_from(a) or [])
+        f = set_rules(read_file(a.patch), game_arg(a.game, a.also), rules)
+        with open(a.output, 'wb') as g: g.write(f)
+        print_rules(f); print('wrote', a.output, len(f), 'bytes')
+        return
     if argv[:1] == ['make']:
         ap = argparse.ArgumentParser(prog='nxc.py make', description="Package a finished .nex and the game it was built from as a patch.")
         ap.add_argument('nex'); ap.add_argument('game', help='the .z80, .sna, .tap or .tzx the .nex was built from'); ap.add_argument('-o', '--output', required=True)
@@ -1903,6 +2161,7 @@ def run(argv):
         ap.add_argument('--game-language', metavar='CODE', help="the language the game itself is in, as an ISO 639 code such as en")
         ap.add_argument('--language-code', action='append', default=[], metavar='NAME=CODE', help="a language set's ISO 639 code; repeatable")
         ap.add_argument('--text-by', help='who translated the text; kept in INF1, not on the menu')
+        rule_arguments(ap)
         a = ap.parse_args(argv[1:])
         refuse_same(a.output, a.nex, a.game, *a.also)
         def named(items):
@@ -1933,7 +2192,7 @@ def run(argv):
         tog = {n: (p_, False) for n, p_ in named(a.toggle).items()}
         tog.update({n: (p_, True) for n, p_ in named(a.toggle_logic).items()})
         f, made = make([a.game] + a.also if a.also else a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank, toggles=tog,
-                       start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary)
+                       rules=rules_from(a), start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary)
         if summary:
             print('tape: %d data blocks; %d copies take %d bytes of the start state from it; %d bytes in %d sites are not on it; table %d bytes'
                   % (summary['blocks'], summary['copies'], summary['from_tape'], summary['residual'], summary['sites'], summary['table']))
@@ -1942,8 +2201,9 @@ def run(argv):
         with open(a.output, 'wb') as g: g.write(f)
         print('rebuilds it exactly, MD5', info['nex_md5']); print(memory_text(dict(blocks(f)[1])[b'OPT1'][2]))
         together = bool(colour_sets(f)) + bool(languages(f)) + len(toggles_of(f))
-        if together > 2:
-            print('note: %d choices can be on together; firmware/nexclash.asm holds 2 at once, so its menu lets no third be turned on' % together)
+        if together > OLD_HOLD and rules_of(f) is None:
+            print('note: %d choices can be on together, but without OPR1 a menu lets no more than %d be on at once: --no-cap, or rules, lift that' % (together, OLD_HOLD))
+        print_rules(f)
         for one in made["sets"]:
             print('set %s: %d bytes decoded in %d banks, %d at most at once, %d stored' % (one['name'], one['decoded'], one['banks'], one['largest'], one['stored']))
         print('wrote', a.output, len(f), 'bytes')
@@ -1978,6 +2238,7 @@ def run(argv):
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
     if toggles_of(f): print('toggles:', ', '.join(n + (' (changes the game logic)' if lg else '') for n, lg in toggles_of(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
+    print_rules(f)
     print('version:', patch_version(f) or '(none)')
     print('needs', memory_text(dict(blocks(f)[1]).get(b'OPT1', bytes(3))[2:3][0] if len(dict(blocks(f)[1]).get(b'OPT1', b'')) == 3 else 0))
     for t in targets(f):

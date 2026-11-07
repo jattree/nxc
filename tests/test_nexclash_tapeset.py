@@ -162,8 +162,8 @@ class SetLoader(T.Base):
 @T.needs_tools
 @unittest.skipUnless(T.ZX0_TOOL.exists(), "the zx0 compressor is missing: set NXC_ZX0_DIR")
 class TapeMemory(T.Base):
-    def test_a_tape_and_two_sets_say_120k(self) -> None:
-        """A tape's table (3 pages) and a set of each kind (3 each) over the 6 every run takes: 15 pages, 120K."""
+    def test_a_tape_and_two_sets_say_96k(self) -> None:
+        """A tape's table (3 pages) and the sets' 3 pages, however many are chosen, over the 6 every run takes: 12 pages, 96K."""
         blocks = G.data_blocks()
         start = G.start_banks(blocks)
         nex, extra = G.build(start, blocks, nxc.ORDER)
@@ -186,10 +186,10 @@ class TapeMemory(T.Base):
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), bytes(both))
-        self.assertEqual(m.peak_pages, 15)
-        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "enter"], free_pages=14)
+        self.assertEqual(m.peak_pages, 12)
+        m = self.machine({"patch.nxc": patch, "game.tap": tap}, keys=["2", "3", "enter"], free_pages=11)
         failed, message = m.run('"patch.nxc"')
-        self.assert_refused(m, failed, message, "Needs 120K free RAM")
+        self.assert_refused(m, failed, message, "Needs 96K free RAM")
 
 
 if __name__ == "__main__":

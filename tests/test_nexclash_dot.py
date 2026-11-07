@@ -1449,12 +1449,10 @@ class Choices:
     ROOM = ('db "patch and your own copy.",13', 'db "p",13')     # the code nearly fills its room: a control may need more
 
     SET_BROKEN = {
-        "the set never applied": [("""        call    apply_sets
-        ld      hl,WORK
+        "the set never applied": [("""        call    nz,apply_chunk
 """, """        nop
         nop
         nop
-        ld      hl,WORK
 """)],
         "the output's CRC not checked": [("""        ld      hl,crc
         ld      de,want
@@ -1465,14 +1463,16 @@ class Choices:
         nop
         nop
 """)],
-        "the CRC run before the set": [("""        call    apply_sets
+        "the CRC run before the set": [(""".emit:  ld      a,1
+        call    bank_sets
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
-""", """        ld      hl,WORK
+""", """.emit:  ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
-        call    apply_sets
+        ld      a,1
+        call    bank_sets
 """)],
         "the index taken as 0": [("""        ld      a,(cur_stream)
         ld      (set_tag+3),a
@@ -1503,22 +1503,14 @@ class Choices:
         ld      (set_choices),a
         ld      (set_choices+1),a
 """, "")],
-        "a chunk left over is passed": [("""        ld      hl,set_recs+4
-        call    is_zero32
+        "a chunk left over is passed": [("""        pop     hl
         jp      nz,bad_patch
-        ld      hl,set_recs+REC+4
-        call    is_zero32
-        jp      nz,bad_patch
-""", """        ld      hl,set_recs+4
-        call    is_zero32
+        ld      de,REC
+""", """        pop     hl
         nop
         nop
         nop
-        ld      hl,set_recs+REC+4
-        call    is_zero32
-        nop
-        nop
-        nop
+        ld      de,REC
 """)],
         "a set not checked before the file is made": [("""        call    check_sets
 """, """        ld      a,1
