@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Rambo: First Blood II
   Publisher   Ocean, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,12 +29,19 @@
               layer behind the jungle that scrolls with the terrain. A painted
               set, colourist not named.
 
+  Changes     1.1: the hooks hand back the CPU speed the game was running at,
+              instead of always dropping to 3.5 MHz
+
   Note        Known issues: when you board the helicopter, its rotor tips are
               drawn where they belong, where the original wraps them onto the
               next row (a small difference from the original). Missing: pace
-              not measured against the original; the cheats are unplayed by a
-              person; not reached in testing: the prison camp and several
-              enemy types; hardware untested.
+              against the original not measured like for like: the game has no
+              frame sync and keeps interrupts off, so a run parts from the
+              original's within a few updates; such runs scattered from -4.7%
+              to +2.2% (JNext, 2026-11-07), and against 1.0 this version
+              measured +0.8%; the cheats are unplayed by a person; not reached
+              in testing: the prison camp and several enemy types; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -53,19 +60,26 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      3 script recordings, 55281 frames, IDENTICAL, default and
-              Enhanced builds, plus long1 30059 frames IDENTICAL; dirt checked
-              against the scenery at every blit, offset 0; 17/17 negatives
-              detected; heli hand-made state: 2 blits differ, the original's
-              rotor wrap; loading stub unchanged since its JNext check
+  Replay      1.1 (NexClash main 102091f, selftest --game rambo --verify): 3
+              recordings IDENTICAL for the default and the Enhanced build
+              (55,281 frames each), unit 1,224 cases PASS, negatives 17/17. 3
+              script recordings, 55281 frames, IDENTICAL, default and Enhanced
+              builds, plus long1 30059 frames IDENTICAL; dirt checked against
+              the scenery at every blit, offset 0; 17/17 negatives detected;
+              heli hand-made state: 2 blits differ, the original's rotor wrap;
+              loading stub unchanged since its JNext check
 
-  Emulator    JNext 1.1.104 headless: Enhanced dirt moved with the scenery on
-              136 of 136 moving frames, one screenshot per frame over 1190
-              frames north, east, west and south, 0 frames split mid-picture;
-              real loader from the Browser, MD5 exact, default and Enhanced
-              reach play, frames viewed
+  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card, default and
+              Enhanced: menu v1.1, loading screen, title, play (Enhanced: the
+              dirt layer and coloured figures); /tmp/NEXCLASH.NEX equal to
+              apply for both. JNext 1.1.104 headless: Enhanced dirt moved with
+              the scenery on 136 of 136 moving frames, one screenshot per
+              frame over 1190 frames north, east, west and south, 0 frames
+              split mid-picture; real loader from the Browser, MD5 exact,
+              default and Enhanced reach play, frames viewed
 
   Coverage    start of the game, score to about 3900, lives to 0; helicopter
               (types 4E, 4F, 52) only from a hand-made state, 2 blits differ
