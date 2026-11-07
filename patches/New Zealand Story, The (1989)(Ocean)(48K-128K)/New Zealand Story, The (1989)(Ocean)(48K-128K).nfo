@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The New Zealand Story
   Publisher   Ocean, 1989
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -40,7 +40,8 @@
               scenes no longer slow down; sprite/scenery handover and
               occasional scroll jumps fixed; Smooth scrolling reworked so the
               camera moves evenly. 1.2: Backdrops: original painted backdrops
-              behind every stage, one set per world.
+              behind every stage, one set per world. 1.3: works on NextZXOS
+              v2.10 (System/Next 26.11).
 
   Note        The whole game in colour: the scenery is drawn on the Next's
               tilemap from the game's own map, and every figure, fruit and
@@ -54,10 +55,9 @@
               play runs about 10% faster than the original (by design: drawing
               at 28 MHz, capped at the original's quiet-scene pace); a stage
               start or new life takes about a quarter of a second longer while
-              the backdrop is drawn; no parallax; not yet checked in full on
-              NextZXOS v2.10 (lacks the v2.10 start-up fix). Missing: a
-              backdrop of its own for every stage; no complete playthrough
-              checked; hardware untested.
+              the backdrop is drawn; no parallax. Missing: a backdrop of its
+              own for every stage; no complete playthrough checked; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -76,7 +76,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      1.0 tested by Dean Woodyatt; 1.2 played by the owner in JNext
-              2026-11-06 (Backdrops): approved
+              2026-11-06 (Backdrops): approved; 1.3 approved by the owner in
+              JNext, 2026-11-07
 
   Replay      v1.2 Backdrops: 34 normalized-time lockstep runs (17 start
               states: worlds 1-5 and six boss-level starts; default and Smooth
@@ -92,16 +93,21 @@
               v1.1's 52 replays, 467 figure cases and negatives carry over
               unchanged.
 
-  Emulator    JNext 1.1.104 headless, NextZXOS v2.09 card. Pace
-              (nexclash.pace, 10 trials per scene, 60 updates): Backdrops
-              against v1.1 0.00% quiet, +0.08% busy, 0.00% scroll; against the
-              original +2.29%, -9.63%, -1.19% (v1.1 +2.29%, -9.70%, -1.19%).
-              Flicker: none found with Backdrops; with Smooth too, 17 frames
-              where sprites and the ULA screen memory change apart, the ULA
-              being hidden in the play area. 15-minute soak: no freeze, loop
-              or crash. Menu .nex: Backdrops on by default, reaches play.
-              Frame strips for worlds 1-5 viewed. A stage start or new life is
-              about a quarter of a second longer while its backdrop is drawn.
+  Emulator    1.3 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu, ENTER:
+              /tmp/NEXCLASH.NEX equal to the bare build (342c8397), and with
+              Backdrops on (679d8c14); title, READY and play reached in both,
+              backdrops shown, frames viewed; no person played it. 1.2: JNext
+              1.1.104 headless, NextZXOS v2.09 card. Pace (nexclash.pace, 10
+              trials per scene, 60 updates): Backdrops against v1.1 0.00%
+              quiet, +0.08% busy, 0.00% scroll; against the original +2.29%,
+              -9.63%, -1.19% (v1.1 +2.29%, -9.70%, -1.19%). Flicker: none
+              found with Backdrops; with Smooth too, 17 frames where sprites
+              and the ULA screen memory change apart, the ULA being hidden in
+              the play area. 15-minute soak: no freeze, loop or crash. Menu
+              .nex: Backdrops on by default, reaches play. Frame strips for
+              worlds 1-5 viewed. A stage start or new life is about a quarter
+              of a second longer while its backdrop is drawn.
 
   Coverage    Worlds 1-5 and six boss-level start states; all 21 levels'
               backdrops by the model check; stage starts and new lives (the
