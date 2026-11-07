@@ -24,6 +24,9 @@
 ;   3 bytes for each line, the writer's; and with flags bit 2 (MENU_RULES only)
 ;   the rules: their count, then each one's type (1 excludes, 2 needs), line A,
 ;   the state that is A on, line B, the state that is B on.
+; With MENU_NEEDS (the dot command's own menu only, never a stub), a kind of set
+; with no sets is an option the machine has too little memory for: it reads N/A,
+; and its key changes nothing.
 ;
 ; No Z80N instruction is used, so that it runs on a plain Z80 emulator.
 
@@ -862,6 +865,12 @@ md_value:
         inc     hl
         inc     hl
         ld      a,(hl)                  ; one set: ON or OFF
+        ifdef MENU_NEEDS
+        or      a                       ; no set at all: an option the machine has too little
+        ld      a,2                     ; memory for (a SET3), N/A; its key steps through none
+        ret     z
+        ld      a,(hl)
+        endif
         dec     a
         jr      z,.state
         dec     hl

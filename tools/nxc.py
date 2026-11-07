@@ -47,6 +47,9 @@ KIND_NAMES_SET = {KIND_COLOURS: 'colours', KIND_LANGUAGE: 'language', KIND_TOGGL
 TOGGLE_KINDS = (KIND_TOGGLE, KIND_TOGGLE_LOGIC)
 BASE_SPRITE = 1; BASE_PLAIN = 2                    # the sprite build; the plain game, reserved
 SET_FIXED = 5; SET_CRC = 4
+BIG_TAG = b'SET3'; BIG_CARRIER_INDEX = 254; BIG_TABLE_INDEX = 253   # an option with a memory need and banks of its own; its streams for the carrier's CRC and its table
+BIG_KINDS = (KIND_COLOURS, KIND_LANGUAGE); NEXT_1MB = 47; NEXT_2MB = 111   # what a SET3 may be, in this version; the highest 16K bank of each Next
+NEEDS_HELP = 'Needs a 2MB Next'                     # the help a reader shows on the line of an option the machine has too little memory for
 TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
 FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version')   # the main line's name without INF1's fix_label
 VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2; DESC_RULES = 4   # INF1's version, shown as v and it; the description's flags
@@ -835,7 +838,7 @@ def language_info(game_language=None, codes=(), text_by=None, sets=()):
 
 def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colours=None, trainer_blocks=(), master=None, more_dumps=(), languages=None, highest_bank=None,
          toggles=None, rules=None,
-         start=None, tape_banks=(), residual_max=None, tape_summary=None):
+         start=None, tape_banks=(), residual_max=None, tape_summary=None, set_top=None):
     """A patch from a game file (.z80, .sna, .tap or .tzx) and the .nex built from it. colours and languages: {name: path of
     the .nex with it, or (path, choice)}. more_dumps: (path, target fields) of others accepted. Before anything is returned,
     every dump named must rebuild exactly that .nex.
@@ -844,7 +847,10 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     if more than residual_max bytes (RESIDUAL_MAX by default) of the start state are not on the tape. tape_summary, a dict,
     gets what the tape table holds.
     rules: OPR1's, as set_rules takes them; None for no block. With rules, options the rules never let be on together may
-    change the same bytes, and every combination they allow is built and checked."""
+    change the same bytes, and every combination they allow is built and checked.
+    A colour or language .nex that lists banks the build does not becomes a SET3: an option with a memory need and those
+    banks of its own, which a reader offers only on a machine that has the memory. Its need is the highest bank its .nex
+    needs, or set_top's {name: bank} if higher. At most one, and no other set of its kind."""
     paths = list(z80) if isinstance(z80, (list, tuple)) else [z80]
     datas = [read_file(x) for x in paths]
     with open(nex, 'rb') as g: out = g.read()
@@ -909,13 +915,18 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     for n, (path, logic) in toggles.items():
         chosen.append((KIND_TOGGLE_LOGIC if logic else KIND_TOGGLE, n, path))
     if len(chosen) > SETS_MAX: raise ValueError('a patch can have at most %d sets' % SETS_MAX)
-    made = []; next_choice = {}; sizes = []; choice_of = {}
+    made = []; next_choice = {}; sizes = []; choice_of = {}; big_pending = []; painted_of = {}
     for stream_index, (kind, name, source) in enumerate(chosen):
         path, choice = source if isinstance(source, tuple) else (source, None)
         next_choice[kind] = next_choice.get(kind, 0) + 1
         choice = next_choice[kind] if choice is None else choice
         choice_of[(kind, name)] = choice
         with open(path, 'rb') as g: painted = g.read()
+        added = [b for b in range(112) if painted[18 + b] and not out[18 + b]] if len(painted) >= 512 else []
+        if added:
+            if kind not in BIG_KINDS: raise ValueError('only a colour or language set may add banks')
+            if big_pending: raise ValueError('a patch can have only one set that adds banks')
+            big_pending.append((stream_index, kind, choice, name, painted, added)); continue
         if painted[:512] != out[:512] or len(painted) != len(out) or nex_screen(painted) != screen_of_out:
             raise ValueError('a set must only change banks of the same build')
         paint = nex_banks(painted); ranges = []; frames = b''; plain_size = held = 0
@@ -927,9 +938,47 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
             ranges += [(b, *r) for r in spans(chunk_offsets(chunk))]; plain_size += len(chunk); held = max(held, len(chunk))
             stream = set_use(st, stream_index, b)(zx0(chunk))
             frames += struct.pack('<BH', b, len(stream)) + stream
-        made.append((kind, name, sorted(ranges)))
+        made.append((kind, name, sorted(ranges))); painted_of[stream_index] = (kind, paint)
         body = bytes((stream_index, kind, choice, BASE_SPRITE, len(label))) + label + set_use(st, stream_index, SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(painted))) + frames
         bl.append([SET_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges})))
+    for stream_index, kind, choice, name, painted, added in big_pending:
+        if any(k == kind for k, _ in painted_of.values()): raise ValueError('a set that adds banks has its kind\'s line to itself')
+        if bytes(extended_header(out[:512], dict(added=added))) != painted[:512] or nex_screen(painted) != screen_of_out \
+                or len(painted) != len(out) + BANK * len(added):
+            raise ValueError('a set that adds banks must be the same build with those banks listed, and nothing else in its header changed')
+        paint = nex_banks(painted); label = name.encode('ascii')
+        if not 1 <= len(label) <= SET_NAME_MAX: raise ValueError('set name %r must be 1 to %d characters' % (name, SET_NAME_MAX))
+        top = max(lowest_memory(painted), (set_top or {}).get(name, 0))
+        if top > 111: raise ValueError('a set cannot need more than bank 111')
+        ranges = []; frames = b''; plain_size = held = 0
+        for b in ORDER:
+            if b not in paint: continue
+            chunk = make_chunk(want[b] if b in want else bytes(BANK), paint[b])
+            if chunk is None: continue
+            ranges += [(b, *r) for r in spans(chunk_offsets(chunk))]; plain_size += len(chunk); held = max(held, len(chunk))
+            stream = set_use(st, stream_index, b)(zx0(chunk))
+            frames += struct.pack('<BH', b, len(stream)) + stream
+        offs = {}; at = 512 + len(screen_of_out)
+        for b in ORDER:
+            if painted[18 + b]: offs[b] = at; at += BANK
+        carrier = bytearray(painted)
+        for b in want: carrier[offs[b]:offs[b] + BANK] = want[b]
+        table = sorted(painted_of)
+        crcs = []
+        for other in table:                           # this option with each other set alone: the same length and layout
+            both = bytearray(painted); paint2 = painted_of[other][1]
+            for b in want:
+                if paint2[b] != want[b]:
+                    for o in range(BANK):
+                        if paint2[b][o] != want[b][o]: both[offs[b] + o] = paint2[b][o]
+            crcs.append(zlib.crc32(bytes(both)))
+        made.append((kind, name, sorted(r for r in ranges if r[0] in want)))
+        body = (bytes((stream_index, kind, choice, BASE_SPRITE, len(label))) + label + bytes((top, len(added))) + bytes(added)
+                + bytes((len(table),)) + bytes(table) + set_use(st, stream_index, SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(painted)))
+                + set_use(st, stream_index, BIG_CARRIER_INDEX)(struct.pack('<I', zlib.crc32(bytes(carrier))))
+                + set_use(st, stream_index, BIG_TABLE_INDEX)(struct.pack('<%dI' % len(crcs), *crcs)) + frames)
+        bl.append([BIG_TAG, body]); sizes.append(dict(name=name, decoded=plain_size, largest=held, stored=len(frames), banks=len({r[0] for r in ranges}),
+                                                      top=top, added=added))
     for i, one in enumerate(made):
         for other in made[i + 1:]:
             if rules is None and (one[0] != other[0] or one[0] in TOGGLE_KINDS):     # toggles go with everything, even each other; with rules, set_rules checks
@@ -958,6 +1007,9 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     bl.insert(0, [b'OPT1', bytes((wanted, flags, highest_bank))])
     f = seal(MAGIC + bytes((1, 0)) + nonce, bl, st)
     if apply(f, game=game) != out: raise Wrong('the patch does not rebuild the build it was made from')
+    for stream_index, kind, choice, name, painted, added in big_pending:
+        if apply(f, game=game, **{'colours' if kind == KIND_COLOURS else 'language': name}) != painted:
+            raise Wrong('the patch does not rebuild the build with %s' % name)
     for path, fields in more_dumps:
         if isinstance(path, (list, tuple)): f = add_target(f, game, FileSet([read_file(x) for x in path], [kind_of_name(x) for x in path]), kind_of_name(path[0]), fields)
         else: f = add_target(f, game, read_file(path), kind_of_name(path), fields)
@@ -1096,10 +1148,22 @@ def blocks(f):
         out.append((tag, f[i:i + n])); i += n
     return nonce, out
 
-def parse_set(d):
-    """The clear part of a SET2 block, or Wrong."""
+def parse_set(d, big=False):
+    """The clear part of a SET2 block, or with big of a SET3, or Wrong. A SET3 adds, after the name: the highest 16K bank
+    the game needs with it on, its added banks (a count, then each), and the stream indices of the SET2 blocks its table
+    has a CRC for (a count, then each); its data is then its three CRCs, its table and its chunks."""
     if len(d) < SET_FIXED or not 1 <= d[4] <= SET_NAME_MAX or len(d) < SET_FIXED + d[4]: raise Wrong('a set block is damaged')
-    return dict(stream=d[0], kind=d[1], choice=d[2], base=d[3], name=d[SET_FIXED:SET_FIXED + d[4]], data=d[SET_FIXED + d[4]:])
+    e = dict(stream=d[0], kind=d[1], choice=d[2], base=d[3], name=d[SET_FIXED:SET_FIXED + d[4]], data=d[SET_FIXED + d[4]:], big=big)
+    if not big: return e
+    x = e['data']
+    if len(x) < 2 or len(x) < 3 + x[1]: raise Wrong('a set block is damaged')
+    k = x[1]; added = list(x[2:2 + k]); m = x[2 + k]
+    if len(x) < 3 + k + m: raise Wrong('a set block is damaged')
+    e.update(top=x[0], added=added, table=list(x[3 + k:3 + k + m]), data=x[3 + k + m:])
+    if e['top'] > NEXT_2MB or any(b >= 112 or b < 8 for b in added) or added != sorted(set(added)) or (added and e['top'] < added[-1]) \
+            or len(set(e['table'])) != m:
+        raise Wrong('a set block is damaged')
+    return e
 
 def set_use(st, stream, index):
     """The xor function for one of a set's streams: tag SEB and its stream index, index its bank or SET_CRC_INDEX."""
@@ -1138,6 +1202,11 @@ def read_set(st, e):
     if len(d) < SET_CRC: raise Wrong('a set is damaged')
     crc = struct.unpack('<I', set_use(st, e['stream'], SET_CRC_INDEX)(d[:SET_CRC]))[0]
     i = SET_CRC; out = []; last = -1
+    if e.get('big'):
+        m = len(e['table'])
+        if len(d) < SET_CRC * (2 + m): raise Wrong('a set is damaged')
+        e['carrier'] = struct.unpack('<I', set_use(st, e['stream'], BIG_CARRIER_INDEX)(d[i:i + SET_CRC]))[0]; i += SET_CRC
+        e['crcs'] = dict(zip(e['table'], struct.unpack('<%dI' % m, set_use(st, e['stream'], BIG_TABLE_INDEX)(d[i:i + SET_CRC * m])))); i += SET_CRC * m
     while i < len(d):
         if i + SET_CHUNK_HEAD > len(d): raise Wrong('a set is damaged')
         b, n = struct.unpack_from('<BH', d, i); i += SET_CHUNK_HEAD
@@ -1159,12 +1228,31 @@ def first_overlap(a, b):
     return None
 
 def sets(f):
-    """Every set block, readable without the game: stream, kind, choice, base, name, data."""
+    """Every SET2 block, readable without the game: stream, kind, choice, base, name, data."""
     return [parse_set(d) for t, d in blocks(f)[1] if t == SET_TAG]
 
-def offered(f, kind):
-    """The sets of a kind a loader offers, in file order: those whose base is the sprite build."""
-    return [e for e in sets(f) if e['kind'] == kind and e['base'] == BASE_SPRITE]
+def big_sets(f):
+    """Every SET3 block, readable without the game: as sets gives, and top, added, table."""
+    return [parse_set(d, True) for t, d in blocks(f)[1] if t == BIG_TAG]
+
+def big_offered(f, kind=None):
+    """The SET3 options a reader offers (of one kind): those with the sprite build as their base and a kind this version has."""
+    return [e for e in big_sets(f) if e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS][:1] if kind is None else \
+        [e for e in big_offered(f) if e['kind'] == kind]
+
+def offered(f, kind, big=False):
+    """The sets of a kind a loader offers, in file order: those whose base is the sprite build. With big, a SET3 of that
+    kind too, which has its kind's line to itself, so is the kind's only set."""
+    return big_offered(f, kind) if big and big_offered(f, kind) else [e for e in sets(f) if e['kind'] == kind and e['base'] == BASE_SPRITE]   # never both: check_structure
+
+def option_top(f, e=None):
+    """The highest 16K bank the rebuilt game needs: OPT1's byte 2, or with SET3 option e on, its own."""
+    opt = dict(blocks(f)[1])[b'OPT1']
+    return max(opt[2], e['top']) if e is not None and e.get('big') else opt[2]
+
+def fits(f, e, ram_top):
+    """Whether option e can be offered on a machine whose highest 16K bank is ram_top (None: any)."""
+    return ram_top is None or not e.get('big') or e['top'] <= ram_top
 
 def colour_sets(f):
     """The names of a patch's colour sets, readable without the game."""
@@ -1191,11 +1279,11 @@ def parse_rules(d):
         out.append((t, (ka, ca), (kb, cb)))
     return out
 
-def rule_options(f):
-    """Every option a rule may name, as the menu offers it: {(kind, choice): (line, state)}, state being what the line
-    reads with it on: a kind's set from 1, a toggle 1."""
+def rule_options(f, ram_top=None):
+    """Every option the menu offers, as a rule would name it: {(kind, choice): (line, state)}, state being what the line
+    reads with it on: a kind's set from 1, a toggle 1. A rule may not name a SET3 option in this version."""
     out = {}
-    for i, (kind, name, key, payload) in enumerate(menu_lines(f)):
+    for i, (kind, name, key, payload) in enumerate(menu_lines(f, ram_top)):
         if kind == 2:
             for n, e in enumerate(payload): out[(e['kind'], e['choice'])] = (i, n + 1)
         elif kind == 3: out[(payload['kind'], payload['choice'])] = (i, 1)
@@ -1208,12 +1296,13 @@ def rules_of(f):
     if not d: return None
     if len(d) > 1: raise Wrong('the option rules block is repeated')
     rules = parse_rules(d[0]); opts = rule_options(f)
+    big = {(e['kind'], e['choice']) for e in big_offered(f)}
     for t, a, b in rules:
-        if a not in opts or b not in opts or opts[a][0] == opts[b][0]: raise Wrong('the option rules block is damaged')
+        if a not in opts or b not in opts or opts[a][0] == opts[b][0] or a in big or b in big: raise Wrong('the option rules block is damaged')
     return rules
 
 def option_name(f, o):
-    for e in sets(f):
+    for e in sets(f) + big_offered(f):
         if (e['kind'], e['choice']) == o and e['base'] == BASE_SPRITE: return e['name'].decode('ascii', 'replace')
     return '%s %d' % (KIND_NAMES_SET.get(o[0], 'kind %d' % o[0]), o[1])
 
@@ -1230,9 +1319,9 @@ def broken_rules(rules, on, hard_only=False):
             out.append(r)
     return out
 
-def line_rules(f, rules):
+def line_rules(f, rules, ram_top=None):
     """The rules in the menu's own terms, as its description carries them: (type, line A, state A, line B, state B)."""
-    opts = rule_options(f)
+    opts = rule_options(f, ram_top)
     return [(t & ~RULE_MENU_ONLY,) + opts[a] + opts[b] for t, a, b in rules]
 
 def menu_settle(states, rules, keyed):
@@ -1288,7 +1377,8 @@ def rules_report(f, st, rules):
     lines = menu_lines(f); opts = rule_options(f); lr = line_rules(f, rules)
     counts = {i: (len(p) if k == 2 else 1) for i, (k, _, _, p) in enumerate(lines) if k in (2, 3)}
     by_state = {v: o for o, v in opts.items()}
-    entry = {(e['kind'], e['choice']): e for e in sets(f) if e['base'] == BASE_SPRITE}
+    entry = {(e['kind'], e['choice']): e for e in sets(f) + big_offered(f) if e['base'] == BASE_SPRITE}
+    big = set(entry) - {(e['kind'], e['choice']) for e in sets(f)}
     bits = {o: option_bits(st, entry[o]) for o in opts}
     order = sorted(counts)
     total = 1
@@ -1327,7 +1417,7 @@ def rules_report(f, st, rules):
     old = []                                          # what a reader without OPR1 can make: two on at most, no rules
     for combo in itertools.product(*[range(counts[l_] + 1) for l_ in order]):
         on = {by_state[(l_, v)] for l_, v in zip(order, combo) if v}
-        if len(on) > OLD_HOLD or not broken_rules(rules, on): continue
+        if on & big or len(on) > OLD_HOLD or not broken_rules(rules, on): continue    # a reader without OPR1 knows no SET3 either
         if any(overlap(bits[x], bits[y]) for x in on for y in on if x < y): continue     # refused there before any file
         hard = broken_rules(rules, on, hard_only=True)
         if hard: old.append((sorted(on), hard))
@@ -1399,8 +1489,8 @@ def check_structure(bl):
             count += 1; kinds += readable(e); snaps += e['kind'] in SNAPSHOT_KINDS; singles += e['kind'] in KIND_NAMES
             if is_tape(e) and readable(e): tapes.add(e['index'])
         elif t == b'TRN1': parse_trn1(data)
-        elif t == SET_TAG:
-            index = parse_set(data)['stream']
+        elif t in (SET_TAG, BIG_TAG):
+            index = parse_set(data, t == BIG_TAG)['stream']
             if index in indices: raise Wrong('a set repeats a stream index')
             indices.add(index)
         elif t == TAPE_TAG:
@@ -1415,6 +1505,15 @@ def check_structure(bl):
     if tags.count(RULES_TAG) > 1: raise Wrong('the option rules block is repeated')
     if RULES_TAG in tags: parse_rules(d[RULES_TAG])
     elif opt[1] & OPT_RULES: raise Wrong('the options block asks for option rules the patch does not have')
+    plain = {parse_set(x)['stream'] for t, x in bl if t == SET_TAG}
+    offered_big = None
+    for t, x in bl:
+        if t == BIG_TAG:
+            e = parse_set(x, True)
+            if e['top'] < opt[2] or not set(e['table']) <= plain: raise Wrong('a set block is damaged')
+            if offered_big is None and e['base'] == BASE_SPRITE and e['kind'] in BIG_KINDS: offered_big = e
+    if offered_big is not None and any(parse_set(x)['kind'] == offered_big['kind'] and parse_set(x)['base'] == BASE_SPRITE for t, x in bl if t == SET_TAG):
+        raise Wrong('a set block is damaged')                # a SET3's kind's line is its own
 
 class Opened(tuple):
     """What check_key found: (stream, blocks, .nex CRC, .nex length), with .master and .target."""
@@ -1465,18 +1564,31 @@ def read_screen(bl, st, header):
     if len(parts) != chunks: raise Wrong('a screen block is missing')
     return b''.join(parts[k] for k in range(chunks))
 
-def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, language=None, toggles=()):
+def extended_header(header, e):
+    """The .nex header with SET3 option e's banks added: each one's flag, the count, and byte 8 if one is above a 1MB Next's."""
+    h = bytearray(header)
+    for b in e['added']:
+        if h[18 + b]: raise Wrong('a set adds a bank the .nex already lists')
+        h[18 + b] = 1
+    h[9] += len(e['added'])
+    if any(b > NEXT_1MB for b in e['added']): h[8] = 1
+    return h
+
+def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, language=None, toggles=(), ram_top=None, carrier=False):
     """The .nex, from the patch and the player's snapshot; raises Wrong otherwise.
     Nothing is decompressed or written until the key and the keyed check pass, which is
     what keeps a damaged file away from a decompressor with no bounds checks.
-    colours, language: a set of each kind, by name. chosen: trainers to apply, by number from 1 or by name, after the
-    output's checksum."""
+    colours, language: a set of each kind, by name, a SET3 option among them. chosen: trainers to apply, by number from 1
+    or by name, after the output's checksum. ram_top: the highest 16K bank of the machine it is for (NEXT_1MB, NEXT_2MB),
+    or None not to check: an option that needs more is refused. carrier: with nothing chosen, the file a menu .nex starts
+    from when it carries the SET3 option: its banks added and its chunks for them applied, and nothing else."""
     if game is None:
         with open(z80, 'rb') as g: game = g.read()
     opened = check_key(f, game); st, bl, crc, size = opened[:4]
     header = unzx0(st.block(b'NEX1')(dict(bl)[b'NEX1']), 512)
     if len(header) != 512 or header[:4] != b'Next': raise Wrong('the .nex header is damaged')
     if any(header[18 + b] for b in range(dict(bl)[b'OPT1'][2] + 1, 112)): raise Wrong('the options block says less memory than the .nex lists')
+    if ram_top is not None and dict(bl)[b'OPT1'][2] > ram_top: raise Wrong('this patch needs a 2MB Next')
     d = dict(bl)[b'SIT1']
     table = unzx0(st.block(b'SIT1')(d), SITE_TABLE_MAX) if d else b''
     whole = {}
@@ -1492,8 +1604,9 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
     selected = []; picked = []
     for kind, wanted in ((KIND_COLOURS, colours), (KIND_LANGUAGE, language)):
         if wanted is None: continue
-        found = [e for e in offered(f, kind) if e['name'] == wanted.encode()]
+        found = [e for e in offered(f, kind, big=True) if e['name'] == wanted.encode()]
         if not found: raise Wrong('this patch has no %s set called %s' % (KIND_NAMES_SET[kind], wanted))
+        if not fits(f, found[0], ram_top): raise Wrong('%s: %s' % (wanted, NEEDS_HELP))
         selected.append(read_set(st, found[0])); picked.append(found[0])
     on = offered(f, KIND_TOGGLE) + offered(f, KIND_TOGGLE_LOGIC)
     on = sorted(on, key=lambda e: [x['stream'] for x in sets(f)].index(e['stream']))[:TOGGLES_MAX]
@@ -1510,6 +1623,16 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
             other = dict(two[1])
             for b, chunk in one[1]:
                 if b in other and any(x & y for x, y in zip(chunk[:BITMAP], other[b][:BITMAP])): raise Wrong('two sets chosen together change the same bytes')
+    big = next((e for e in picked if e.get('big')), None)
+    if carrier:
+        if picked or chosen: raise Wrong('a carrier has nothing chosen')
+        big = (big_offered(f) or [None])[0]
+        if big is None: raise Wrong('this patch has no option with banks of its own')
+        if not fits(f, big, ram_top): raise Wrong('%s: %s' % (big['name'].decode('ascii', 'replace'), NEEDS_HELP))
+        whole_crc, big_chunks = read_set(st, big)
+        selected = [(whole_crc, [(b, c) for b, c in big_chunks if b in big['added']])]
+    base_header = header
+    if big is not None: header = extended_header(header, big)
     if banks is None:
         snap = game_snapshot(opened, game); banks = snap.banks
         if any(not header[18 + b] for b in getattr(snap, 'extra', ())): raise Wrong('a tape table writes a bank the .nex does not list')
@@ -1529,14 +1652,24 @@ def apply(f, z80=None, game=None, banks=None, colours=None, chosen=None, languag
         if header[18 + b]:
             offs[b] = len(out)
             if b in whole: out += whole[b] + bytes(BANK - len(whole[b]))
+            elif big is not None and b in big['added']: out += bytes(BANK)
             elif b in have and len(have[b]) == BANK: out += have[b]
             else: raise Wrong('bank %d is in neither the patch nor the snapshot' % b)
-    if len(out) != size: raise Wrong('the rebuilt .nex fails its checksum')
+    if len(out) != size + (BANK * len(big['added']) if big is not None else 0): raise Wrong('the rebuilt .nex fails its checksum')
     expected = crc
-    for set_crc, chunks in selected:
-        expected ^= set_crc ^ crc
+    if carrier: expected = big['carrier']
+    elif big is not None:
+        expected = selected[picked.index(big)][0]
+        for e, (set_crc, _) in zip(picked, selected):
+            if e is big: continue
+            if e['stream'] not in big['crcs']: raise Wrong('a set is damaged')
+            expected ^= big['crcs'][e['stream']] ^ selected[picked.index(big)][0]
+    else:
+        for set_crc, _ in selected: expected ^= set_crc ^ crc
+    for n, (set_crc, chunks) in enumerate(selected):
+        mine = carrier or (n < len(picked) and picked[n] is big)
         for b, chunk in chunks:
-            if b not in offs: raise Wrong('a set is out of range')
+            if b not in offs or (not mine and not base_header[18 + b]): raise Wrong('a set is out of range')
             for place, o in enumerate(chunk_offsets(chunk), BITMAP): out[offs[b] + o] = chunk[place]
     if zlib.crc32(bytes(out)) != expected: raise Wrong('the rebuilt .nex fails its checksum')
     written = {}
@@ -1580,11 +1713,15 @@ def wrap_help(text):
     if len(text) > HELP_MAX: raise Wrong('help does not fit two rows of %d: %r' % (MENU_ROW, text))
     return text
 
-def menu_lines(f):
+def menu_lines(f, ram_top=None):
     """The menu's lines as every reader shows them: [(kind, name, help key, payload)], kind 0 trainer, 1 the main line, 2 a
-    kind of set (payload its SET2 entries), 3 a toggle (payload its entry); trainers (payload their POKEs) fill what the
-    main line, the kinds and the toggles leave of ten, at most TRAINERS_SHOWN."""
-    kinds = [(KIND_NAMES_SET[k], 'Enhanced colours' if k == KIND_COLOURS else 'Language', offered(f, k)) for k in (KIND_COLOURS, KIND_LANGUAGE) if offered(f, k)]
+    kind of set (payload its SET2 entries, or its one SET3), 3 a toggle (payload its entry); trainers (payload their POKEs)
+    fill what the main line, the kinds and the toggles leave of ten, at most TRAINERS_SHOWN. ram_top: a menu .nex for a
+    machine whose highest 16K bank that is leaves out a SET3 option that needs more, as a reader before SET3 does; None
+    keeps it."""
+    kinds = [(KIND_NAMES_SET[k], 'Enhanced colours' if k == KIND_COLOURS else 'Language', [e for e in offered(f, k, big=True) if fits(f, e, ram_top)])
+             for k in (KIND_COLOURS, KIND_LANGUAGE)]
+    kinds = [x for x in kinds if x[2]]
     tg = [e for e in sets(f) if e['kind'] in TOGGLE_KINDS and e['base'] == BASE_SPRITE][:TOGGLES_MAX]
     room = min(TRAINERS_SHOWN, MENU_LINES - 1 - len(kinds) - len(tg))
     out = [(0, t[1], 'trainer_%d' % (n + 1), t[2]) for n, t in enumerate(trainers(f)[:room])]
@@ -1620,9 +1757,9 @@ def set_runs(chunks):
     for each bit set), then a bank of 0xFF."""
     return b''.join(struct.pack('<BH', b, len(chunk)) + chunk for b, chunk in chunks) + b'\xff'
 
-def menu_presets(f, chosen=None, colours=None, language=None, toggles=()):
+def menu_presets(f, chosen=None, colours=None, language=None, toggles=(), ram_top=None):
     """The states a menu .nex's lines start with, from choices as apply takes them: {line index: state}."""
-    lines = menu_lines(f); out = {}
+    lines = menu_lines(f, ram_top); out = {}
     numbers = [k for k, t in enumerate(trainers(f)) for c in chosen or () if t[1] == c or str(k + 1) == str(c)]
     for c in chosen or ():
         if not any(t[1] == c or str(k + 1) == str(c) for k, t in enumerate(trainers(f))): raise Wrong('this patch has no trainer %s' % c)
@@ -1637,22 +1774,25 @@ def menu_presets(f, chosen=None, colours=None, language=None, toggles=()):
         if kind == 3 and name in (toggles or ()): out[i] = 1
     for t in toggles or ():
         if not any(l[0] == 3 and l[1] == t for l in lines): raise Wrong('this patch has no toggle called %s' % t)
+    for key, want in (('colours', colours), ('language', language)):
+        if want is not None and not any(l[0] == 2 and l[2] == key for l in lines): raise Wrong('this patch has no %s set called %s' % (key, want))
     rules = rules_of(f)
     if rules is None:
         if sum(1 for i, v in out.items() if lines[i][0] >= 2 and v) > MENU_HOLD: raise Wrong('at most %d sets and toggles can be on at once' % MENU_HOLD)
     else:
-        opts = {v: o for o, v in rule_options(f).items()}
+        opts = {v: o for o, v in rule_options(f, ram_top).items()}
         broken = broken_rules(rules, {opts[(i, v)] for i, v in out.items() if lines[i][0] >= 2 and v})
         if broken: raise Wrong('the menu cannot start like that: %s' % rule_text(f, broken[0]))
     return out
 
-def menu_description(f, st=None, presets=None):
+def menu_description(f, st=None, presets=None, ram_top=None):
     """(the description firmware/menu.asm draws, the data its lines point at) for a menu .nex, its lines starting in the
-    states presets gives ({line: state}, off without). Without st (the patch's key), sets and toggles get no data."""
-    lines = menu_lines(f); helps = help_texts(f)
+    states presets gives ({line: state}, off without). Without st (the patch's key), sets and toggles get no data. A SET3
+    option carries only its chunks for the banks the base lists: the menu .nex holds its own banks already."""
+    lines = menu_lines(f, ram_top); helps = help_texts(f)
     title = next((t['title'] for t in targets(f) if t.get('title')), b'') or b''
     pub = inf1_value(f, 'publisher') or b''
-    colours = (inf1_value(f, 'colours_by') or b'') if colour_sets(f) else b''
+    colours = (inf1_value(f, 'colours_by') or b'') if any(k == 2 and key == 'colours' for k, _, key, _ in lines) else b''
     ver = inf1_value(f, 'version') or b''; rules = rules_of(f)
     d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0) | (DESC_RULES if rules is not None else 0), MENU_HOLD if rules is None else NO_CAP, len(lines)))
     for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), MENU_TITLE), (pub, MENU_ROW), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
@@ -1669,10 +1809,11 @@ def menu_description(f, st=None, presets=None):
         if kind == 0:
             data += bytes((len(payload),)) + b''.join(struct.pack('<BHB', b, o, v) for b, o, v in payload)
         else:
-            for e in (payload if kind == 2 else [payload]): data += set_runs(read_set(st, e)[1])
+            for e in (payload if kind == 2 else [payload]):
+                data += set_runs([(b, c) for b, c in read_set(st, e)[1] if not e.get('big') or b not in e['added']])
     for w in where: d += struct.pack('<I', w)[:3]
     if rules is not None:                           # only with its flag, so a patch without OPR1 has the description it had
-        d += bytes((len(rules),)) + b''.join(bytes(r) for r in line_rules(f, rules))
+        d += bytes((len(rules),)) + b''.join(bytes(r) for r in line_rules(f, rules, ram_top))
     return bytes(d), bytes(data)
 
 def stub_binary(rules=False):
@@ -1687,25 +1828,27 @@ def menu_refusal(header, top):
     if top > 111: return 'it needs more banks than a Next has'
     return None
 
-def set_or_poke_touches(f, st, bank, lo, hi):
+def set_or_poke_touches(f, st, bank, lo, hi, ram_top=None):
     """Whether any trainer, set or toggle the menu offers changes bank's bytes lo to hi."""
-    for kind, _, _, payload in menu_lines(f):
+    for kind, _, _, payload in menu_lines(f, ram_top):
         if kind == 0 and any(b == bank and lo <= o < hi for b, o, _ in payload): return True
         for e in (payload if kind == 2 else [payload] if kind == 3 else []):
             for b, chunk in read_set(st, e)[1]:
                 if b == bank and any(lo <= o < hi for o in chunk_offsets(chunk)): return True
     return False
 
-def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=()):
+def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=(), ram_top=None):
     """The .nex that carries its menu (spec, "A .nex that carries its menu"): the bare .nex with nothing chosen, its header
     changed to start the stub, then the menu banks: the stub, its parameters and the description, then the data. The
-    choices, as apply takes them, are where its menu starts."""
-    presets = menu_presets(f, chosen, colours, language, toggles)
-    bare = apply(f, game=game)
+    choices, as apply takes them, are where its menu starts. With a SET3 option the machine has the memory for (ram_top,
+    None for any), the bare part is its carrier, and the menu banks start above its need."""
+    presets = menu_presets(f, chosen, colours, language, toggles, ram_top)
+    big = [e for k, _, _, p in menu_lines(f, ram_top) if k == 2 for e in p if e.get('big')]
+    bare = apply(f, game=game, carrier=bool(big), ram_top=ram_top)
     opened = check_key(f, game); st, bl = opened[:2]
     header = bytearray(bare[:512])
-    m0 = dict(bl)[b'OPT1'][2] + 1
-    desc, data = menu_description(f, st, presets)
+    m0 = option_top(f, big[0] if big else None) + 1
+    desc, data = menu_description(f, st, presets, ram_top)
     stub = bytearray(stub_binary(rules_of(f) is not None))
     if len(stub) + len(desc) > STUB_DESC_END: raise Wrong('the menu is too big for its bank')
     count = 1 + -(-len(data) // BANK); top = m0 + count - 1
@@ -1723,7 +1866,7 @@ def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=()):
             if header[18 + b]:
                 if b == header[139]: m0_bank[lo:hi] = bare[at + lo:at + hi]
                 at += BANK
-        if set_or_poke_touches(f, st, header[139], lo, hi): raise Wrong('this build cannot carry its menu: a choice changes the bytes below its stack')
+        if set_or_poke_touches(f, st, header[139], lo, hi, ram_top): raise Wrong('this build cannot carry its menu: a choice changes the bytes below its stack')
     stub[-STUB_PARAMS:] = struct.pack('<BHHBBB', 2 * m0, pc, sp, 2 * header[139], count, int(shadow))
     for b in range(m0, top + 1): header[18 + b] = 1
     header[9] += count
@@ -2152,6 +2295,7 @@ def run(argv):
         ap.add_argument('--build', help="what INF1 calls the build; the .nex's own name by default")
         ap.add_argument('--rom', type=int, choices=(0, 1, 2), default=0, help='0 not stated; 1 runs on the Next\'s own ROM; 2 needs the Sinclair 48K ROM, carried in the alt ROM')
         ap.add_argument('--highest-bank', type=int, help='the highest 16K bank the build uses at run time, if above the highest it lists')
+        ap.add_argument('--set-highest-bank', action='append', default=[], metavar='NAME=N', help='for a set whose .nex lists banks the build does not (a SET3): the highest 16K bank it uses at run time, if above the highest it lists')
         ap.add_argument('--proof', action='append', default=[], metavar='KEY=VALUE', help='a PRF1 field; repeatable')
         ap.add_argument('--proof-file', help='PRF1 fields, as lines of KEY=VALUE')
         ap.add_argument('--colours', action='append', default=[], metavar='NAME=NEX', help='a colour set: the same build with it applied; repeatable')
@@ -2192,7 +2336,8 @@ def run(argv):
         tog = {n: (p_, False) for n, p_ in named(a.toggle).items()}
         tog.update({n: (p_, True) for n, p_ in named(a.toggle_logic).items()})
         f, made = make([a.game] + a.also if a.also else a.game, a.nex, target, info, rom=a.rom, proof=proof, colours=named(a.colours), languages=named(a.language), highest_bank=a.highest_bank, toggles=tog,
-                       rules=rules_from(a), start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary)
+                       rules=rules_from(a), start=a.start, tape_banks=tape_banks, residual_max=a.residual_max, tape_summary=summary,
+                       set_top={k: int(v, 0) for k, v in (x.split('=', 1) for x in a.set_highest_bank)})
         if summary:
             print('tape: %d data blocks; %d copies take %d bytes of the start state from it; %d bytes in %d sites are not on it; table %d bytes'
                   % (summary['blocks'], summary['copies'], summary['from_tape'], summary['residual'], summary['sites'], summary['table']))
@@ -2206,6 +2351,7 @@ def run(argv):
         print_rules(f)
         for one in made["sets"]:
             print('set %s: %d bytes decoded in %d banks, %d at most at once, %d stored' % (one['name'], one['decoded'], one['banks'], one['largest'], one['stored']))
+            if 'top' in one: print('set %s adds banks %s: %s' % (one['name'], ','.join(map(str, one['added'])), memory_text(one['top'])))
         print('wrote', a.output, len(f), 'bytes')
         return
     if argv[:1] in (['add-dump'], ['add-target']):
@@ -2233,8 +2379,12 @@ def run(argv):
     ap.add_argument('--original', action='store_true', help='no patch: write the game itself, or with trainers a snapshot of it with them in; for a tape, the start state as a .z80')
     ap.add_argument('--also', action='append', default=[], metavar='TAPE', help='a further file of the game, for a patch that wants a set of tapes; repeatable, in order')
     ap.add_argument('--bare', action='store_true', help='a .nex without the menu, with the choices given here fixed in it; by default the .nex carries the menu, which starts with the choices given here')
+    ap.add_argument('--ram', choices=('1mb', '2mb'), help='the Next it is for: an option that needs more memory is refused, and a menu .nex leaves it out; by default nothing is checked and a menu .nex keeps every option')
     a = ap.parse_args(argv); f = read_file(a.patch)
-    print('colour sets:', ', '.join(['(default)'] + colour_sets(f)))
+    ram_top = {None: None, '1mb': NEXT_1MB, '2mb': NEXT_2MB}[a.ram]
+    print('colour sets:', ', '.join(['(default)'] + colour_sets(f) + [e['name'].decode('ascii', 'replace') for e in big_offered(f, KIND_COLOURS)]))
+    for e in big_offered(f):
+        print('%s: %s, its own banks %s' % (e['name'].decode('ascii', 'replace'), memory_text(option_top(f, e)), ','.join(map(str, e['added'])) or 'none'))
     if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
     if toggles_of(f): print('toggles:', ', '.join(n + (' (changes the game logic)' if lg else '') for n, lg in toggles_of(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
@@ -2253,8 +2403,8 @@ def run(argv):
             print('found beside it:', ', '.join(os.path.basename(x) for x in (found if isinstance(found, list) else [found])))
         refuse_same(output, a.patch, *(a.game, *a.also) if a.game else (found if isinstance(found, list) else [found]))
         if a.original: d = original_with_pokes(f, game, a.trainer)
-        elif a.bare: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle)
-        else: d = apply_menu(f, game, chosen=a.trainer, colours=a.colours, language=a.language, toggles=a.toggle)
+        elif a.bare: d = apply(f, game=game, colours=a.colours, chosen=a.trainer, language=a.language, toggles=a.toggle, ram_top=ram_top)
+        else: d = apply_menu(f, game, chosen=a.trainer, colours=a.colours, language=a.language, toggles=a.toggle, ram_top=ram_top)
         with open(output, 'wb') as g: g.write(d)
         print('wrote', output, hashlib.md5(d).hexdigest())
 

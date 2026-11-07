@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a patch's .nfo, the text file a player reads beside it, from the patch alone: the game file it needs, what it
 does, its menu, credits and how it was tested. Everything comes from the patch's own clear fields (INF1, PRF1, TGT1,
-TRN1, SET2), so the two cannot disagree, and the game is not needed. See spec/NXC-FORMAT.md, "INF1's notes" and "PRF1".
+TRN1, SET2, SET3), so the two cannot disagree, and the game is not needed. See spec/NXC-FORMAT.md, "INF1's notes" and "PRF1".
 
     make_nfo.py PATCH.nxc [PATCH.nxc ...]        writes NAME.nfo beside each
     make_nfo.py PATCH.nxc -o OUT.nfo             one, to OUT ('-' for standard output)
@@ -65,7 +65,8 @@ def nfo(d, base):
     tg = nxc.targets(d)
     tt = fields(tg[0]['text'])
     trainers = [x[1] for x in nxc.trainers(d)]
-    colours = nxc.offered(d, nxc.KIND_COLOURS)
+    colours = nxc.offered(d, nxc.KIND_COLOURS, big=True)
+    big = nxc.big_offered(d)
     o = [l.rstrip() for l in HEAD.strip('\n').splitlines()]
     rule(o, 'GAME')
     para('Title', tt.get('title', base), o)
@@ -95,13 +96,20 @@ def nfo(d, base):
     o.append('  The patch carries none of the game\'s code. It only works with that exact')
     o.append('  dump, under that name or any other: anything else is refused, with a')
     o.append('  message naming the file it wants.')
+    if big:                                         # only a patch with a SET3 says more about memory than before
+        o.append('')
+        base_top = dict(bl)[b'OPT1'][2]
+        para('Memory', '%s. %s.' % ('Any Next: a 1MB Next has the memory for the game' if base_top <= nxc.NEXT_1MB else 'A 2MB Next',
+                                    '; '.join('%s needs a %s Next, and is not offered on a smaller one' % (e['name'].decode('ascii', 'replace'), '2MB' if e['top'] > nxc.NEXT_1MB else '1MB')
+                                              for e in big)), o)
     rule(o, 'WHAT IT DOES')
     o.append('  Moving figures become Next hardware sprites, so they keep their own colours')
     o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
     if colours:
         names = [e['name'].decode('ascii', 'replace') for e in colours]
         o.append('')
-        para('Colours', 'Default (the game\'s own) plus: ' + ', '.join(names) + ', chosen on the menu, off by default.', o)
+        need = ['%s (needs a 2MB Next)' % n if e.get('big') and e['top'] > nxc.NEXT_1MB else n for e, n in zip(colours, names)]
+        para('Colours', 'Default (the game\'s own) plus: ' + ', '.join(need) + ', chosen on the menu, off by default.', o)
         src = (inf.get('credit', '').split('; ', 1) + [''])[1]
         for e, name in zip(colours, names):
             look = inf.get('enhanced_%d' % e['choice'], '')

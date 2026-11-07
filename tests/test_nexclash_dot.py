@@ -1427,7 +1427,7 @@ class Choices:
 
     def test_a_later_version_of_the_block_is_skipped(self) -> None:
         def add(bl, st):
-            bl.append([b"SET3", b"\0\1\1\1\x03xyzjunk"])
+            bl.append([b"SET4", b"\0\1\1\1\x03xyzjunk"])
         patch = rekey(self.patch, self.game, add)
         one, fix_key, set_key = self.lines()
         m, failed, message = self.run_it([set_key, "enter"], patch=patch)

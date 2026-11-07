@@ -622,7 +622,8 @@ class Machine:
                     self.callbacks[name]()
                 self.step()
                 continue
-            in_menu_page = 0xA000 <= m.pc < 0xC000 and self.allocated and self.mmu[5] == self.allocated[0]
+            in_menu_page = self.allocated and ((0xA000 <= m.pc < 0xC000 and self.mmu[5] == self.allocated[0])
+                                               or (0x6000 <= m.pc < 0x8000 and self.mmu[3] == self.allocated[0]))   # the big part (SET3), through big_call
             if m.halted or not (LOAD_AT <= m.pc < LOAD_AT + 0x2000 or in_menu_page):
                 raise Hung(f"stopped at {m.pc:#06x}")
         if last_phase is not None:

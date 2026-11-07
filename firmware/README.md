@@ -11,7 +11,7 @@ derived from dzx0_standard by Einar Saukas and Urusergi (BSD-3-Clause).
 image. On real hardware it has run on Jon's NextNano (a Tang Nano 20K FPGA build of the Next) with NextZXOS v2.09, and
 nothing beyond that. It has not run on an official Next board.**
 
-The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card. It reads sets as `SET2`; a patch made with `SET1` plays with no enhanced line, and has to be made again.
+The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card. It reads sets as `SET2`; a patch made with `SET1` plays with no enhanced line, and has to be made again. It reads a `SET3`, an option that needs more memory and adds banks of its own (spec, "SET3"): it asks NextZXOS for the total of ZX memory (`IDE_BANK` through `M_P3DOS`, H = 0, L = 0, the answer in E) before the menu and at ENTER, shows the line as `[N/A]` with the help `Needs a 2MB Next` when there is too little, and otherwise builds it, its added banks from zeros. It refuses a `SET3` with another set or toggle as needing a newer loader, and SPACE writes the bare `.nex` when a patch has one. That code runs from the menu's page mapped at 0x6000 (`big_call`), as the command's 8K is full; `check_screen` and `all_banks_available` moved there too, to make room. Tested on the Z80 harness (`tests/test_nexclash_ram.py`) and in JNext 1.1.104 with NextZXOS v2.09 and 26.11 card copies, where 1MB is NextZXOS's answer set to 96 by a script, as JNext's memory is a fixed 2MB. Not run on a Next.
 
 ## Building
 

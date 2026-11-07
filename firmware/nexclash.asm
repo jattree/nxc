@@ -341,6 +341,20 @@ game_kind       equ target_kinds
         VAR     dir_h, 1                    ; the folder being scanned for the game
         VAR     opr_seen, 1                 ; OPR1: there is one,
         VAR     opr_rec, 8                  ; and its place and length
+; SET3 (an option that needs more memory, with banks of its own): what the walk and the menu found.
+; Copied, in this order, into the menu's page (mp_bigv), where the big part reads them after the menu.
+        VAR     big_seen, 1                 ; the first SET3 this loader offers: there is one
+        VAR     big_kind, 1                 ; its slot: 0 colours, 1 language
+        VAR     big_top, 1                  ; its need: the highest 16K bank the game needs with it on
+        VAR     big_k, 1                    ; how many banks it adds
+        VAR     big_m, 1                    ; and entries in its table
+        VAR     big_nlen, 1                 ; its name's length
+        VAR     big_stream, 1
+        VAR     big_off, 1                  ; the machine has too little memory: its line cannot be chosen
+        VAR     ram_total, 1                ; NextZXOS's 8K banks of ZX memory; 255 if it would not say
+        VAR     big_pos, 4                  ; its block's data, and length
+        VAR     big_len, 4
+BIG_VARS        equ 17
 vars_end        equ var_at
         assert  vars_end <= smallbuf, "the menu's variables run into the small buffer"
 ; These need no clearing, and lie below the stack.
@@ -1320,6 +1334,9 @@ walk_first:
         ld      de,magic_set2
         call    tag_is
         call    z,note_set
+        ld      de,magic_set3
+        call    tag_is
+        call    z,note_big
         ld      de,magic_tap1_p
         call    tag_is
         call    z,note_tape
@@ -1371,6 +1388,7 @@ walk_first:
         cp      2
         jp      c,bad_patch
 .level_ok:
+        call    big_line
         ld      b,9                         ; ten lines have keys: the fix, each kind, each toggle,
         ld      a,(set_counts)              ; and trainers in what is left
         or      a
@@ -2387,6 +2405,10 @@ note_trainer:
 ; 25, which must fit. A stream index given twice would use one stream twice. A kind or
 ; base this loader cannot apply is not offered, but is checked all the same.
 note_set:
+        call    note_set_head
+        jr      note_set_kind
+; A SET2's or SET3's fixed part into smallbuf, its name fitting, its stream index not seen before.
+note_set_head:
         ld      hl,blk_len
         ld      bc,0
         ld      de,SET_FIXED
@@ -2430,6 +2452,8 @@ note_set:
         ld      a,d
         or      (hl)
         ld      (hl),a
+        ret
+note_set_kind:
         ld      a,(smallbuf+3)
         cp      BASE_SPRITE
         ret     nz
@@ -2477,13 +2501,194 @@ note_set:
         ret     nz
         jp      bad_patch                   ; 256 of a kind: more than there are streams
 
+; A SET3 block, the file at its data: as a SET2 (note_set_head), then its need, its added banks,
+; rising from 8 to its need, and its table, which must all fit, with its three CRCs and table's
+; CRCs after them. The first with base 1 and kind 1 or 2 is offered; any other is checked and passed over.
+note_big:
+        call    note_set_head
+        ld      a,(big_seen)
+        or      a
+        ret     nz
+        ld      a,(smallbuf+3)
+        cp      BASE_SPRITE
+        ret     nz
+        ld      a,(smallbuf+1)
+        dec     a
+        cp      KINDS
+        ret     nc
+        ld      (big_kind),a
+        ld      a,(smallbuf)
+        ld      (big_stream),a
+        ld      a,(smallbuf+4)
+        ld      (big_nlen),a
+        add     a,SET_FIXED
+        ld      l,a
+        ld      h,0
+        ld      (work32),hl
+        ld      l,h
+        ld      (work32+2),hl
+        ld      hl,blk_pos                  ; its need and how many banks it adds
+        ld      de,big_pos
+        call    copy4
+        ld      hl,big_pos
+        ld      de,work32
+        call    add32
+        ld      hl,big_pos
+        call    seek_patch
+        ld      hl,(work32)
+        inc     hl
+        inc     hl
+        call    big_fits
+        ld      hl,smallbuf+8
+        ld      bc,2
+        call    read_patch
+        ld      a,(smallbuf+8)
+        ld      (big_top),a
+        cp      112
+        jp      nc,bad_patch
+        ld      a,(smallbuf+9)
+        ld      (big_k),a
+        cp      105
+        jp      nc,bad_patch
+        ld      e,a                         ; its banks and m
+        ld      d,0
+        ld      hl,(work32)
+        add     hl,de
+        inc     hl
+        inc     hl
+        inc     hl
+        call    big_fits
+        ld      c,e
+        ld      b,0
+        inc     c
+        ld      hl,smallbuf+16
+        call    read_patch
+        ld      a,(smallbuf+9)              ; each added bank: 8 to its need, rising
+        ld      b,a
+        ld      c,7
+        ld      hl,smallbuf+16
+        or      a
+        jr      z,.table
+.bank:  ld      a,(hl)
+        cp      c
+        jp      c,bad_patch
+        jp      z,bad_patch
+        ld      c,a
+        ld      a,(big_top)
+        cp      c
+        jp      c,bad_patch
+        inc     hl
+        djnz    .bank
+.table: ld      a,(hl)                      ; m: its stream indices, three CRCs, then m CRCs
+        ld      (big_m),a
+        ld      l,a
+        ld      h,0
+        ld      e,l
+        ld      d,h
+        add     hl,hl
+        add     hl,hl
+        add     hl,de
+        ld      de,8
+        add     hl,de
+        ld      de,(work32)
+        add     hl,de
+        ld      a,(big_k)
+        ld      e,a
+        ld      d,0
+        add     hl,de
+        inc     hl
+        inc     hl
+        inc     hl
+        call    big_fits
+        ld      hl,blk_pos
+        ld      de,big_pos
+        call    copy4
+        ld      hl,blk_len
+        ld      de,big_len
+        call    copy4
+        ld      a,1
+        ld      (big_seen),a
+        ret
+
+; Damage unless the block (blk_len) holds HL bytes at least. Keeps DE.
+big_fits:
+        push    de
+        ex      de,hl
+        ld      hl,blk_len
+        ld      bc,0
+        call    below32
+        pop     de
+        jp      c,bad_patch
+        ret
+
+; After the walk: a SET3 offered has its kind's line to itself, so a SET2 of that kind is damage;
+; its need is at least OPT1's.
+big_line:
+        ld      a,(big_seen)
+        or      a
+        ret     z
+        ld      a,(big_kind)
+        ld      e,a
+        ld      d,0
+        ld      hl,set_counts
+        add     hl,de
+        ld      a,(hl)
+        or      a
+        jp      nz,bad_patch
+        inc     (hl)
+        ld      a,(ram_bank)
+        ld      hl,big_top
+        cp      (hl)
+        ret     c
+        ret     z
+        jp      bad_patch
+
+; A: the highest 16K bank the game needs with what is chosen: a SET3's need with it on, otherwise
+; OPT1's. Keeps DE.
+need_top:
+        ld      a,(big_seen)
+        or      a
+        jr      z,.base
+        ld      a,(big_kind)
+        ld      c,a
+        ld      b,0
+        ld      hl,set_choices
+        add     hl,bc
+        ld      a,(hl)
+        or      a
+        jr      z,.base
+        ld      a,(big_top)
+        ret
+.base:  ld      a,(ram_bank)
+        ret
+
 ; ----------------------------------------------------------------- the menu
 
 ; The menu is firmware/menu.asm, read with what draws it from this file's menu part into a page of
 ; its own, mapped at 0xA000 while it runs, with interrupts off. The page stays the first in the
 ; list, so that the .nex writer can take the stub and the description from it, and is freed with
 ; the rest. Carry from the part: BREAK.
-menu:   ld      hl,BANK_ALLOC
+menu:   ld      hl,0                        ; ZX memory, total: a SET3 needing more is shown, not offered
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+ram_answer:
+        ld      a,e
+        jr      c,.known
+        ld      a,$ff
+.known: ld      (ram_total),a
+        ld      a,(big_top)
+        inc     a
+        add     a,a
+        ld      hl,ram_total
+        cp      (hl)
+        jr      c,.fits
+        jr      z,.fits
+        ld      a,1
+        ld      (big_off),a
+.fits:  ld      hl,BANK_ALLOC
         exx
         ld      de,IDE_BANK
         ld      c,7
@@ -2576,7 +2781,7 @@ check_ram:
         rst     $08
         db      M_P3DOS
         ret     nc
-        ld      a,(ram_bank)
+        call    need_top
         inc     a
         add     a,a
         cp      e
@@ -2698,6 +2903,7 @@ parse_name:
 
 magic_trn1:     db "TRN1"
 magic_scr1_p:   db "SCR1"
+magic_set3:     db "SET3"
 magic_opr1:     db "OPR1"
 magic_tap1_p:   db "TAP1"
 key_title:      db "title=",0
@@ -2803,8 +3009,12 @@ nexclash_chosen:
         ld      a,$ff
         call    sites_walk                  ; check the whole table
         call    map_iopage
-        call    all_banks_available
-        call    check_screen
+        ld      ix,big_prepare
+        call    big_call
+        ld      ix,all_banks_available
+        call    big_call
+        ld      ix,check_screen
+        call    big_call
         call    check_sets
         xor     a
         call    load_pokes
@@ -2836,6 +3046,9 @@ nexclash_chosen:
         ld      a,(cur_bank)
         call    header_has
         jr      z,.next
+        ld      ix,big_has                  ; a bank a SET3 adds: zeros, then its chunk
+        call    big_call
+        jr      nz,.zero
         call    bank_index_entry            ; IX at the patch's bank, if any
         jr      nz,.patch
         ld      a,(z80_v1)
@@ -2844,6 +3057,9 @@ nexclash_chosen:
         ld      a,(cur_bank)
         call    sites_walk
         call    map_iopage
+        jr      .emit
+.zero:  ld      de,WORK
+        call    fill_zeros
         jr      .emit
 .patch: call    decode_patch_bank
 .emit:  ld      a,1
@@ -2970,86 +3186,6 @@ screen_sizes:
 
 ; Every SCR1 block before any file is made: one for each 16K of the screen, in range,
 ; no index given twice, and none at all if the header lists no screen.
-check_screen:
-        call    screen_size
-        ld      a,(scr_left+2)              ; chunks = size / 16384, rounded up
-        ld      h,a
-        ld      a,(scr_left+1)
-        ld      l,a
-        ld      a,(scr_left)
-        or      a
-        jr      z,.even
-        inc     hl                          ; (a palette: 512 is $200, not a low byte)
-.even:  ld      de,$3f
-        add     hl,de
-        add     hl,hl
-        add     hl,hl
-        ld      a,h
-        ld      (scr_chunks),a
-        xor     a
-        ld      (scr_mask),a
-        call    walk_begin
-.next:  call    walk_next
-        jr      z,.end
-        ld      de,magic_scr1
-        call    tag_is
-        jr      nz,.next
-        ld      hl,blk_len
-        ld      bc,0
-        ld      de,3
-        call    below32
-        jp      c,bad_patch
-        ld      hl,tagbuf
-        ld      bc,3
-        call    read_patch
-        ld      a,(scr_chunks)
-        ld      c,a
-        ld      a,(tagbuf)
-        cp      c
-        jp      nc,bad_patch
-        ld      b,a
-        inc     b
-        ld      a,$80
-.bit:   rlca
-        djnz    .bit
-        ld      c,a
-        ld      a,(scr_mask)
-        ld      b,a
-        and     c
-        jp      nz,bad_patch
-        ld      a,b
-        or      c
-        ld      (scr_mask),a
-        ld      hl,(tagbuf+1)               ; at most 16K, and data if it says so
-        ld      de,BANK_SIZE+1
-        or      a
-        sbc     hl,de
-        jp      nc,bad_patch
-        ld      hl,(tagbuf+1)
-        ld      a,h
-        or      l
-        jr      nz,.next
-        ld      hl,blk_len
-        ld      de,three
-        call    same_tag
-        jp      nz,bad_patch
-        jr      .next
-.end:   ld      a,(scr_chunks)              ; all of them there
-        ld      b,a
-        xor     a
-        inc     b
-.count: dec     b
-        jr      z,.counted
-        scf
-        rla
-        jr      .count
-.counted:
-        ld      c,a
-        ld      a,(scr_mask)
-        cp      c
-        jp      nz,bad_patch
-        ret
-
 ; The screen into the file, 16K at a time through WORK, under both CRCs. Each is
 ; decoded as a BNK1 is, its stream SCR1 with its index.
 write_screen:
@@ -3147,35 +3283,33 @@ header_has:
         or      a
         ret
 
-; All banks the header lists must come from somewhere, before any file is made.
-all_banks_available:
-        ld      b,112
-        ld      c,0
-.b:     push    bc
-        ld      a,c
-        ld      (cur_bank),a
-        call    bank_index_entry
+; Run the big part's routine at IX (SET3, and checks made once before any file), from the menu's
+; page, mapped at 0x6000 for it: WORK holds nothing at these points. The page that was there is put
+; back. AF, DE and HL come back from the routine.
+big_call:
+        ld      bc,NR_SELECT
+        ld      a,NR_MMU3
+        out     (c),a
+        inc     b
+        in      a,(c)
         push    af
-        ld      a,(cur_bank)
-        call    header_has
-        jr      nz,.listed
-        pop     af                          ; a BNK1 for a bank not listed is damage
-        jp      nz,bad_patch
-        jr      .ok
-.listed:
-        ld      a,(ram_bank)                ; OPT1 may say more than the header lists, not less
-        ld      hl,cur_bank
-        cp      (hl)
-        jp      c,bad_patch
+        push    de
+        ld      a,(all_pages)
+        ld      e,a
+        ld      a,NR_MMU3
+        call    nr_write
+        pop     de
+        call    .go
+        pop     bc
+        push    af
+        push    de
+        ld      e,b
+        ld      a,NR_MMU3
+        call    nr_write
+        pop     de
         pop     af
-        jr      nz,.ok
-        ld      a,(cur_bank)
-        call    part_has
-        jp      nc,bad_patch
-.ok:    pop     bc
-        inc     c
-        djnz    .b
         ret
+.go:    jp      (ix)
 
 ; Create the output on the system drive.
 create_out:
@@ -4169,11 +4303,14 @@ sets_open:
         or      a
         jp      z,.none
         ld      (cur_n),a
-        call    find_set
+        ld      ix,big_find_any
+        call    big_call
         ld      a,(tagbuf+4)                ; past its fixed part and name
         add     a,SET_FIXED
         ld      l,a
         ld      h,0
+        ld      ix,big_extras               ; and a SET3's need, banks and table's indices
+        call    big_call
         ld      (left),hl
         ld      l,h
         ld      (left+2),hl
@@ -4223,6 +4360,8 @@ sets_open:
 .past:  ld      hl,blk_pos
         ld      de,four
         call    add32
+        ld      ix,big_past                 ; and a SET3's carrier CRC and table
+        call    big_call
         call    rec_of_kind
         ex      de,hl
         ld      hl,blk_pos
@@ -6559,6 +6698,10 @@ mp_k_colours:   db "colours=",0
 mp_k_language:  db "language=",0
 
 mp_main:
+        ld      hl,big_seen                 ; what the walk found of a SET3, for the big part after the menu
+        ld      de,mp_bigv
+        ld      bc,BIG_VARS
+        ldir
         ld      a,'*'                       ; the font, from the card's ROM file
         ld      hl,mp_rom_name
         ld      b,FA_READ
@@ -6769,7 +6912,10 @@ mp_main:
         call    mp_head
         dec     de
         pop     af
-        ld      (de),a
+        call    mp_big_off                  ; Z: a SET3 this machine has too little memory for
+        jr      nz,.ks
+        xor     a                           ; no set: menu.asm shows N/A, and its key does nothing
+.ks:    ld      (de),a
         inc     de
         ld      a,(cur_kind)
         or      a
@@ -6777,7 +6923,12 @@ mp_main:
         jr      z,.kl
         ld      hl,str_language
 .kl:    call    mp_copyz
-        ld      a,(cur_kind)
+        call    mp_big_off
+        jr      nz,.kq
+        ld      hl,mp_s_needs
+        call    mp_copyz_help
+        jr      .kn
+.kq:    ld      a,(cur_kind)
         or      a
         ld      hl,mp_k_colours
         jr      z,.kh
@@ -6794,7 +6945,7 @@ mp_main:
         ld      a,c
         ld      (cur_n),a
         push    de
-        call    find_set
+        call    mp_find_any
         call    mp_setname
         pop     bc
         inc     c
@@ -6944,6 +7095,9 @@ mp_chosen:
 .route: ld      a,(mp_key)
         or      a
         ret     z
+        ld      a,(big_seen)                ; this loader writes no menu .nex for a patch with a SET3
+        or      a
+        ret     nz
         ld      a,(ver_original)
         or      a
         ret     nz
@@ -7311,7 +7465,69 @@ mp_help:
         inc     de
         ret
 
+; Z when the line of kind cur_kind is a SET3's that the machine has too little memory for; A kept.
+mp_big_off:
+        ld      c,a
+        ld      a,(big_seen)
+        and     a
+        jr      z,.nz
+        ld      a,(big_off)
+        and     a
+        jr      z,.nz
+        ld      a,(big_kind)
+        ld      hl,cur_kind
+        cp      (hl)
+        ld      a,c
+        ret
+.nz:    xor     a
+        inc     a
+        ld      a,c
+        ret
+
+; The help at HL, a fixed string, at DE as mp_help puts one; DE past it.
+mp_copyz_help:
+        push    hl
+        ld      bc,0
+.l:     ld      a,(hl)
+        or      a
+        jr      z,.e
+        inc     hl
+        inc     bc
+        jr      .l
+.e:     pop     hl
+        ld      a,HELP_MAX
+        call    copy_text
+        inc     de
+        ret
+
+; find_set, or for kind cur_kind's SET3 its block: tagbuf its fixed part, blk_pos and blk_len it.
+mp_find_any:
+        ld      a,(big_seen)
+        or      a
+        jp      z,find_set
+        ld      a,(big_kind)
+        ld      hl,cur_kind
+        cp      (hl)
+        jp      nz,find_set
+        ld      hl,big_pos
+        ld      de,blk_pos
+        call    copy4
+        ld      hl,big_len
+        ld      de,blk_len
+        call    copy4
+        ld      hl,blk_pos
+        call    seek_patch
+        ld      hl,tagbuf
+        ld      bc,SET_FIXED
+        call    read_patch
+        ld      a,(tagbuf)
+        ld      (cur_stream),a
+        ret
+
+mp_s_needs:     db "Needs a 2MB Next",0
+
         define  MENU_RULES
+        define  MENU_NEEDS
         include "menu.asm"
 
 ; After ENTER or SPACE, while the menu is still up: its keys' row, found by its green ENTER (the only
@@ -7346,6 +7562,348 @@ menu_busy:
 s_patching:     db "Patching...            ",0
 s_loading:      db "Loading...             ",0
 
+mp_bigv:        ds      BIG_VARS + 15               ; the walk's SET3 state, then B_CUR and B_MAP
+mp_big_at:
+        ent
+        disp    mp_big_at - MP_AT + WORK
+BIGV            equ mp_bigv - MP_AT + WORK
+big_start:
+; ---------------------------------------------------------------- the big part
+; Run from the menu's page mapped at 0x6000 (big_call), after the menu: SET3, an option that needs
+; more memory and adds banks of its own, and two checks made once before any file is made, moved
+; here for room. Its variables are the menu's copy of what the walk found (mp_bigv).
+B_SEEN          equ BIGV
+B_KIND          equ BIGV + 1
+B_TOP           equ BIGV + 2
+B_K             equ BIGV + 3
+B_M             equ BIGV + 4
+B_NLEN          equ BIGV + 5
+B_POS           equ BIGV + 9
+B_LEN           equ BIGV + 13
+B_CUR           equ BIGV + 17               ; the set find_any found is the SET3
+B_MAP           equ BIGV + 18               ; a bit for each bank it adds, 14
+
+; NZ when the SET3 is chosen.
+big_on:
+        ld      a,(B_SEEN)
+        or      a
+        ret     z
+        ld      a,(B_KIND)
+        ld      e,a
+        ld      d,0
+        ld      hl,set_choices
+        add     hl,de
+        ld      a,(hl)
+        or      a
+        ret
+
+; find_set, or for the SET3's kind its block, as find_set leaves one.
+big_find_any:
+        xor     a
+        ld      (B_CUR),a
+        ld      a,(B_SEEN)
+        or      a
+        jp      z,find_set
+        ld      a,(B_KIND)
+        ld      hl,cur_kind
+        cp      (hl)
+        jp      nz,find_set
+        ld      a,1
+        ld      (B_CUR),a
+        ld      hl,B_POS
+        ld      de,blk_pos
+        call    copy4
+        ld      hl,B_LEN
+        ld      de,blk_len
+        call    copy4
+        ld      hl,blk_pos
+        call    seek_patch
+        ld      hl,tagbuf
+        ld      bc,SET_FIXED
+        call    read_patch
+        ld      a,(tagbuf)
+        ld      (cur_stream),a
+        ret
+
+; HL, past a set's fixed part and name: for the SET3, past its need, banks and table's indices too.
+big_extras:
+        ld      a,(B_CUR)
+        or      a
+        ret     z
+        ld      a,(B_K)
+        add     a,3
+        ld      e,a
+        ld      d,0
+        add     hl,de
+        ld      a,(B_M)
+        ld      e,a
+        add     hl,de
+        ret
+
+; Past the SET3's own CRC (done): its carrier's CRC and its table, which this loader does not need.
+big_past:
+        ld      a,(B_CUR)
+        or      a
+        ret     z
+        ld      a,(B_M)
+        ld      l,a
+        ld      h,0
+        add     hl,hl
+        add     hl,hl
+        ld      de,4
+        add     hl,de
+        ld      (work32),hl
+        ld      hl,0
+        ld      (work32+2),hl
+        ld      hl,blk_pos
+        ld      de,work32
+        call    add32
+        ld      hl,blk_len
+        ld      de,work32
+        call    sub32
+        jp      c,bad_patch
+        ret
+
+; With the SET3 chosen: alone among the sets, as this loader holds no table for another with it;
+; its banks added to the header, each above 7, rising, to its need and not listed before (byte 8 if
+; one is above 47); 16K more in the output for each; and its need for OPT1's.
+big_prepare:
+        call    big_on
+        ret     z
+        ld      de,set_choices
+        ld      b,0
+.oth:   ld      a,(B_KIND)
+        cp      b
+        jr      z,.me
+        ld      a,(de)
+        or      a
+        jr      z,.me
+        ld      hl,msg_level
+        jp      fail_hl
+.me:    inc     de
+        inc     b
+        ld      a,b
+        cp      SLOTS
+        jr      c,.oth
+        ld      a,(B_NLEN)
+        add     a,SET_FIXED + 2
+        ld      l,a
+        ld      h,0
+        ld      (work32),hl
+        ld      l,h
+        ld      (work32+2),hl
+        ld      hl,B_POS
+        ld      de,left
+        call    copy4
+        ld      hl,left
+        ld      de,work32
+        call    add32
+        ld      hl,left
+        call    seek_patch
+        ld      a,(B_K)
+        or      a
+        jr      z,.len
+        ld      c,a
+        ld      b,0
+        ld      hl,smallbuf
+        call    read_patch
+        ld      a,(B_K)
+        ld      b,a
+        ld      c,7
+        ld      hl,smallbuf
+.bank:  ld      a,(hl)
+        cp      c
+        jp      c,bad_patch
+        jp      z,bad_patch
+        ld      c,a
+        push    hl
+        push    bc
+        ld      a,(B_TOP)
+        cp      c
+        jp      c,bad_patch
+        ld      a,c
+        call    header_has
+        jp      nz,bad_patch
+        ld      (hl),1
+        ld      hl,HDR+9
+        inc     (hl)
+        ld      a,c
+        cp      48
+        jr      c,.low
+        ld      a,1
+        ld      (HDR+8),a
+.low:   ld      a,c
+        call    big_bit
+        or      (hl)
+        ld      (hl),a
+        pop     bc
+        pop     hl
+        inc     hl
+        djnz    .bank
+.len:   ld      a,(B_K)                     ; 16K x k more: k << 14
+        ld      c,a
+        rrca
+        rrca
+        and     $c0
+        ld      (work32+1),a
+        ld      a,c
+        srl     a
+        srl     a
+        ld      (work32+2),a
+        xor     a
+        ld      (work32),a
+        ld      (work32+3),a
+        ld      hl,want+4
+        ld      de,work32
+        call    add32
+        ld      a,(B_TOP)
+        ld      (ram_bank),a
+        ret
+
+; HL at bank A's byte of B_MAP, A its bit. Keeps C.
+big_bit:
+        ld      e,a
+        rrca
+        rrca
+        rrca
+        and     31
+        ld      l,a
+        ld      h,0
+        ld      a,e
+        ld      de,B_MAP
+        add     hl,de
+        and     7
+        ld      b,a
+        inc     b
+        ld      a,1
+.r:     rrca
+        djnz    .r
+        ret
+
+; NZ when bank cur_bank is one the chosen SET3 adds.
+big_has:
+        call    big_on
+        ret     z
+        ld      a,(cur_bank)
+        call    big_bit
+        and     (hl)
+        ret
+
+; All banks the header lists must come from somewhere, before any file is made.
+all_banks_available:
+        ld      b,112
+        ld      c,0
+.b:     push    bc
+        ld      a,c
+        ld      (cur_bank),a
+        call    bank_index_entry
+        push    af
+        ld      a,(cur_bank)
+        call    header_has
+        jr      nz,.listed
+        pop     af                          ; a BNK1 for a bank not listed is damage
+        jp      nz,bad_patch
+        jr      .ok
+.listed:
+        ld      a,(ram_bank)                ; OPT1 may say more than the header lists, not less
+        ld      hl,cur_bank
+        cp      (hl)
+        jp      c,bad_patch
+        pop     af
+        jr      nz,.ok
+        call    big_has                     ; a bank the chosen SET3 adds: from zeros
+        jr      nz,.ok
+        ld      a,(cur_bank)
+        call    part_has
+        jp      nc,bad_patch
+.ok:    pop     bc
+        inc     c
+        djnz    .b
+        ret
+
+check_screen:
+        call    screen_size
+        ld      a,(scr_left+2)              ; chunks = size / 16384, rounded up
+        ld      h,a
+        ld      a,(scr_left+1)
+        ld      l,a
+        ld      a,(scr_left)
+        or      a
+        jr      z,.even
+        inc     hl                          ; (a palette: 512 is $200, not a low byte)
+.even:  ld      de,$3f
+        add     hl,de
+        add     hl,hl
+        add     hl,hl
+        ld      a,h
+        ld      (scr_chunks),a
+        xor     a
+        ld      (scr_mask),a
+        call    walk_begin
+.next:  call    walk_next
+        jr      z,.end
+        ld      de,magic_scr1
+        call    tag_is
+        jr      nz,.next
+        ld      hl,blk_len
+        ld      bc,0
+        ld      de,3
+        call    below32
+        jp      c,bad_patch
+        ld      hl,tagbuf
+        ld      bc,3
+        call    read_patch
+        ld      a,(scr_chunks)
+        ld      c,a
+        ld      a,(tagbuf)
+        cp      c
+        jp      nc,bad_patch
+        ld      b,a
+        inc     b
+        ld      a,$80
+.bit:   rlca
+        djnz    .bit
+        ld      c,a
+        ld      a,(scr_mask)
+        ld      b,a
+        and     c
+        jp      nz,bad_patch
+        ld      a,b
+        or      c
+        ld      (scr_mask),a
+        ld      hl,(tagbuf+1)               ; at most 16K, and data if it says so
+        ld      de,BANK_SIZE+1
+        or      a
+        sbc     hl,de
+        jp      nc,bad_patch
+        ld      hl,(tagbuf+1)
+        ld      a,h
+        or      l
+        jr      nz,.next
+        ld      hl,blk_len
+        ld      de,three
+        call    same_tag
+        jp      nz,bad_patch
+        jr      .next
+.end:   ld      a,(scr_chunks)              ; all of them there
+        ld      b,a
+        xor     a
+        inc     b
+.count: dec     b
+        jr      z,.counted
+        scf
+        rla
+        jr      .count
+.counted:
+        ld      c,a
+        ld      a,(scr_mask)
+        cp      c
+        jp      nz,bad_patch
+        ret
+
+big_end:
+        ent
+        disp    mp_big_at + big_end - big_start
         db      "NXQ1"
 mp_end:
 mp_size         equ mp_end - mp_start

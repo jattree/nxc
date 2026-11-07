@@ -85,6 +85,7 @@ An extra block must never be required to play. A patch that truly needs more tha
 | `TAP1` | one for each group of tape targets | yes, after its first 2 + n bytes | How one or more tapes become the game's banks |
 | `HLP1` | no, once | no | Help for the menu's lines |
 | `OPR1` | no, once | no | Which options go together, with no limit of two at once |
+| `SET3` | no, at most one | yes, after its name, its banks, its table's indices and the heads of its chunks | One choice that needs more memory than the base: banks of its own, and the most memory the game needs with it |
 
 A second `OPT1`, `INF1`, `OUT1`, `NEX1` or `SIT1` is damage at once, however many there are.
 
@@ -133,7 +134,9 @@ A loader that is shown a patch of its level or below can do all of it. `SCR1` ma
 
 **Memory.** Byte 2 lets a loader on a smaller machine refuse rather than start a game that breaks. A writer works it out from the `.nex`: the highest bank the header lists, or 48 if the header's byte 8 asks for 1792K, whichever is higher. That is all the file shows: a build may use banks at run time that it does not load, such as Layer 2 buffers, so an author may raise it, and nothing can lower it. A reader refuses a value below a bank the header lists.
 
-A loader that can find out how much there is compares `2 x (byte 2 + 1)` with the 8K banks of ZX memory, and if there are too few, refuses the rebuilt game, saying so. A 1MB Next has banks 0 to 47, and a 2MB Next banks 0 to 111. `firmware/nexclash.asm` asks NextZXOS, with `IDE_BANK` and reason `rc_bank_total` through `M_P3DOS`, when ENTER is pressed with the clash fix on. If NextZXOS will not say, it goes on. The clash fix off is the player's own game, and is not checked. `.nexload` does not check its header's byte 8 itself, as its source on the card shows.
+This is the base build's need. A choice that needs more, such as a colour set whose pictures fill a 2MB Next, is a `SET3` and says its own need: a loader offers it only on a machine that has it, and the base still fits the smaller one. See "SET3".
+
+A loader that can find out how much there is compares `2 x (byte 2 + 1)`, or with a `SET3` chosen `2 x` (its need `+ 1`), with the 8K banks of ZX memory, and if there are too few, refuses the rebuilt game, saying so. A 1MB Next has banks 0 to 47, and a 2MB Next banks 0 to 111. `firmware/nexclash.asm` asks NextZXOS, with `IDE_BANK` and reason `rc_bank_total` through `M_P3DOS`, when ENTER is pressed with the clash fix on. If NextZXOS will not say, it goes on. The clash fix off is the player's own game, and is not checked. `.nexload` does not check its header's byte 8 itself, as its source on the card shows.
 
 ### Text blocks
 
@@ -396,6 +399,54 @@ An **option** is a set the menu offers: a colour set or a language (kinds 1 and 
 
 **Compatibility.** A patch without `OPR1` is unchanged, byte for byte, and so are its bare and menu `.nex`, from every reader before and after. A reader before `OPR1` reads a patch with it as one without: two at once, with no rules, and it refuses the combinations whose options overlap, as it always has; one whose rules it could break otherwise is refused, by bit 2. `OPR1` raises no level.
 
+### SET3: a choice that needs more memory
+
+A colour set or a language that only fits a bigger Next: Enhanced colours whose pictures fill a 2MB Next, on a game whose base build fits a 1MB one. It is a `SET2` in every way but these: it says the most memory the game needs with it on; it may **add banks**, which the base build does not list and the set fills; and a loader offers it only on a machine with that memory. Optional, at most one in a patch.
+
+| Offset | Size | Field |
+|---|---|---|
+| 0 | 1 | Stream index, in the clear. **Unique among all `SET2` and `SET3` blocks**: a repeat is damage |
+| 1 | 1 | Kind: 1 colours or 2 language. Others are reserved, and a reader does not offer them |
+| 2 | 1 | Choice ID, as in `SET2` |
+| 3 | 1 | Base: 1, the sprite build. Others are reserved, and a reader does not offer them |
+| 4 | 1 | Length of the name, 1 to 25 |
+| 5 | | The name in ASCII, in the clear |
+| | 1 | **Its need:** the highest 16K bank the rebuilt game needs with it on, from `OPT1`'s byte 2 to 111. A 1MB Next has banks 0 to 47, so 48 or more is "needs a 2MB Next" |
+| | 1 | k, the number of banks it adds, 0 to 104 |
+| | k | The banks it adds, rising, each from 8 to its need. None may be listed by the base build's header |
+| | 1 | m, the number of entries in its table |
+| | m | The stream index of each `SET2` block its table holds a CRC for, each once |
+| | 4 | The CRC-32 of the finished file with this set alone over the base, encrypted under tag `SEB` plus the stream index, index 255, as in `SET2` |
+| | 4 | The CRC-32 of its **carrier**, below, the same stream, index 254 |
+| | 4m | Its table: for each index listed, the CRC-32 of the finished file with this set and that `SET2` alone, the same stream, index 253, in the listed order |
+| | | Its chunks, to the end of the block |
+
+**With it on**, the `.nex` is the base build's with its banks added: each added bank's flag set in the header (byte 18 + bank), byte 9 increased by k, byte 8 set to 1 if an added bank is above 47, and nothing else in the header changed. The added banks take their places in `.nex` order, among the base's, so the file is k x 16K longer. An added bank starts as 16,384 zeros, and the set's chunks fill it. **Its chunks** are exactly a `SET2`'s, a bitmap and its bytes for each bank it changes, in `.nex` order, and may be for any bank of the header with its banks added: the base's and its own. An added bank that stays all zeros needs no chunk. A reader refuses as for `SET2`, against that header.
+
+**The check.** The added banks change the length and the layout, so the CRCs of the `SET2` blocks, made against the base, cannot be combined with this one's. So it carries its own: with it on, the output's CRC is
+
+```text
+CRC(combination) = CRC(this alone) XOR (CRC(this and set 1) XOR CRC(this alone)) XOR (CRC(this and set 2) XOR CRC(this alone)) ...
+```
+
+taking each chosen `SET2`'s term from this set's table. A chosen `SET2` with no entry in the table is damage; a writer puts every `SET2` with base 1 in it. The length is `OUT1`'s plus k x 16,384. A `SET2`'s chunks must still be for banks the base lists. A writer refuses a `SET2` that overlaps it as it refuses two sets that overlap.
+
+**Its need, and the machine.** A reader that can find out how much memory the machine has (see `OPT1`) offers it only when the machine has banks 0 to its need. **On a machine with less, the line is shown, but cannot be chosen:** its value reads `[N/A]`, its key does nothing, and its help reads `Needs a 2MB Next` (for a need of 48 or more; a need it can never have, above 111, is damage), whatever `HLP1` says. A reader that cannot find out offers it, and refuses at the end if the machine turns out too small, as for `OPT1`. Everything else on the menu works as before, and the base build is what plays.
+
+**Its kind's line is its own:** a writer refuses a patch with a `SET2` of the same kind as its `SET3`, so the line is `[ ON]` or `[OFF]`, and named as `SET2` lines are, `Enhanced colours` or `Language`; `HLP1`'s `colours` or `language` is its help. A reader that finds such a `SET2` anyway refuses the patch as damaged. A reader offers the first `SET3` it can apply and passes over any other, as a writer never makes two.
+
+**Rules.** In this version an `OPR1` rule may not name a `SET3` option: a reader refuses one that does as damage, and a writer does not make it. A `SET3` option is on with any `SET2`, toggle or trainer it does not overlap.
+
+**Old readers stay safe.** A reader from before `SET3` skips the block, as any tag it does not know, so it sees the base build: the menu without the line, and a base whose `OPT1` byte 2 it can check against the machine. That is why the base must fit on its own, and why everything only the option needs is in its block: nothing a reader before it can make needs more than `OPT1` says. `tools/nxc.py`'s tests rebuild a patch with a `SET3` through the reader as it was before it, and get the base build and its menu `.nex`, byte for byte.
+
+**Memory, in a loader.** A chosen `SET3` is decoded a chunk at a time, as a `SET2` is, in the same pages. Its added banks are made from zeros, and need nothing more.
+
+**How a loader on a Next finds the memory.** NextZXOS counts the machine's memory when it starts and answers for it: `IDE_BANK` (0x01BD) through `M_P3DOS`, with H = 0 (ZX memory) and L = 0 (the total), gives in E the 8K banks of ZX memory there are, 96 on a 1MB Next and 224 on a 2MB one. Banks 0 to b need `2 x (b + 1)` of them. A loader asks before its menu and again when ENTER starts the build. If NextZXOS will not say, it offers the option and goes on, as for `OPT1`. Nothing here reads a NextREG or probes memory: NextZXOS has already done that, and a loader that paged through memory to find its end would be guessing at the board's wiring.
+
+**`firmware/nexclash.asm`** keeps to all of this, with three limits of its own, each a refusal and never a wrong file: it holds no table, so a `SET3` chosen together with another set or a toggle is refused as needing a newer loader (trainers are fine); with a `SET3` offered, SPACE writes the bare `.nex` with the choices fixed, as ENTER does, since it does not write a carrier, and the menu `.nex`s are written by `tools/nxc.py` (`--ram 1mb`, `--ram 2mb`); and it does not check the carrier's CRC or the table, which it never uses. Its menu shows the line as `[N/A]` with that help on a 1MB Next. Its code for `SET3` runs from the menu's own page, mapped at 0x6000 while the build has nothing there, as the command's 8K is full. In JNext, whose memory is a fixed 2MB, the 1MB case is NextZXOS's answer set to 96 by a script, and in `tests/test_nexclash_ram.py` the harness answers 96 or 224.
+
+**In a `.nex` that carries its menu.** A menu `.nex` made for a machine without the option's memory leaves it out: its menu and data are those of a reader before `SET3`, byte for byte, so it runs on the smaller machine. One made for a machine with the memory **carries the option**: its bare part is the **carrier**, the base build with the set's banks added and the set's chunks for its own banks applied, and nothing else, whose CRC the block holds; its menu banks start above the set's need (M0 is the need plus 1, not `OPT1`'s byte 2 plus 1); and its data holds the set's chunks for the banks the base lists only, as its own banks are in the file already. With the set off, the game starts with the same bytes in every bank the base lists as the bare base build, and its own banks, which the base never uses, are left as they are. `nxc.py PATCH GAME --ram 1mb` and `--ram 2mb` write each; without `--ram` it writes the one that carries the option.
+
 ### Reserved: game speed, SET2 kind 5
 
 No tool or loader here writes or offers this; both already show nothing for it, as for any kind they do not know. The rules, so that every reader that comes to offer it offers the same thing. It comes from the speed review of 2026-11-04: a loader setting the CPU's speed (NextREG 0x07) by itself changes how several games play, so a speed is the engine's work, made and proven for each game, and the format only carries and selects it.
@@ -619,6 +670,8 @@ No two uses share a stream. Each tag has one purpose, and within a tag the index
 | master | `TAP1` | The block's stream index | That tape table |
 | master | `SEB` then the set's stream index, as one byte | 255 | That set's CRC |
 | master | `SEB` then the set's stream index, as one byte | The bank | That set's chunk for that bank |
+| master | `SEB` then a `SET3`'s stream index, as one byte | 254 | Its carrier's CRC |
+| master | `SEB` then a `SET3`'s stream index, as one byte | 253 | Its table of CRCs |
 
 `TGT1` is never used under the master base nor anything else under a dump's, and these tags are fixed, so a writer needs no other rule. A new encrypted block needs a new tag, and with it its own streams. Changing a clear block keeps the nonce, the key and the streams, as the plaintext of every encrypted block is unchanged. Changing what an encrypted block holds means a new nonce and key.
 
