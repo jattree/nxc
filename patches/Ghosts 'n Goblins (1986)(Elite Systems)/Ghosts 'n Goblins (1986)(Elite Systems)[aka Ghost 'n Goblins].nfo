@@ -1,0 +1,113 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Ghosts 'n Goblins
+  Publisher   Elite, 1986
+  Version     1.6
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Ghosts 'n Goblins (1986)(Elite Systems)[aka Ghost 'n
+              Goblins].z80
+  MD5         23d69f517506104c36ba429cb2148fa5
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Owner-painted flat colours on the original Spectrum drawings,
+              chosen from an arcade reference; armour, faces, zombies and
+              graves painted, climbing poses included. Excess black padding
+              trimmed from unarmoured Arthur. White HUD text and cyan weapon
+              on black. Source: Enhanced colours: Jon Attree.
+
+  Pace        original
+
+  Changes     1.6: the moving platform over the water no longer glitches with
+              Always the dagger on (the cheat corrupted one of its four
+              drawings)
+              1.5: real cheats (invincibility; start at level 2 or 3; always
+              the dagger); infinite time no longer stops the game from
+              starting
+              1.4: figures move through intermediate positions between the
+              game's two-frame steps; a zombie's pot no longer shows below
+              ground as it emerges; latest owner sprite painting in Enhanced.
+              Game logic, sound and delays unchanged.
+
+  Note        0 starts/fires; 5 left, 8 right, 7 up, 6 down, SPACE jump. J
+              joystick, R redefine. Enhanced off by default. Original pace and
+              loading screen. Hardware untested. Known issue: in one spot on
+              level 3 a ladder can blink for a frame as the scenery scrolls
+              (the sprite engine delays the game's redraw of it until after
+              the screen has been drawn there); the original does not do this;
+              a fix is planned.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite time
+   3  Invincibility
+   4  Start at level 2
+   5  Start at level 3
+   6  Always the dagger
+
+  Infinite lives is the archive's POKE for this release; the other cheats were
+  found in the game's code for this patch, and Infinite time replaces the
+  archive's, which stopped the game from starting.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Elite, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06 (1.4 colours and engine,
+              1.5 cheats): approved; the 1.6 platform fix checked in the
+              simulator and headless JNext
+
+  Replay      Both sets: 11 recordings, 53063 frames each, identical game
+              state, registers, positions and 331570 exact painted patterns;
+              every hook ran (125170 plots, 139028 object hooks, 24223 draw
+              passes, 24209 Copper commits). Carried-pot oracle: 567 hidden,
+              960 partial, 1517 full. Per set 648 clipping cases and 3120
+              clock/R/IFF cases (incl. 2048 object hook). 34 replay, 5
+              clipping/atlas and 1 stale-history negative controls caught.
+
+  Emulator    JNext headless: per set a 5000-frame death/reset run (8 reset
+              hooks, no Copper update during sprite drawing) and native pot-
+              emergence captures; actual loader rebuilt both sets byte for
+              byte from private card-image copies. Hardware untested.
+
+  Coverage    152 complete painted images, 315 recorded/audited variants. Six
+              injected section-start fixtures (c0-c10; c6 is not a valid
+              start); natural death, game over and menus; both climbing forms;
+              a natural zombie pot emergence. Ending, late bosses, joystick
+              and redefine paths remain uncovered. v1.5 cheats: 9 cheat
+              recordings (43,030 frames) replay identical in both sets; level
+              2 and 3 starts played through their first scroll; JNext runs of
+              each cheat; 15-minute all-cheats soak. v1.6: the dagger cheat
+              fixed; 4 more recordings (19,174 frames, incl. a ride on the
+              water platform) replay identical in both sets; the platform
+              drawings stay intact.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
