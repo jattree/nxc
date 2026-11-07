@@ -24,6 +24,10 @@
 ;   3 bytes for each line, the writer's; and with flags bit 2 (MENU_RULES only)
 ;   the rules: their count, then each one's type (1 excludes, 2 needs), line A,
 ;   the state that is A on, line B, the state that is B on.
+; With MENU_LANG, flags bit 3: each kind of set's line has one more string after
+;   its sets' names, its value with no set chosen, such as the game's own
+;   language; with one, the line names the chosen set even when it has only one
+;   (spec, "The menu"). Empty: [OFF] and [ ON] as before.
 ; With MENU_NEEDS (the dot command's own menu only, never a stub), a kind of set
 ; with no sets is an option the machine has too little memory for: it reads N/A,
 ; and its key changes nothing.
@@ -58,6 +62,9 @@ MENU_PATCH      equ 21
 MENU_FOOTER     equ 22                  ; the fixed footer, two bars, which no patch can change
 MENU_VERSION    equ 8                   ; a version's characters, after its v
 MD_VERSION      equ 1                   ; the flags' bit: a version follows patch_by
+        ifdef MENU_LANG
+MD_LANG         equ 3                   ; the flags' bit: a kind of set's line has a name for no set chosen
+        endif
 A_TEXT          equ $47                 ; BRIGHT, paper black, ink white
 A_BAR           equ $4e                 ; paper blue, ink yellow
 A_HEAD          equ $46
@@ -452,10 +459,24 @@ md_line:
 
 ; HL at the record after the one at HL. Keeps B, DE.
 md_skip:
+        ifdef MENU_LANG
+        ld      a,(hl)                  ; the kind
+        endif
         inc     hl
         inc     hl
         ld      c,(hl)                  ; the number of sets' names
         inc     hl
+        ifdef MENU_LANG
+        cp      2
+        jr      nz,.nl
+        push    hl
+        ld      hl,(MV_DESC)
+        bit     MD_LANG,(hl)
+        pop     hl
+        jr      z,.nl
+        inc     c                       ; and its name for no set chosen
+.nl:
+        endif
         call    md_skipz                ; name
         call    md_skipz                ; help
         inc     c
@@ -796,7 +817,11 @@ draw_line:
         ld      (MV_VTYPE),a
         ld      c,5
         cp      3
+        ifdef MENU_LANG
+        jr      c,.w                    ; 3 and 4 are names
+        else
         jr      nz,.w
+        endif
         ld      c,b
         inc     c
         inc     c
@@ -826,6 +851,9 @@ draw_line:
         ld      a,(MV_VTYPE)
         cp      3
         jr      z,.name
+        ifdef MENU_LANG
+        jr      nc,.own
+        endif
         ld      hl,s_values
         add     a,a
         add     a,a
@@ -839,6 +867,11 @@ draw_line:
         call    puts_max
         jr      .close
 .name:  ld      a,A_ON
+        ifdef MENU_LANG
+        jr      .nm
+.own:   ld      a,A_OFF                 ; the game's own language: no set chosen
+.nm:
+        endif
         ld      (MV_ATTR),a
         call    puts_max
 .close: ld      a,A_TEXT
@@ -847,7 +880,8 @@ draw_line:
         jp      putc
 
 ; A: 0 OFF, 1 ON, 2 N/A, 3 a set's name (HL at it, B its length, cut to 12), for
-; the record at MV_REC.
+; the record at MV_REC; with MENU_LANG, 4 the line's name for no set chosen, the
+; same way.
 md_value:
         ld      hl,(MV_REC)
         ld      a,(hl)
@@ -871,13 +905,18 @@ md_value:
         ret     z
         ld      a,(hl)
         endif
+        ifdef MENU_LANG
+        call    md_own                  ; a name for no set chosen: names, even with one set
+        jr      nz,.own
+        ld      a,(hl)
+        endif
         dec     a
         jr      z,.state
         dec     hl
         ld      a,(hl)
         or      a
         ret     z
-        ld      b,a
+.pick:  ld      b,a
         inc     hl
         inc     hl
         call    md_skipz                ; past the name and the help
@@ -893,6 +932,20 @@ md_value:
         pop     hl
         ld      a,3
         ret
+        ifdef MENU_LANG
+.own:   dec     hl                      ; the state
+        ld      a,(hl)
+        or      a
+        jr      nz,.pick                ; a set chosen: its name
+        ex      de,hl
+        push    hl
+        ld      b,12
+        call    len_max
+        ld      b,a
+        pop     hl
+        ld      a,4
+        ret
+        endif
 .state: ld      hl,(MV_REC)
         inc     hl
         ld      a,(hl)
@@ -900,6 +953,32 @@ md_value:
         ret     z
         ld      a,1
         ret
+
+        ifdef MENU_LANG
+; NZ, with DE at it, when the kind of set's line at MV_REC has a name for no set
+; chosen (the flags' bit 3, and not empty). Keeps HL.
+md_own: push    hl
+        ld      hl,(MV_DESC)
+        bit     MD_LANG,(hl)
+        jr      z,.no
+        ld      hl,(MV_REC)
+        inc     hl
+        inc     hl
+        ld      b,(hl)                  ; the number of sets
+        inc     hl
+        call    md_skipz                ; past the name and the help
+        call    md_skipz
+        inc     b
+.s:     dec     b
+        jr      z,.at
+        call    md_skipz
+        jr      .s
+.at:    ld      a,(hl)
+        ex      de,hl
+        or      a
+.no:    pop     hl
+        ret
+        endif
 
 ; ------------------------------------------------------------- the screen
 

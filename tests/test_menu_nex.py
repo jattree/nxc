@@ -297,6 +297,8 @@ class Writer(unittest.TestCase):
             self.assertEqual(out.read_bytes(), nxc.stub_binary())
             subprocess.run(["sjasmplus", "--nologo", "-DMENU_RULES", f"--raw={out}", "nxcstub.asm"], cwd=ROOT / "firmware", check=True, capture_output=True)
             self.assertEqual(out.read_bytes(), nxc.stub_binary(rules=True))
+            subprocess.run(["sjasmplus", "--nologo", "-DMENU_RULES", "-DMENU_LANG", f"--raw={out}", "nxcstub.asm"], cwd=ROOT / "firmware", check=True, capture_output=True)
+            self.assertEqual(out.read_bytes(), nxc.stub_binary(lang=True))
 
 
 @unittest.skipUnless(N.z80 is not None and os.environ.get("NXC_MENU_GAMES"), "no real games listed: set NXC_MENU_GAMES")

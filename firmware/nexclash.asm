@@ -6695,6 +6695,7 @@ MENU_TEXT       equ 32                      ; a publisher, a name in the credits
 HELP_MAX        equ 64
 NAME_MAX        equ 25
 VERSION_MAX     equ 8                       ; INF1's version, shown after a v
+LANG_NAME_MAX   equ 12                      ; INF1's game_language_name, the Language line's value with no set chosen
 
         disp    MP_AT
 mp_start:
@@ -6710,6 +6711,7 @@ mp_k_toggle:    db "toggle_",0
 mp_k_fix:       db "fix=",0
 mp_k_colours:   db "colours=",0
 mp_k_language:  db "language=",0
+mp_k_own:       db "game_language_name=",0
 
 mp_main:
         ld      hl,big_seen                 ; what the walk found of a SET3, for the big part after the menu
@@ -6851,7 +6853,9 @@ mp_main:
 .pby:   ld      hl,key_patch_by
         call    mp_inf
         call    mp_version
-; Each line: kind, state, sets, name, help, the sets' names.
+        call    mp_own_in
+; Each line: kind, state, sets, name, help, the sets' names, and with the flags' bit 3 a kind of set's name
+; for no set chosen.
         ld      a,(trainer_count)
         or      a
         jr      z,.fix
@@ -6941,7 +6945,7 @@ mp_main:
         jr      nz,.kq
         ld      hl,mp_s_needs
         call    mp_copyz_help
-        jr      .kn
+        jr      .kx
 .kq:    ld      a,(cur_kind)
         or      a
         ld      hl,mp_k_colours
@@ -6964,6 +6968,7 @@ mp_main:
         pop     bc
         inc     c
         djnz    .sn
+.kx:    call    mp_own_out
 .kn:    ld      a,(cur_kind)
         inc     a
         cp      KINDS
@@ -7364,6 +7369,50 @@ mp_version:
         set     1,(hl)
         ret
 
+; INF1's game_language_name, with a language line offered: at most LANG_NAME_MAX characters at mp_own,
+; then a zero, and the description's flags bit 3 set; mp_own empty without it, or with it empty.
+mp_own_in:
+        xor     a
+        ld      (mp_own),a
+        ld      a,(set_counts+1)
+        or      a
+        ret     z
+        push    de
+        ld      de,mp_k_own
+        call    text_find
+        jr      c,.no
+        ld      a,b
+        or      c
+        jr      z,.no
+        ld      de,mp_own
+        ld      a,LANG_NAME_MAX
+        call    copy_text
+        ld      hl,MP_DESC
+        set     3,(hl)
+.no:    pop     de
+        ret
+
+; With the flags' bit 3, the line of kind cur_kind's name for no set chosen at DE: the game's
+; language for the language line, empty for colours; DE past its zero.
+mp_own_out:
+        ld      a,(MP_DESC)
+        bit     3,a
+        ret     z
+        ld      a,(cur_kind)
+        or      a
+        ld      hl,mp_own
+        jr      nz,.c
+        ld      (de),a
+        inc     de
+        ret
+.c:     ld      a,(hl)
+        ld      (de),a
+        inc     hl
+        inc     de
+        or      a
+        jr      nz,.c
+        ret
+
 ; BC bytes at HL as a name, at most NAME_MAX, at DE; DE past its zero.
 mp_name:
         ld      a,NAME_MAX
@@ -7551,6 +7600,7 @@ mp_s_needs:     db "Needs a 2MB Next",0
 
         define  MENU_RULES
         define  MENU_NEEDS
+        define  MENU_LANG
         include "menu.asm"
 
 ; After ENTER or SPACE, while the menu is still up: its keys' row, found by its green ENTER (the only
@@ -7949,7 +7999,8 @@ mp_key          equ mp_end + 8
 mp_keybuf       equ mp_end + 9              ; 12
 mp_ok           equ mp_end + 21             ; 2: a rule's option, its kind and choice
 mp_optp         equ mp_end + 23             ; 2: and where it is
-MENU_RAM        equ mp_end + 25             ; MENU_RAM_SIZE
+mp_own          equ mp_end + 25             ; LANG_NAME_MAX + 1: the game's language, for the language line
+MENU_RAM        equ mp_own + LANG_NAME_MAX + 1 ; MENU_RAM_SIZE
 MP_FONT         equ MENU_RAM + MENU_RAM_SIZE ; 768
 MP_HELP         equ MP_FONT + 768           ; HELP_READ
 MP_DESC         equ MP_HELP + HELP_READ
@@ -8012,7 +8063,11 @@ mnx_start:
         ld      de,mnx_tg
         ld      bc,2 + 2 * TOGGLES_MAX
         ldir
-        ld      a,(MP_DESC)                 ; the stub: the one with rules for a patch with OPR1
+        ld      a,(MP_DESC)                 ; the stub: with the game's language named, the third;
+        ld      hl,STUB3_LEN                ; otherwise the one with rules for a patch with OPR1
+        ld      de,file_stub3_at
+        bit     3,a
+        jr      nz,.st
         and     4
         ld      hl,STUB1_LEN
         ld      de,file_stub1_at
@@ -8606,6 +8661,7 @@ msg_no_menu:    db "No menu .nex: press ENTE", 'R' | $80
 mnx_v12:        db "V1.2"
 file_stub1_at:  dd FILE_STUB1_AT
 file_stub2_at:  dd FILE_STUB2_AT
+file_stub3_at:  dd FILE_STUB3_AT
         db      "NXQ1"
 mnx_end_code:
 mnx_size        equ mnx_end_code - mnx_start
@@ -8643,16 +8699,21 @@ mnx_vars_end    equ mnx_end_code + 97
 FILE_MENU_AT    equ FIRST_PART + ov_size + tape1_size + tape2_size + tape3_size
 FILE_MNX_AT     equ FILE_MENU_AT + mp_size
 
-; The two stubs of a .nex that carries its menu, each with a part's tag: the one a .nex for a
-; patch without OPR1 has always carried, and the one that keeps to OPR1's rules.
+; The three stubs of a .nex that carries its menu, each with a part's tag: the one a .nex for a
+; patch without OPR1 has always carried, the one that keeps to OPR1's rules, and that one with a
+; name for the language line's no set chosen (INF1's game_language_name).
 stub1_file:     incbin "nxcstub.bin"
 STUB1_LEN       equ $ - stub1_file
         db      "NXQ1"
 stub2_file:     incbin "nxcstub2.bin"
 STUB2_LEN       equ $ - stub2_file
         db      "NXQ1"
+stub3_file:     incbin "nxcstub3.bin"
+STUB3_LEN       equ $ - stub3_file
+        db      "NXQ1"
 FILE_STUB1_AT   equ FILE_MNX_AT + mnx_size
 FILE_STUB2_AT   equ FILE_STUB1_AT + STUB1_LEN + 4
+FILE_STUB3_AT   equ FILE_STUB2_AT + STUB2_LEN + 4
 
 ; The highest the code reaches, whichever part is in.
         if      z80_part_at + tape1_size > ov_start_at + ov_size

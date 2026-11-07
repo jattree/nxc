@@ -818,7 +818,7 @@ class Split(Case):
     def test_the_first_part_is_exactly_what_nextzxos_loads(self) -> None:
         self.assertGreater(len(self.binary), H.FIRST_PART)
         sizes = [self.symbols[n] for n in ("ov_size", "tape1_size", "tape2_size", "tape3_size", "mp_size", "mnx_size")]
-        sizes += [self.symbols["STUB1_LEN"] + 4, self.symbols["STUB2_LEN"] + 4]     # then the two stubs, each with the tag
+        sizes += [self.symbols[n] + 4 for n in ("STUB1_LEN", "STUB2_LEN", "STUB3_LEN")]     # then the three stubs, each with the tag
         self.assertEqual(len(self.binary), H.FIRST_PART + sum(sizes))
         at = H.FIRST_PART
         for size in sizes:                                  # the overlay, a tape's three parts, the menu's, the writer's: each ends in the tag

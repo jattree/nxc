@@ -51,8 +51,9 @@ BIG_TAG = b'SET3'; BIG_CARRIER_INDEX = 254; BIG_TABLE_INDEX = 253   # an option 
 BIG_KINDS = (KIND_COLOURS, KIND_LANGUAGE); NEXT_1MB = 47; NEXT_2MB = 111   # what a SET3 may be, in this version; the highest 16K bank of each Next
 NEEDS_HELP = 'Needs a 2MB Next'                     # the help a reader shows on the line of an option the machine has too little memory for
 TEXT_READ = 252; CREDIT_NAME = 32  # what a loader reads of INF1, and keeps of a name
-FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version')   # the main line's name without INF1's fix_label
-VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2; DESC_RULES = 4   # INF1's version, shown as v and it; the description's flags
+FIX_LABEL = 'Colour clash fix'; FIX_LABEL_MAX = 25; MENU_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version', 'game_language_name')   # the main line's name without INF1's fix_label
+VERSION_MAX = 8; DESC_FIXED = 1; DESC_VERSION = 2; DESC_RULES = 4; DESC_LANG = 8   # INF1's version, shown as v and it; the description's flags
+LANGUAGE_NAME_MAX = 12   # INF1's game_language_name: the Language line's value with no language set chosen, as a set's name is cut
 RULES_TAG = b'OPR1'; RULES_MAX = 32; RULE_SIZE = 5; RULE_EXCLUDES = 1; RULE_NEEDS = 2; RULE_MENU_ONLY = 0x80   # OPR1: which options go together
 RULE_WORDS = {RULE_EXCLUDES: 'excludes', RULE_NEEDS: 'needs', RULE_NEEDS | RULE_MENU_ONLY: 'implies', RULE_EXCLUDES | RULE_MENU_ONLY: 'excludes (menu only)'}
 NO_CAP = 255; OLD_HOLD = 2; STATES_MAX = 65536   # the description's N with OPR1; what a reader without OPR1 holds at once; the most menu states a writer goes through
@@ -654,6 +655,8 @@ def import_pok(f, game_path, pok_text, publisher=None, skipped=None, only=None, 
             if not fix_label_seen(body, label.decode()): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
             ver = next((l[8:] for l in body.split(b'\n') if l.startswith(b'version=')), b'')
             if not fix_label_seen(body, ver.decode(), b'version'): raise Wrong('version must end within the first %d bytes of INF1' % TEXT_READ)
+            own = next((l[19:] for l in body.split(b'\n') if l.startswith(b'game_language_name=')), b'')
+            if not fix_label_seen(body, own.decode(), b'game_language_name'): raise Wrong('game_language_name must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
     return seal(f[:CHECK_AT], out, st)
 
@@ -897,6 +900,8 @@ def make(z80, nex, target, info, nonce=None, level=None, rom=0, proof=None, colo
     if info.get('version') not in (None, ''): check_version(info['version'])
     if not fix_label_seen(text(info), info.get('fix_label')): raise Wrong('fix_label must end within the first %d bytes of INF1' % TEXT_READ)
     if not fix_label_seen(text(info), info.get('version'), b'version'): raise Wrong('version must end within the first %d bytes of INF1' % TEXT_READ)
+    if info.get('game_language_name') not in (None, ''): check_language_name(info['game_language_name'])
+    if not fix_label_seen(text(info), info.get('game_language_name'), b'game_language_name'): raise Wrong('game_language_name must end within the first %d bytes of INF1' % TEXT_READ)
     bl = [[b'TGT1', target_block(0, game_kind, game, nonce, master, target)], [b'INF1', text(info)], [b'PRF1', proof_text(proof)], [b'ROM1', bytes((rom,))]]
     names = [parse_trn1(t)[1] for t in trainer_blocks]
     if len(set(names)) != len(names): raise ValueError('two trainers have one name')
@@ -1694,6 +1699,7 @@ MENU_TITLE = 54   # two bar rows of 27
 HELP_TAG = b'HLP1'; HELP_MAX = 64; HELP_READ = 1024; MENU_ROW = 32; MENU_LINES = 10; MENU_HOLD = 2   # help: two rows of 32
 STUB = os.path.join(HERE, '..', 'firmware', 'nxcstub.bin')   # assembled from firmware/nxcstub.asm, with firmware/menu.asm
 STUB_RULES = os.path.join(HERE, '..', 'firmware', 'nxcstub2.bin')   # the same, with MENU_RULES: for a patch with OPR1
+STUB_LANG = os.path.join(HERE, '..', 'firmware', 'nxcstub3.bin')   # with MENU_RULES and MENU_LANG: for a description with DESC_LANG
 STUB_PARAMS = 8; STUB_DESC_END = 0x1D00; STUB_BLOCK = 57; MENU_ENTRY = 0xC000; NO_DATA = 0xFFFFFF
 STUB_SHADOW = 16; SHADOW_ROOM = ((0x1D40, 0x2000), (0x3F80, 0x4000))   # M0's room for .nexload's bytes below a stack in the entry bank
 
@@ -1801,7 +1807,9 @@ def menu_description(f, st=None, presets=None, ram_top=None):
     pub = inf1_value(f, 'publisher') or b''
     colours = (inf1_value(f, 'colours_by') or b'') if any(k == 2 and key == 'colours' for k, _, key, _ in lines) else b''
     ver = inf1_value(f, 'version') or b''; rules = rules_of(f)
-    d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0) | (DESC_RULES if rules is not None else 0), MENU_HOLD if rules is None else NO_CAP, len(lines)))
+    own = game_language_name(f) if any(k == 2 and key == 'language' for k, _, key, _ in lines) else ''
+    d = bytearray((DESC_FIXED | (DESC_VERSION if ver else 0) | (DESC_RULES if rules is not None else 0) | (DESC_LANG if own else 0),
+                   MENU_HOLD if rules is None else NO_CAP, len(lines)))
     for v, n in ((title.upper() if isinstance(title, bytes) else title.encode().upper(), MENU_TITLE), (pub, MENU_ROW), (colours, CREDIT_NAME), (inf1_value(f, 'patch_by') or b'', CREDIT_NAME)):
         d += menu_text(v, n) + b'\0'
     if ver: d += menu_text(ver, VERSION_MAX) + b'\0'       # only with its flag, so a patch without one has the description it had
@@ -1811,6 +1819,7 @@ def menu_description(f, st=None, presets=None, ram_top=None):
         d += menu_text(name.encode(), 25) + b'\0' + menu_text(helps.get(key, '').encode(), HELP_MAX) + b'\0'
         if kind == 2:
             for e in payload: d += menu_text(e['name'], 25) + b'\0'
+            if own: d += (own.encode() if key == 'language' else b'') + b'\0'   # only with its flag, so a patch without one has the description it had
         if kind == 1 or (st is None and kind != 0): where.append(NO_DATA); continue
         where.append(len(data))
         if kind == 0:
@@ -1823,8 +1832,10 @@ def menu_description(f, st=None, presets=None, ram_top=None):
         d += bytes((len(rules),)) + b''.join(bytes(r) for r in line_rules(f, rules, ram_top))
     return bytes(d), bytes(data)
 
-def stub_binary(rules=False):
-    with open(STUB_RULES if rules else STUB, 'rb') as g: return g.read()
+def stub_binary(rules=False, lang=False):
+    """The stub a menu .nex carries: nxcstub3.bin for a description with DESC_LANG, otherwise nxcstub2.bin for a patch
+    with OPR1, otherwise nxcstub.bin, which every other patch has always carried."""
+    with open(STUB_LANG if lang else STUB_RULES if rules else STUB, 'rb') as g: return g.read()
 
 def menu_refusal(header, top):
     """Why a build cannot carry its menu, or None."""
@@ -1856,7 +1867,7 @@ def apply_menu(f, game, chosen=None, colours=None, language=None, toggles=(), ra
     header = bytearray(bare[:512])
     m0 = option_top(f, big[0] if big else None) + 1
     desc, data = menu_description(f, st, presets, ram_top)
-    stub = bytearray(stub_binary(rules_of(f) is not None))
+    stub = bytearray(stub_binary(rules_of(f) is not None, bool(desc[0] & DESC_LANG)))
     if len(stub) + len(desc) > STUB_DESC_END: raise Wrong('the menu is too big for its bank')
     count = 1 + -(-len(data) // BANK); top = m0 + count - 1
     why = menu_refusal(header, top)
@@ -1912,6 +1923,17 @@ def fix_label(f):
     if not v: return FIX_LABEL
     return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:FIX_LABEL_MAX])
 
+def check_language_name(v):
+    if not isinstance(v, str) or not 1 <= len(v) <= LANGUAGE_NAME_MAX or not v.isascii() or not v.isprintable():
+        raise Wrong("the game's language name is 1 to %d printable ASCII characters, as the Language line shows it: %r" % (LANGUAGE_NAME_MAX, v))
+
+def game_language_name(f):
+    """The game's own language as the menu's Language line names it with no language set chosen: INF1's
+    game_language_name, its first LANGUAGE_NAME_MAX characters with anything unprintable as ?, or '' if the key is absent,
+    empty or cut off, when the line reads [ ON] and [OFF] as it always did."""
+    v = inf1_value(f, 'game_language_name') or b''
+    return ''.join(chr(c) if 32 <= c < 127 else '?' for c in v[:LANGUAGE_NAME_MAX])
+
 def check_version(v):
     if not isinstance(v, str) or not 1 <= len(v) <= VERSION_MAX or not v.isascii() or not v.isprintable() or ' ' in v or v[0] in 'vV':
         raise Wrong('a version is 1 to %d printable ASCII characters with no spaces, without the v the menu adds: %r' % (VERSION_MAX, v))
@@ -1955,7 +1977,7 @@ def set_credits(f, game, patch_by=None, colours_by=None):
                    line(b'colours_by', colours_by) if colours_by is not None else old[b'colours_by']]
             rest = [l for l in lines if not l.startswith((b'patch_by=', b'colours_by='))]
             first = [l for l in rest if l.startswith(b'publisher=')]
-            label = [l for l in rest if l.startswith((b'fix_label=', b'version='))]   # the menu's lines first, the fix label and version after the names
+            label = [l for l in rest if l.startswith((b'fix_label=', b'version=', b'game_language_name='))]   # the menu's lines first, the fix label, version and language name after the names
             body = b''.join(first + new + label + [l for l in rest if l not in first and l not in label])
             if len(b''.join(first + new + label)) > TEXT_READ: raise Wrong('the menu lines must end within the first %d bytes of INF1' % TEXT_READ)
         out.append([t, body])
@@ -1979,7 +2001,7 @@ def set_version(f, game, version):
     return seal(f[:CHECK_AT], out, st)
 
 NOTE_MAX = 1024     # INF1's notes, enhanced_N, changes and tested: one line each, for the .nfo
-INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version', 'build', 'nex_md5', 'nexclash', 'credit',
+INFO_KEYS = ('publisher', 'patch_by', 'colours_by', 'fix_label', 'version', 'game_language_name', 'build', 'nex_md5', 'nexclash', 'credit',
              'game_language', 'language_codes', 'text_by', 'trainers_played', 'cheats_source', 'notes', 'changes', 'tested')   # and enhanced_N
 NOTE_KEYS = ('notes', 'changes', 'tested')
 PACE_TARGETS = {'ORIGINAL': 'original', 'SLOWDOWN REMOVED': 'slowdown removed', 'TURBO': 'turbo'}
@@ -2027,6 +2049,7 @@ def check_field(key, value):
     if '\n' in value or not value.isascii() or not value.isprintable(): raise Wrong('%s must be one line of printable ASCII' % key)
     if key == 'fix_label': check_fix_label(value)
     elif key == 'version': check_version(value)
+    elif key == 'game_language_name': check_language_name(value)
     elif key == 'nex_md5' and not re.fullmatch(r'[0-9a-f]{32}', value): raise Wrong('nex_md5 is 32 lower-case hexadecimal digits')
     elif key == 'game_language' and not re.fullmatch(r'[a-z]{2,3}', value): raise Wrong('game_language is an ISO 639 code, such as en')
     elif key in NOTE_KEYS or key.startswith('enhanced_'):
@@ -2310,6 +2333,7 @@ def run(argv):
         ap.add_argument('--toggle', action='append', default=[], metavar='NAME=NEX', help='a toggle that changes only what is shown: the same build with it on; repeatable, at most %d' % TOGGLES_MAX)
         ap.add_argument('--toggle-logic', action='append', default=[], metavar='NAME=NEX', help='a toggle that changes the game logic, as a bug fix does; needs a toggle_N proof line')
         ap.add_argument('--game-language', metavar='CODE', help="the language the game itself is in, as an ISO 639 code such as en")
+        ap.add_argument('--game-language-name', metavar='NAME', help="the language the game itself is in, as the menu's Language line names it with no language set chosen, such as Spanish; 1 to %d characters" % LANGUAGE_NAME_MAX)
         ap.add_argument('--language-code', action='append', default=[], metavar='NAME=CODE', help="a language set's ISO 639 code; repeatable")
         ap.add_argument('--text-by', help='who translated the text; kept in INF1, not on the menu')
         rule_arguments(ap)
@@ -2334,7 +2358,7 @@ def run(argv):
         target = dict(file=a.file or os.path.basename(a.game), title=a.title, zxdb_entry=a.zxdb)
         if a.also: target['file'] = [target['file']] + [os.path.basename(x) for x in a.also]
         with open(a.nex, 'rb') as g: built = g.read()
-        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by, fix_label=a.fix_label, version=a.patch_version,
+        info = dict(publisher=a.publisher, patch_by=a.patch_by, colours_by=a.colours_by, fix_label=a.fix_label, version=a.patch_version, game_language_name=a.game_language_name,
                     build=a.build or os.path.splitext(os.path.basename(a.nex))[0], nex_md5=hashlib.md5(built).hexdigest())
         if a.credit: info['credit'] = a.credit
         info.update(language_info(a.game_language, a.language_code, a.text_by, named(a.language)))
@@ -2392,7 +2416,7 @@ def run(argv):
     print('colour sets:', ', '.join(['(default)'] + colour_sets(f) + [e['name'].decode('ascii', 'replace') for e in big_offered(f, KIND_COLOURS)]))
     for e in big_offered(f):
         print('%s: %s, its own banks %s' % (e['name'].decode('ascii', 'replace'), memory_text(option_top(f, e)), ','.join(map(str, e['added'])) or 'none'))
-    if languages(f): print('languages:', ', '.join(['(default)'] + languages(f)))
+    if languages(f): print('languages:', ', '.join(['%s (default)' % game_language_name(f) if game_language_name(f) else '(default)'] + languages(f)))
     if toggles_of(f): print('toggles:', ', '.join(n + (' (changes the game logic)' if lg else '') for n, lg in toggles_of(f)))
     print('trainers:', ', '.join(t[1] for t in trainers(f)) or '(none)')
     print_rules(f)

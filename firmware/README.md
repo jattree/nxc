@@ -90,7 +90,14 @@ patch needs no assembler; `tests/test_menu_nex.py` checks it is what the source 
 
 ```
 cd firmware && sjasmplus --nologo --raw=nxcstub.bin nxcstub.asm
+cd firmware && sjasmplus --nologo -DMENU_RULES --raw=nxcstub2.bin nxcstub.asm
+cd firmware && sjasmplus --nologo -DMENU_RULES -DMENU_LANG --raw=nxcstub3.bin nxcstub.asm
 ```
+
+`nxcstub2.bin` is the menu that keeps to `OPR1`'s rules, for a patch with them. `nxcstub3.bin` is that menu with
+`MENU_LANG` too, for a patch whose `INF1` names the game's own language (`game_language_name`): its `Language` line
+then reads `[Spanish]` with no language set chosen and the set's name, such as `[English]`, with one, never `[ ON]` or
+`[OFF]`. Every other patch carries the stub it always did, byte for byte.
 
 ## The menu
 
