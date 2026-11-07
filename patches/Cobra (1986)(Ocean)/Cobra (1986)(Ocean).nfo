@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cobra
   Publisher   Ocean, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,12 +23,18 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original
+  Pace        original (-0.00% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same file;
+              probe 0xA5CD (player input, once per game update), input keyed
+              to updates, game state checked at every update; beeper writes
+              435 and 499 a second against the original's 437 and 500)
 
   Changes     1.0: figures and bullets as Next sprites; Sinclair's 48K ROM as
               the whole alt ROM, so the game starts from its own BASIC; the
               game's speed restored after every hook; the original's pace kept
               by a pace limiter and prepared sprite patterns
+              1.1: rebuilt on NexClash's shared pace code; plays as 1.0 did,
+              at the original's pace
 
   Note        Keys: any key on the loading screen and the credits, then 1 on
               the menu (5 first swaps COLOUR and MONO; COLOUR is the default).
@@ -61,17 +67,24 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05: approved; 1.1 approved
+              by the owner in JNext, 2026-11-07
 
-  Replay      IDENTICAL on 4 recordings, 37,054 frames: 42,192 plots, 1,244
-              bullets, 9,380 frame hooks, every hook run; 12 of 12 negatives
-              detected, a forced 3.5 MHz exit among them; ROM path check clean
-              on both builds
+  Replay      1.1 (NexClash main 102091f, selftest --game cobra --verify): 4
+              recordings IDENTICAL (37,054 frames, 42,192 plots), clock matrix
+              340 cases at 9 sites, unit PASS. IDENTICAL on 4 recordings,
+              37,054 frames: 42,192 plots, 1,244 bullets, 9,380 frame hooks,
+              every hook run; 12 of 12 negatives detected, a forced 3.5 MHz
+              exit among them; ROM path check clean on both builds
 
-  Emulator    JNext 1.1.104 headless: loading screen, credits, menu and play
-              reached from the build's own start, frames inspected; flicker
-              check clean in 3 windows of 220 frames; 15-minute soak: no
-              freeze, loop or crash
+  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card: menu v1.1,
+              loading screen, credits, round 1, play to game over and the
+              high-score table; /tmp/NEXCLASH.NEX equal to apply. JNext
+              1.1.104 headless: loading screen, credits, menu and play reached
+              from the build's own start, frames inspected; flicker check
+              clean in 3 windows of 220 frames; 15-minute soak: no freeze,
+              loop or crash
 
   Coverage    Random-key recordings only, no human play: COLOUR and MONO,
               rounds 1-7, all 3 level types, weapons 1-3, bullets, deaths,
