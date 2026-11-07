@@ -1,0 +1,99 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Cybernoid - The Fighting Machine
+  Publisher   Hewson Consultants, 1988
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Cybernoid - The Fighting Machine (1988)(Hewson
+              Consultants)(128K).z80
+  MD5         92ad5a23acfe06f0756ae2d503ab31cc
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on the figures: the ship,
+              enemies, weapons and effects in fuller colour over the game's
+              own scenery, as approved for the earlier build. A painted set,
+              colourist not named.
+
+  Pace        original
+
+  Changes     1.1: the 128K release with AY music; the original's pace kept by
+              a limiter; works on NextZXOS v2.10; verified 128K cheats; the
+              approved Enhanced colours unchanged
+
+  Note        128K release with AY sound. Original colours with clash removed
+              by default; approved Enhanced colours optional and off by
+              default. Known issues: Very heavy debris can exceed the
+              available small-figure slots, as in the approved earlier build.
+              The loader displays the first eight trainers; additional
+              verified trainers are host-tool options only. Missing: hardware
+              testing, natural full-game completion, and unsupported archive
+              trainer variants.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite weapon stock
+   3  Immunity
+   4  Start with 99 lives
+   5  No enemies
+   6  No guns
+   7  No tunnel aliens
+   8  No snakes
+   9  No rockets
+  10  No flying aliens
+  11  Sound off
+  12  Keep backshot on death
+  13  Keep satellite on death
+
+  The archive's POKEs, checked against this 128K release and translated where
+  they differ; Sound off uses the game's own sound-off entry points, as the
+  archive's address is wrong for this version. Five more tested cheats (No
+  rockets, No flying aliens, Sound off, Keep backshot on death, Keep satellite
+  on death) are in the patch but beyond the loader's eight cheat lines.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Hewson Consultants, 1988, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-06: approved. Differential
+              replays, figure and edge tests, deliberately broken builds,
+              JNext pace and AY checks, and the real loader (default,
+              Enhanced, all eight cheats) on disposable card copies.
+
+  Replay      All registers including R, working RAM and sprite pixels
+              compared against the original drawing routines: 25,707 replay
+              frames over menus, play, death, game over and restart, three
+              level-start tours; 17 deliberately broken builds detected.
+
+  Emulator    JNext 1.1.104; four incoming speed values and both IFF states;
+              exact ordered AY stream after accounting for startup phase;
+              direct/NEXLOAD boot checked.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
