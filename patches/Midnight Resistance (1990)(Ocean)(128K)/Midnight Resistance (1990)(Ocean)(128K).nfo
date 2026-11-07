@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Midnight Resistance
   Publisher   Ocean, 1990
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,12 +23,18 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Note        Known issues: not yet checked in full on NextZXOS v2.10: it
-              lacks the start-up fix for v2.10's ROM changes that Cyclone and
-              Chuckie Egg needed. Missing: no Enhanced colour set; pace not
-              measured against the original; an earlier build ran on a real
-              Next for Dean (2026-10-14), but this one, with the loading
-              screen, has not; hardware untested.
+  Changes     1.1: the game keeps its own CPU speed after each sprite update
+              instead of being set back to 3.5 MHz; works on NextZXOS v2.10
+              (System/Next 26.11).
+
+  Note        Known issues: quiet scenes run about 7% faster than the original
+              in JNext (-6.6 to -8.3% in 3 runs), while busy scenes keep its
+              pace (-0.4 to +1.8%); the game has no frame limiter of its own,
+              so holding quiet scenes to the original's pace needs a pace
+              limiter in the hooks, not in this version. Missing: no Enhanced
+              colour set; an earlier build ran on a real Next for Dean
+              (2026-10-14), but this one, with the loading screen, has not;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -48,18 +54,26 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      2 RZX IDENTICAL with the painted colour map, unit + interrupt +
+  Replay      1.1 (2026-11-07, nexclash main 102091f, hooks give back the
+              caller's CPU speed): 2 RZX IDENTICAL, 16513 frames, 25527 plots
+              converted, unit 8856 cases, 48 of 48 negatives detected. 1.0: 2
+              RZX IDENTICAL with the painted colour map, unit + interrupt +
               level / shop exit + full table + flipped + map PASS
 
-  Emulator    JNext 1.1.104 headless, through the real loader, reached play;
-              frames viewed; no person played it; with the loading screen:
-              JNext 1.1.104 headless through the real loader, MD5 exact,
-              reached the screen, the game and play frames, viewed; no person
-              played it; JNext 1.1.104 headless through the real loader,
-              2026-11-03: chosen in the Browser with every cheat on,
-              /tmp/NEXCLASH.NEX equal to apply
+  Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu, ENTER:
+              /tmp/NEXCLASH.NEX equal to the bare build (b2e8f80a), the
+              loading screen, control menu and play reached (keyboard), points
+              scored, frames viewed; no person played it. 1.0: JNext 1.1.104
+              headless, through the real loader, reached play; frames viewed;
+              no person played it; with the loading screen: JNext 1.1.104
+              headless through the real loader, MD5 exact, reached the screen,
+              the game and play frames, viewed; no person played it; JNext
+              1.1.104 headless through the real loader, 2026-11-03: chosen in
+              the Browser with every cheat on, /tmp/NEXCLASH.NEX equal to
+              apply
 
   Coverage    loading screen stub added in bank 19, 2026-11-03: the replay and
               hardware lines are of the build without it, whose game memory
