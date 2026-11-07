@@ -1,0 +1,108 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Pac-Mania
+  Publisher   Grandslam, 1988
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Pac-Mania (1988)(Grandslam)(128K).z80
+  MD5         e9cb908bc86661ff81732665741393cc
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Pac-Man yellow with a red mouth; the ghosts red, cyan for the
+              ghost that jumps with Pac-Man and orange in their third look;
+              frightened ghosts blue, flashing blue and red; eyes white;
+              fruit, tokens and scores in the Spec256 conversion's colours.
+              The maze and panel are the game's own. Source: Enhanced colours
+              from the MVV package's older Spec256 conversion, painter not
+              established, with Pac-Man and the ghosts repainted for Jon
+              Attree.
+
+  Pace        original
+
+  Changes     1.0: first release: the 128K release with AY music, every figure
+              a sprite, R and CPU speed restored by every hook, whole Sinclair
+              ROM image for NextZXOS v2.10, five tested cheats, the approved
+              Enhanced colours as an option
+
+  Note        The 128K release with AY music. The game starts at once: its
+              loading screen shows while the .nex loads, and no key is needed
+              to leave it. Every moving figure is a Next sprite: Pac-Man
+              bright yellow and the ghosts in the round's colour, as the
+              original draws them, without the yellow clash around Pac-Man;
+              the maze and panel keep the original's colours. Enhanced
+              colours, off by default, is the look approved on 2026-11-03.
+              With Start with 9 lives the panel still shows at most five
+              faces, as the original does. Known issues: about 0.5% slower
+              than the original in steady play in JNext (whole runs -0.4% to
+              +1.0%). Missing: hardware testing; full natural completion of
+              every round (the all-rounds test used a cheat); the archive's
+              Lives (1-128) value prompt (fixed at 9 here); the 48K release is
+              not a target.
+
+-- MENU ----------------------------------------------------------------------
+   1  Start with 9 lives
+   2  Infinite lives
+   3  Turbo speed
+   4  Infinite credits
+   5  Immunity
+
+  The archive's POKEs for Pac-Mania (one .pok serves every release), each
+  tested alone on this 128K release; Lives (1-128) is fixed at 9 and Turbo
+  Pacman is named Turbo speed.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours from the
+              MVV package's older Spec256 conversion, painter not established,
+              with Pac-Man and the ghosts repainted for Jon Attree
+  Original    Grandslam, 1988, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 2026-11-07: approved; automated
+              replay, JNext pace and real-loader checks the same day
+
+  Replay      8 RZX recordings from the release, 96,520 frames: original and
+              patched replayed side by side, every frame all registers
+              including R and all 128K of RAM (bank 1, the music, too)
+              compared; at each screen copy the ULA plus sprites equal the
+              original's picture; 10 of 10 deliberately broken builds
+              detected.
+
+  Emulator    JNext 1.1.104: default and Enhanced reach play; boot and NEXLOAD
+              start checked; ROM paths checked over NextZXOS v2.09 and v2.10
+              ROMs.
+
+  Coverage    Title, round picture, intro theatre, play in every round (one
+              recording uses a test cheat to clear each round with one dot),
+              interludes, ending, deaths, game over. Every hook at four
+              incoming CPU speeds and across R's wrap; all 86 figure frames
+              and the score forms at the view's edges against the original
+              plotter.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
