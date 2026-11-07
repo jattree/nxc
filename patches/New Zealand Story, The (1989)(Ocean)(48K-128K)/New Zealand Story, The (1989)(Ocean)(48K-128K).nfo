@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The New Zealand Story
   Publisher   Ocean, 1989
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -33,27 +33,31 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        slowdown removed (-10.19% measured in JNext 1.1.104, 10 runs per
+  Pace        slowdown removed (-9.63% measured in JNext 1.1.104, 10 runs per
               scene)
 
   Changes     1.0: the colour build (tested by Dean Woodyatt). 1.1: busy
               scenes no longer slow down; sprite/scenery handover and
               occasional scroll jumps fixed; Smooth scrolling reworked so the
-              camera moves evenly.
+              camera moves evenly. 1.2: Backdrops: original painted backdrops
+              behind every stage, one set per world.
 
   Note        The whole game in colour: the scenery is drawn on the Next's
               tilemap from the game's own map, and every figure, fruit and
-              item is a painted sprite. It loads from Ocean's two tape files,
-              the Side A .tap (or .tzx) and the Side B .tzx, kept together in
-              the patch's folder. Starts at the title screen. Smooth
-              scrolling, off by default, glides the camera between the game's
-              steps. Needs a core with the tilemap (any recent one). Known
-              issues: busy scenes no longer slow down, so busy play runs about
-              10% faster than the original's (by design: the drawing runs at
-              28 MHz, capped at the original's quiet-scene pace); not yet
-              checked in full on NextZXOS v2.10: it lacks the start-up fix for
-              v2.10's ROM changes that Cyclone and Chuckie Egg needed.
-              Missing: no complete playthrough checked; hardware untested.
+              item is a painted sprite. Backdrops, a menu toggle (try it on),
+              shows original painted backdrops through the sky on Layer 2: one
+              set per world, varied per stage, with walls and figures in
+              front. Loads from Ocean's two tape files, the Side A .tap (or
+              .tzx) and the Side B .tzx, kept together in the patch's folder.
+              Smooth scrolling, off by default, glides the camera between the
+              game's steps. Needs a core with the tilemap. Known issues: busy
+              play runs about 10% faster than the original (by design: drawing
+              at 28 MHz, capped at the original's quiet-scene pace); a stage
+              start or new life takes about a quarter of a second longer while
+              the backdrop is drawn; no parallax; not yet checked in full on
+              NextZXOS v2.10 (lacks the v2.10 start-up fix). Missing: a
+              backdrop of its own for every stage; no complete playthrough
+              checked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -71,48 +75,38 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-04
+  Tested      1.0 tested by Dean Woodyatt; 1.2 played by the owner in JNext
+              2026-11-06 (Backdrops): approved
 
-  Replay      52 normalized-time lockstep runs, 141000 frames: 18 default-
-              colour (48000), 16 scenery-only (45000), 18 Smooth scrolling
-              (48000); all game-state comparisons IDENTICAL. Smooth picture
-              checks: 29550 interrupt frames, zero offset/tile/sprite/clip
-              differences. Existing 12 negative cases detected; six new rules
-              tested: sound-clock, speed-restore, missing-cap, early-sprite-
-              commit, premature-pattern-upload and four-pixel catch-up jump;
-              all controls detected. All 467 figure cases pass with smoothing
-              off and on, including mirrored and multipart figures; eight
-              existing figure-unit negatives also detected. Pure drawing
-              wrappers preserve registers, memory and incoming CPU clock in 20
-              cases at all four speeds. Replay normalizes hook time and skips
-              only the isolated video-line wait; native JNext tests that wait
-              independently.
+  Replay      v1.2 Backdrops: 34 normalized-time lockstep runs (17 start
+              states: worlds 1-5 and six boss-level starts; default and Smooth
+              scrolling), 51000 frames, 6958 screen copies: game state
+              IDENTICAL at every copy; at every interrupt the play area Layer
+              2 shows equals the backdrop model (28780 checks, 245 of a
+              sampled 600 Smooth frames mid-glide), its palette and the
+              tilemap's transparent paper exact. Negatives detected: Layer 2
+              scroll one pixel off (default and Smooth), the wrong level's
+              backdrop, the sky left opaque. With Backdrops off the build is
+              v1.1 byte for byte (70174ecb, Smooth 7d9898e8); the Backdrops
+              and Smooth toggles change disjoint bytes and compose exactly.
+              v1.1's 52 replays, 467 figure cases and negatives carry over
+              unchanged.
 
-  Emulator    JNext 1.1.104 headless. Pace target SLOWDOWN REMOVED: drawing at
-              28 MHz, game logic and sound at 3.5 MHz; cap of 1244 video lines
-              before the player update. Ten trials per quiet/busy scene.
-              Original 12.37/11.19 updates/s; prior colour 12.01/10.52; new
-              default 12.34/12.33. Native sound and restored-clock checks
-              pass; AY sequence and tempo match after start-phase alignment.
-              Smooth commits tilemap, pattern uploads and sprite attributes
-              together. Native tilemap/sprite alignment 1125/1125 video
-              frames; early-commit negative fails 66. The generic ULA flicker
-              checker has one warning on the opaque-tilemap build; its frame
-              was inspected and the actual tilemap agrees. Host reconstruction
-              is byte-exact for both targets with both toggle choices. Menu
-              startup preserves all 40 banks, registers (except R), MMU and
-              stack in four toggle/IFF cases; both menu choices reach play in
-              headless JNext. These checks are rerun after packaging and
-              recorded beside this patch.
+  Emulator    JNext 1.1.104 headless, NextZXOS v2.09 card. Pace
+              (nexclash.pace, 10 trials per scene, 60 updates): Backdrops
+              against v1.1 0.00% quiet, +0.08% busy, 0.00% scroll; against the
+              original +2.29%, -9.63%, -1.19% (v1.1 +2.29%, -9.70%, -1.19%).
+              Flicker: none found with Backdrops; with Smooth too, 17 frames
+              where sprites and the ULA screen memory change apart, the ULA
+              being hidden in the play area. 15-minute soak: no freeze, loop
+              or crash. Menu .nex: Backdrops on by default, reaches play.
+              Frame strips for worlds 1-5 viewed. A stage start or new life is
+              about a quarter of a second longer while its backdrop is drawn.
 
-  Coverage    Worlds 1-5 and six boss-level start states, retaining the
-              previous patch's short-play and unit-tested-boss limits. The
-              stage-1 multiload payload, source targets and trainers are
-              retained. No new complete-game playthrough is claimed. Real-time
-              encounters can differ because the original IRQ mixes interrupted
-              A into its RNG; no LD A,R instruction was found in the game
-              banks.
+  Coverage    Worlds 1-5 and six boss-level start states; all 21 levels'
+              backdrops by the model check; stage starts and new lives (the
+              READY-time draw) reached in replay. No new complete-game
+              playthrough is claimed.
 
   Hardware    none
 
