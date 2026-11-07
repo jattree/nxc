@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gryzor
   Publisher   Ocean, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,13 +23,19 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original
+  Pace        original (+0.00% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same file;
+              probe 0xA439 (the player's controls read, once per game update);
+              input keyed to updates; both runs in lockstep at every update in
+              all 15 trials)
 
   Changes     1.0: figures and bullets as Next sprites; black outline;
               Sinclair's 48K ROM as the alt ROM; hooks at 28 MHz restoring the
               game's speed; R kept, so the game's random numbers are the
               original's; the original's pace kept by a pace limiter and
               prepared sprite patterns
+              1.1: rebuilt on NexClash's shared pace code; plays at the
+              original's pace as 1.0 did
 
   Note        Keys: hold 0 on the menu to start (the menu checks the keyboard
               every few frames); cursor keys 5 left, 8 right, 7 jump, 6 down,
@@ -38,14 +44,15 @@
               across the jungle's bands; scenery, stars, objects and text keep
               the original's colours. Plays at the original's pace (hooks at
               28 MHz, your speed restored) and gives the same enemies for the
-              same keys. Known issues: in the yellow forest the black outline
-              meets the forest's black pattern, so figures read less well
-              there; while the scenery scrolls, a figure can show a frame
-              behind it now and then. Missing: this is the 48K form, so the
-              first section only and no 128K music; no Enhanced colour set (a
-              trial set was shelved); the cheats are the archive's, checked on
-              a simulator only; not yet checked: Kempston and define keys;
-              hardware untested.
+              same keys. 1.1, 5 trials a scene: quiet +0.00%, busy +0.64%
+              (worst +1.52%), firing +0.48%. Known issues: in the yellow
+              forest the black outline meets the forest's black pattern, so
+              figures read less well there; while the scenery scrolls, a
+              figure can show a frame behind it now and then. Missing: this is
+              the 48K form, so the first section only and no 128K music; no
+              Enhanced colour set (a trial set was shelved); the cheats are
+              the archive's, checked on a simulator only; not yet checked:
+              Kempston and define keys; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -62,24 +69,31 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05: approved; 1.1 approved
+              by the owner in JNext, 2026-11-07
 
-  Replay      IDENTICAL on 5 recordings, 33,038 frames, 13,466 ticks, R
-              compared at every tick and after every hook: 48,251 plots (c4
-              22,547, c3 14,594, clip 4,603, bullet 6,078, c5 429), 13,080
-              star hooks, 13,466 tick hooks, 16 screen and 3 bitmap clears;
-              the outline's white twin IDENTICAL too; 23 of 23 negatives
-              detected, a forced 3.5 MHz exit and a missing cache invalidation
-              among them; ROM path check clean on all three builds
+  Replay      1.1 (NexClash main 102091f, selftest --game gryzor --verify): 5
+              recordings IDENTICAL (33,038 frames, 13,466 ticks, every screen
+              and memory check), unit PASS. IDENTICAL on 5 recordings, 33,038
+              frames, 13,466 ticks, R compared at every tick and after every
+              hook: 48,251 plots (c4 22,547, c3 14,594, clip 4,603, bullet
+              6,078, c5 429), 13,080 star hooks, 13,466 tick hooks, 16 screen
+              and 3 bitmap clears; the outline's white twin IDENTICAL too; 23
+              of 23 negatives detected, a forced 3.5 MHz exit and a missing
+              cache invalidation among them; ROM path check clean on all three
+              builds
 
-  Emulator    JNext 1.1.104 headless: menu and play reached from the build's
-              own start, frames inspected; pace runs in lockstep with the
-              original at every update with no fixture (R kept); 15-minute
-              soak: no freeze, loop or crash (1,708 distinct pictures of
-              1,801, the original 1,732); flicker check: 2, 18 and 1 frames of
-              220 with figures a frame behind the scrolled scenery (the
-              2026-11-03 build: 42 in the same window), no figure vanished, no
-              attribute flashes
+  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card: menu v1.1,
+              the game's menu, hold 0, play through to the last life;
+              /tmp/NEXCLASH.NEX equal to apply. JNext 1.1.104 headless: menu
+              and play reached from the build's own start, frames inspected;
+              pace runs in lockstep with the original at every update with no
+              fixture (R kept); 15-minute soak: no freeze, loop or crash
+              (1,708 distinct pictures of 1,801, the original 1,732); flicker
+              check: 2, 18 and 1 frames of 220 with figures a frame behind the
+              scrolled scenery (the 2026-11-03 build: 42 in the same window),
+              no figure vanished, no attribute flashes
 
   Coverage    Random-key bot recordings only, no human play: the whole first
               section to the door, the walk out and START TAPE (lives cheat in
