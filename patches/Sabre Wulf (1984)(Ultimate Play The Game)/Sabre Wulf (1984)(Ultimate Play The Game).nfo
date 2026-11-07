@@ -48,22 +48,16 @@
               players, 3-6 controls). In play Q left, W right, E up, R down, T
               fight, SPACE pause. With QAOP + Space on (menu, off by default;
               keyboard chosen, 3): Q up, A down, O left, P right, Space fight,
-              Caps Shift pause (Space or Caps Shift resumes); W, E, R and T do
-              nothing; joysticks move and fight as before, and pause on Caps
-              Shift too. Every moving figure is a Next sprite in the game's
-              own colours, the look the owner approved; the jungle, panel and
-              text keep the original's colours. The hooks cost about 1.7
-              percent of the game's pace (enemies a little slower than the
-              original, never faster); the game has no frame cap, so this
-              could not be repaid. It starts from the tape's own BASIC, as on
-              a 48K. Cheats from the archive's POKEs for this release;
-              dropped: Infinite Lives (an RST 38 at each death, and the two
-              below do it cleanly), Keep SabreMan cyan (sets colour 186 and
-              stops every orchid effect ending), Immunity (lives still lost),
-              Less Animals, No destructible Enemies and Floating rhinos (no
-              effect seen in the simulator), See Ending and Paralyzed Enemies
-              (the game freezes), Lives and Invincibility to jungle animals
-              (ask for a value). Not tested on hardware.
+              Caps Shift pause; W, E, R and T do nothing; joysticks pause on
+              Caps Shift too. Every moving figure is a Next sprite in the
+              game's own colours; the jungle, panel and text keep the
+              original's. It starts from the tape's own BASIC, as on a 48K.
+              Known issues: about 1.5 to 1.7 percent slower than the original,
+              single trials up to 2.1% (the game has no frame cap to repay the
+              hooks from), so enemies move a little slower. Missing: ten of
+              the archive's cheats (they freeze the game, have no effect,
+              misbehave or ask for a value); not reached in testing: the
+              amulet by play, the cave, joysticks; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  [P1]Infinite lives

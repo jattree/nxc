@@ -26,7 +26,13 @@
   Note        No outline on the figures: the owner chose that for this mostly
               black game. The patch writes the whole alt ROM image (Sinclair's
               ROM plus its hooks), which fixed a crash on the define-keys
-              screen.
+              screen. Known issues: the same keys can give different enemies
+              from the unpatched game's, because the game seeds its random
+              numbers from the frame counter and this build's start-up runs a
+              little longer. Missing: no Enhanced colour set (rated moderate);
+              pace not measured against the original; the cheats are unplayed
+              by a person; not reached in testing: high-score name entry, the
+              core assembly and the ending; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

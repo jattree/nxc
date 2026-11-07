@@ -34,6 +34,12 @@
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
 
+  Note        Known issues: none found in testing. Missing: pace not measured
+              against the original; the cheats are unplayed by a person (only
+              strength and time checked in the simulator); not reached in
+              testing: the puzzles, spells that succeed, orders to characters
+              and the ending; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite strength
    2  Infinite time

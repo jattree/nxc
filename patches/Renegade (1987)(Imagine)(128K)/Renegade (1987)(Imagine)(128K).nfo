@@ -29,6 +29,13 @@
               detail. Source: Enhanced colours from the MVV package's older
               Spec256 conversion, painter not established.
 
+  Note        Known issues: not yet checked in full on NextZXOS v2.10: it
+              lacks the start-up fix for v2.10's ROM changes that Cyclone and
+              Chuckie Egg needed. Missing: pace not measured against the
+              original; the music was not listened to in testing; the cheats
+              are the archive's 128K POKEs and have not been played; not yet
+              checked: joysticks and the ending; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Infinite time

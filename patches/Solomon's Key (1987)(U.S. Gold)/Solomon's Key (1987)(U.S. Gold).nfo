@@ -52,7 +52,9 @@
               is repaid from the game's own padding of each pass; passes with
               ten figures or more have none, and repay it in the next padded
               passes. All four of the archive's cheats are on the menu, each
-              shown to work in the simulator. Not tested on hardware.
+              shown to work in the simulator. Known issues: none found in
+              testing. Missing: no room was solved by play in testing;
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

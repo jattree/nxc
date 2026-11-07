@@ -36,7 +36,13 @@
               the original's pace: the hooks are timed so the patch costs no
               speed (measured +0.15% in JNext). The slowdown in busy rooms and
               the music lagging while an effect plays are the original game's
-              own: its tune and effects share the beeper.
+              own: its tune and effects share the beeper. Known issues: room
+              changes measured about 2% slower than the original; not yet
+              checked in full on NextZXOS v2.10: it lacks the start-up fix for
+              v2.10's ROM changes that Cyclone and Chuckie Egg needed.
+              Missing: the lives cheat was checked on the original code, not
+              in this build; not reached in testing: the puzzles, Wilma,
+              Herbert and the ending; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

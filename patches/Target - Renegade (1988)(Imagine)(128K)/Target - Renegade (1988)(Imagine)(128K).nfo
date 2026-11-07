@@ -43,9 +43,14 @@
               game plays at the original's pace; the bar bouncers' see-through
               gaps filled in Enhanced.
 
-  Note        Enhanced is a first pass: the level 2 street gangs' sprites
-              still need some clean-up, coming in a later version. Needs a 1MB
-              Next: the faster hooks keep built sprite images in spare RAM.
+  Note        Needs a 1MB Next: the faster hooks keep built sprite images in
+              spare RAM. Known issues: Enhanced is a first pass: the level 2
+              street gangs' sprites still need some clean-up, coming in a
+              later version; not yet checked in full on NextZXOS v2.10: it
+              lacks the start-up fix for v2.10's ROM changes that Cyclone and
+              Chuckie Egg needed. Missing: Enhanced on levels 2-5 checked on
+              captured states, not by a replay; player 2's lives cheat not
+              played; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time

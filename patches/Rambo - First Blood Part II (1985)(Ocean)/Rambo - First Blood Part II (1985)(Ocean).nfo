@@ -29,6 +29,13 @@
               layer behind the jungle that scrolls with the terrain. A painted
               set, colourist not named.
 
+  Note        Known issues: when you board the helicopter, its rotor tips are
+              drawn where they belong, where the original wraps them onto the
+              next row (a small difference from the original). Missing: pace
+              not measured against the original; the cheats are unplayed by a
+              person; not reached in testing: the prison camp and several
+              enemy types; hardware untested.
+
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
    2  Immunity
