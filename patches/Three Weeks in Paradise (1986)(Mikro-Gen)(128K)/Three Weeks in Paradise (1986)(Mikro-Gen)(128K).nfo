@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Three Weeks in Paradise
   Publisher   Mikro-Gen, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,20 +29,28 @@
               Spec256 conversion. Source: Enhanced colours from the MVV
               package's older Spec256 conversion, painter not established.
 
-  Pace        original (+0.15% measured in JNext 1.1.104)
+  Pace        original (+0.46% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same start
+              state; probe 0xA8ED, keys keyed to updates, game state equal at
+              every update)
+
+  Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11); the hooks hand
+              back the CPU speed the game was running at; the pace code is now
+              NexClash's shared library (pace as 1.0)
 
   Note        Scenery that Wally walks behind covers him as whole objects
               (plants, palms), with the right-edge palms in front. Plays at
               the original's pace: the hooks are timed so the patch costs no
-              speed (measured +0.15% in JNext). The slowdown in busy rooms and
-              the music lagging while an effect plays are the original game's
-              own: its tune and effects share the beeper. Known issues: room
-              changes measured about 2% slower than the original; not yet
-              checked in full on NextZXOS v2.10: it lacks the start-up fix for
-              v2.10's ROM changes that Cyclone and Chuckie Egg needed.
-              Missing: the lives cheat was checked on the original code, not
-              in this build; not reached in testing: the puzzles, Wilma,
-              Herbert and the ending; hardware untested.
+              speed (1.1 measured +0.46% and +0.16% over 600 game updates,
+              Enhanced +0.42% and +0.37%, in JNext, 2026-11-07). The slowdown
+              in busy rooms and the music lagging while an effect plays are
+              the original game's own: its tune and effects share the beeper.
+              Works on NextZXOS v2.10 from 1.1. Known issues: the pace evens
+              out over a few updates: the slowest 20-update stretch in each
+              run was about 7% behind the original, as in 1.0. Missing: the
+              lives cheat was checked on the original code, not in this build;
+              not reached in testing: the puzzles, Wilma, Herbert and the
+              ending; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -60,31 +68,38 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-04
+              2026-11-04; 1.1 approved by the owner in JNext, 2026-11-07
 
-  Replay      IDENTICAL on 16 recordings, 62696 frames, default colours;
-              Enhanced IDENTICAL on 5, 28930 frames; the game's memory,
-              registers and flags as the original's at every hook, the pace
-              window included; site differential, sprite layer and Layer 2
-              against an independent model; every hook ran; go-behind by whole
-              room objects, 565 room checks, 0 split; Wally's body least 52.1%
-              (47.5% at the owner's right-edge palm exception); 27 of 27
-              negatives detected, among them the two new ones for the pace
-              window (the wait loses AF: registers differ 373; the blit left
-              at 28 MHz: MMU / speed not restored 224); plots-survive only on
-              a forced start state and in a unit test; pace (headless JNext,
-              same game state at every update, updates 21-561): 46.80 s
-              against the original's 46.73 s (+0.15%), d386a699 51.29 s
-              (+9.8%); room 2 across 9.63 s against 9.55 (+0.9%), room 3
-              across 9.04 against 9.07 (-0.3%); timing negatives: no wait -18
-              to -32%, hook time outside the window ignored +1.2 to +2.7%;
-              captures by update after the blit, d386a699 against this build,
-              7 of 7 pixel-identical
+  Replay      1.1 (NexClash main 102091f, selftest --game three_weeks
+              --verify): 16 recordings IDENTICAL (62,696 frames), Enhanced 5
+              recordings IDENTICAL (59,045 frames), unit PASS, negatives 21 of
+              21 detected; the v2.10 fix checked in NexClash's Next model: no
+              fix-up site holds v2.10's bytes (1.0: all 11 did). IDENTICAL on
+              16 recordings, 62696 frames, default colours; Enhanced IDENTICAL
+              on 5, 28930 frames; the game's memory, registers and flags as
+              the original's at every hook, the pace window included; site
+              differential, sprite layer and Layer 2 against an independent
+              model; every hook ran; go-behind by whole room objects, 565 room
+              checks, 0 split; Wally's body least 52.1% (47.5% at the owner's
+              right-edge palm exception); 27 of 27 negatives detected, among
+              them the two new ones for the pace window (the wait loses AF:
+              registers differ 373; the blit left at 28 MHz: MMU / speed not
+              restored 224); plots-survive only on a forced start state and in
+              a unit test; pace (headless JNext, same game state at every
+              update, updates 21-561): 46.80 s against the original's 46.73 s
+              (+0.15%), d386a699 51.29 s (+9.8%); room 2 across 9.63 s against
+              9.55 (+0.9%), room 3 across 9.04 against 9.07 (-0.3%); timing
+              negatives: no wait -18 to -32%, hook time outside the window
+              ignored +1.2 to +2.7%; captures by update after the blit,
+              d386a699 against this build, 7 of 7 pixel-identical
 
-  Emulator    JNext 1.1.104: plain, sprites and Enhanced reach play headless;
-              this build's .nex through the real loader, default and Enhanced,
-              MD5 exact, room 0 walked; pace measured update-locked against
-              the plain .nex
+  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card, default and
+              Enhanced: menu v1.1, the game's menus, play in the first room;
+              /tmp/NEXCLASH.NEX equal to apply for both. JNext 1.1.104: plain,
+              sprites and Enhanced reach play headless; this build's .nex
+              through the real loader, default and Enhanced, MD5 exact, room 0
+              walked; pace measured update-locked against the plain .nex
 
   Coverage    19 rooms walked with cheats, 13 more entered by poked room
               change; go-behind in 18 rooms, all 18 replayed; deaths, game
