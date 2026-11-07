@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Sabre Wulf
   Publisher   Ultimate, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -27,22 +27,29 @@
               by default.
   Enhanced    The Spec256 conversion's colours on every figure: khaki
               Sabreman, coloured parrot, pale spider, dusky scorpion, grey
-              rhino; the jungle unchanged. No white outlines or edges. Painted
-              colours are fixed, so Sabreman no longer changes colour with the
-              orchids. Source: Enhanced colours: from the Spec256 conversion
-              (the Spectrum Magic package, credited to Spec256), painter not
-              established.
+              rhino; the jungle unchanged. No white outlines or edges. The
+              orchids bloom in the game's own colours, and Sabreman's helmet,
+              shirt and trousers take the colour the game gives him while an
+              orchid acts, as in the original. Source: Enhanced colours: from
+              the Spec256 conversion (the Spectrum Magic package, credited to
+              Spec256), painter not established.
 
   Pace        original (+1.67% measured in JNext 1.1.104 headless; probe 39453
               (the end of a round of the object loop: enemy pace); input keyed
               to rounds; 10 trials per scene; a fixture with the game's time
-              sources read from its round counter in both runs)
+              sources read from its round counter in both runs; 1.2's Enhanced
+              against 1.1's: 30 trials, -0.01 to +0.03%, 29 in lockstep
+              throughout; against the original: quiet +1.61%, busy +1.72%,
+              sound +1.66% (4 trials each))
 
   Changes     1.0: figures as Next sprites; Sinclair's 48K ROM as the whole
               alt ROM, so the game starts from its own BASIC; the game's speed
               restored after every hook; R kept as the original's; faster
               hooks with a frame cache; the Spec256 conversion's colours as
-              the Enhanced set. 1.1: QAOP + Space option
+              the Enhanced set. 1.1: QAOP + Space option. 1.2: Enhanced
+              colours: orchids show their real colours as they bloom, and
+              Sabreman shows his orchid effects as in the original (reported
+              by Catcher40)
 
   Note        Keys: any key on the loading screen, then 0 on the menu (1 or 2
               players, 3-6 controls). In play Q left, W right, E up, R down, T
@@ -79,7 +86,9 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05, with and without QAOP +
-              Space: approved
+              Space: approved; 1.2's Enhanced colours (orchids and Sabreman's
+              effect colours) played by the owner in JNext 2026-11-07:
+              approved
 
   Replay      IDENTICAL on 5 recordings, 123,765 frames, in both colour sets:
               142,954 moves, 5,363 toggles, 91 saved-image toggles, 133,780
@@ -89,14 +98,29 @@
               Enhanced build beside the default at all 283,009 hook events; 14
               of 14 negatives detected in replays, a forced 3.5 MHz exit and R
               one off among them, 2 Enhanced negatives detected, controls at
-              3.5 and 7 MHz clean; ROM path check clean on both builds
+              3.5 and 7 MHz clean; ROM path check clean on both builds; 1.2
+              (2026-11-07): the same 5 recordings IDENTICAL with 1.2's
+              Enhanced hooks beside the default at all 283,009 hook events
+              (Sabreman in palette offsets of his own); a colour model at
+              85,046 frames, every orchid and Sabreman pixel in the palette
+              the build's setup writes: orchid blooms in the game's colour
+              (768,467 pixels, all five colours), Sabreman's helmet, shirt and
+              trousers in the game's colour under an orchid (505,583) and
+              painted otherwise, against the original's attributes too (cells
+              it has not yet repainted at most 4 frames); 4 colour negatives
+              detected, 1.1's Enhanced among them
 
   Emulator    JNext 1.1.104 headless: loading screen, title and play reached
               from the build's own BASIC start in both colour sets, frames
               inspected; flicker check clean in both sets (300 frames);
               15-minute soak in both sets: no freeze, loop or crash, play,
               game overs and restarts on the sheet; the .nxc menu builds of
-              both sets reach play, cheats on and off
+              both sets reach play, cheats on and off; 1.2: orchids blooming
+              in all five colours and Sabreman under red, magenta and cyan
+              orchids (yellow poked) seen in JNext from room-entry snapshots;
+              the real loader on a copy of a NextZXOS v2.09 card wrote the
+              exact .nex, default, Enhanced and Enhanced with QAOP + Space,
+              and play was reached
 
   Coverage    Bot recordings only, no human play: rooms near the start and 34
               rooms with cheats, deaths, game over, hall of fame, two-player
