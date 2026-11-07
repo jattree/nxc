@@ -25,11 +25,13 @@
 
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
 
-  Note        Works on NextZXOS v2.10 from 1.1. Known issues: none found in
-              testing. Missing: no Enhanced colour set; pace not measured
-              against the original; the replay check did not reach aircraft,
-              the cyclone, crates, landing or game over (unit cases only);
-              hardware untested.
+  Note        Works on NextZXOS v2.10 from 1.1. Known issues: runs about 15 to
+              21 percent slower than the original (measured in JNext,
+              2026-11-06), with an occasional frame where a sprite is a frame
+              behind the scenery under it; a fix is made and comes in the next
+              version. Missing: no Enhanced colour set; the replay check did
+              not reach aircraft, the cyclone, crates, landing or game over
+              (unit cases only); hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
