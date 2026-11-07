@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Incredible Shrinking Fireman
   Publisher   Mastertronic
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,12 +23,23 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
+  Pace        original (+0.00% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same file;
+              probe 0xB950, Kempston bot keyed to updates; no state addresses,
+              so lockstep not checked)
 
-  Note        Works on NextZXOS v2.10 from 1.1. Known issues: none found in
-              testing. Missing: no Enhanced colour set; pace not measured
-              against the original; earlier builds ran on a real Next for
-              Dean, and the faults he found were fixed, but this build has
+  Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
+              1.2: the hooks hand back the CPU speed the game was running at,
+              instead of always dropping to 3.5 MHz
+
+  Note        Works on NextZXOS v2.10 from 1.1. Plays at the original's pace:
+              +0.0%, +0.3% and +0.4% over 600 game updates (quiet thirds up to
+              +1.2%, busy thirds up to +0.2%), in JNext, 2026-11-07. Known
+              issues: none found in testing; over 20-update stretches the
+              build was at most about 6% behind the original. Missing: no
+              Enhanced colour set; the pace runs could not be checked for
+              lockstep (no state addresses); earlier builds ran on a real Next
+              for Dean, and the faults he found were fixed, but this build has
               not; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
@@ -48,31 +59,39 @@
 -- TESTING -------------------------------------------------------------------
   Tested      1.0 played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 played by the owner in JNext on NextZXOS v2.10
-              (System/Next 26.11), 2026-11-06: approved
+              (System/Next 26.11), 2026-11-06: approved; 1.2 approved by the
+              owner in JNext, 2026-11-07
 
-  Replay      1.1: NexClash's ROM path check (nextboot.rom_paths) on the v2.10
-              ROM3, 1 recording, 32492 frames: every ROM byte the game runs is
-              as recorded, as on v2.09 (1.0: BEEPER 0x03C1-0x03C4 differs).
-              1.0: RZX (32492 frames) IDENTICAL (registers, memory, interrupt
-              safety, 54 interrupts deferred to a plot exit, sprite layer
-              incl. mask vs model, plot screen change = old ^ new, old + new
-              image covered from plot entry to exit: 5.1M pixels, attribute
-              reads vs the removed painter), unit cases + interrupt injection
-              + 9 negative controls PASS; hook cost mean 2.3K T, max 16.6K T
-              per frame
+  Replay      1.2 (NexClash main 102091f, selftest --game
+              incredible_shrinking_fireman-add-OPUS --verify): the recording
+              IDENTICAL (32,492 frames, 27,883 plots, 29,891 interrupts), unit
+              PASS; the v2.10 fix checked in NexClash's Next model: no fix-up
+              site holds v2.10's bytes. 1.1: NexClash's ROM path check
+              (nextboot.rom_paths) on the v2.10 ROM3, 1 recording, 32492
+              frames: every ROM byte the game runs is as recorded, as on v2.09
+              (1.0: BEEPER 0x03C1-0x03C4 differs). 1.0: RZX (32492 frames)
+              IDENTICAL (registers, memory, interrupt safety, 54 interrupts
+              deferred to a plot exit, sprite layer incl. mask vs model, plot
+              screen change = old ^ new, old + new image covered from plot
+              entry to exit: 5.1M pixels, attribute reads vs the removed
+              painter), unit cases + interrupt injection + 9 negative controls
+              PASS; hook cost mean 2.3K T, max 16.6K T per frame
 
-  Emulator    1.1, 2026-11-06: JNext 1.1.104 headless, through the Browser and
-              the real loader on System/Next 26.11 (NextZXOS v2.10) and on
-              v2.09: reached play, keys answered, beeper sound in the recorded
-              audio, /tmp/NEXCLASH.NEX equal to apply; 1.0 on 26.11 freezes at
-              the first beep in play (BEEPER runs into RAM). 1.0: JNext
-              1.1.104 headless, through the real loader, reached play; frames
-              viewed; no person played it; with the loading screen: JNext
-              1.1.104 headless through the real loader, MD5 exact, reached the
-              screen, the game and play frames, viewed; no person played it;
-              JNext 1.1.104 headless through the real loader, 2026-11-03:
-              chosen in the Browser with every cheat on, /tmp/NEXCLASH.NEX
-              equal to apply
+  Emulator    1.2, 2026-11-07: JNext 1.1.104 headless through the Browser and
+              the real loader on a private copy of the v2.09 card: menu v1.2,
+              title, play; /tmp/NEXCLASH.NEX equal to apply. 1.1, 2026-11-06:
+              JNext 1.1.104 headless, through the Browser and the real loader
+              on System/Next 26.11 (NextZXOS v2.10) and on v2.09: reached
+              play, keys answered, beeper sound in the recorded audio,
+              /tmp/NEXCLASH.NEX equal to apply; 1.0 on 26.11 freezes at the
+              first beep in play (BEEPER runs into RAM). 1.0: JNext 1.1.104
+              headless, through the real loader, reached play; frames viewed;
+              no person played it; with the loading screen: JNext 1.1.104
+              headless through the real loader, MD5 exact, reached the screen,
+              the game and play frames, viewed; no person played it; JNext
+              1.1.104 headless through the real loader, 2026-11-03: chosen in
+              the Browser with every cheat on, /tmp/NEXCLASH.NEX equal to
+              apply
 
   Coverage    1.1 changes only the start-up stub: after its copy of the
               running ROM3 into the alt ROM it puts v2.09's bytes back at 11
