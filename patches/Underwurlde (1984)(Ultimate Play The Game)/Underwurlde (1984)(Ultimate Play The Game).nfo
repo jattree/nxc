@@ -1,0 +1,118 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Underwurlde
+  Publisher   Ultimate, 1984
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Underwurlde (1984)(Ultimate Play The Game).z80
+  MD5         9a031797ed0cc96a9ec286ed22a32317
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on every moving figure:
+              Sabreman with fair hair and skin, brown winged beasts shaded
+              grey, pale-blue jellyfish, orange flying bugs, bubbles, weapons
+              and items in their own colours; rooms, furniture, the rope and
+              the panel unchanged. No white outlines or edges. The palette is
+              fitted to the figures so Sabreman's eyes stay apart from his
+              skin. Source: Enhanced colours: the Spec256 team, from their
+              Spec256 conversion of the game.
+
+  Pace        original (-0.08% measured in JNext 1.1.104 headless; probe 38183
+              with IX 36634 (the player's own update); 3 trials per scene from
+              the same RAM, each at its own video phase; single trials -0.66
+              to +0.91%; player position and room equal to the original at
+              every update)
+
+  Changes     1.0: review build, not published: figures as Next sprites, the
+              Spec256 conversion's colours as Enhanced.
+              1.1: Sinclair's 48K ROM as the whole alt ROM (NextZXOS 26.11
+              safe); the game's speed restored after every hook; R kept as the
+              original's; original pace; the game's own interrupt routine at
+              its own clock; the approved Enhanced colours unchanged; the
+              tape's loading screen; five checked trainers
+
+  Note        Keys: on the game's selection screen 1 keyboard, 2 Kempston, 3
+              cursor or 4 Interface II, then 0 to start; on the keyboard Q, W,
+              E and R move and T fires. Every moving figure (Sabreman, the
+              creatures, weapons and items) is a Next sprite in the game's own
+              colours; plants, stalactites, furniture, the rope, the panel and
+              text stay as the original draws them. The original 48K game with
+              its beeper sound. Known issues: a figure past the far right edge
+              (X over 232) is cut off at the edge, where the original wraps
+              its pixels onto the next screen row; not seen in testing.
+              Missing: not reached in testing: natural play to the end (the
+              deep rooms and the ending reached from labelled cheat and
+              teleport starts only), joysticks; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite gems
+   3  No enemies
+   4  Weapons stay put
+   5  Start with 9 lives
+
+  The archive's POKEs for this release, translated to the game's loading
+  address. Weapons stay put corrected: the archive's address leaves four
+  weapon layouts, the corrected one gives one.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: the
+              Spec256 team, from their Spec256 conversion of the game
+  Original    Ultimate, 1984, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
+              by script through the real loader on NextZXOS v2.09 and 26.11
+              card copies.
+
+  Replay      IDENTICAL on 33 recordings, 131,756 frames, default colours: at
+              every hook original and patched code compared from the same
+              state, every register with R, working RAM, sprite pixels against
+              the original plotter's XOR (249,111 figure plots, 125,499
+              picture checks, 96 rooms, 66 figure IDs); A' and rope registers
+              overwritten and replayed (dead); 14 of 14 negatives detected;
+              all 113 figures at 9 positions, slot, scenery and row cases; 176
+              hook cases at 3.5, 7, 14 and 28 MHz with interrupts on and off;
+              2,114 injected interrupts
+
+  Emulator    JNext 1.1.104 headless: six 12,000-frame soaks (3 seeds a colour
+              set), 32,814 player updates a set, deaths and 151 room changes,
+              no errors, the default and Enhanced counters equal; beeper
+              writes in the original order, all at 3.5 MHz; the real loader
+              (.NEXCLASH) on private card copies, NextZXOS v2.09 and 26.11:
+              default, Enhanced and Enhanced with all five trainers wrote the
+              exact .nex and reached play
+
+  Coverage    Recordings and soaks by script, no human play: menus, play,
+              ropes, 96 rooms, deaths, game over, restarts; the ending and
+              deep rooms from labelled cheat and teleport starts; not reached:
+              natural completion, joysticks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
