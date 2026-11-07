@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Target: Renegade
   Publisher   Imagine, 1988
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,16 +41,16 @@
   Changes     1.1: an optional Enhanced colour set, hand-painted by Jon
               Attree; the hooks made faster with the same pictures, so the
               game plays at the original's pace; the bar bouncers' see-through
-              gaps filled in Enhanced.
+              gaps filled in Enhanced. 1.2: works on NextZXOS v2.10
+              (System/Next 26.11).
 
   Note        Needs a 1MB Next: the faster hooks keep built sprite images in
               spare RAM. Known issues: Enhanced is a first pass: the level 2
               street gangs' sprites still need some clean-up, coming in a
-              later version; not yet checked in full on NextZXOS v2.10: it
-              lacks the start-up fix for v2.10's ROM changes that Cyclone and
-              Chuckie Egg needed. Missing: Enhanced on levels 2-5 checked on
-              captured states, not by a replay; player 2's lives cheat not
-              played; hardware untested.
+              later version; each sprite update still sets the CPU back to 3.5
+              MHz, so a faster speed chosen on the Next is not kept. Missing:
+              Enhanced on levels 2-5 checked on captured states, not by a
+              replay; player 2's lives cheat not played; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
@@ -69,70 +69,78 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-05
+              2026-11-05; 1.2 approved by the owner in JNext, 2026-11-07
 
-  Replay      RZX IDENTICAL (level 1), unit + guard + cache / log full + map +
-              5 negative controls PASS; recolour round trip; Enhanced (v1.1):
-              RZX IDENTICAL (level 1, 7039 frames, 24670 plots, 2257 commits,
-              3849290 sprite pixels with their palette offsets), unit 530
-              cases PASS, the commit on 20 JNext captures of levels 1-5 equal
-              to the model, 8 of 8 Enhanced negative controls detected (colour
-              store left out, palette class ignored, store shifted, level
-              signatures wrong, level tables swapped, one graphic repainted,
-              IY written, a palette byte changed); default rebuilt by the
-              engine = e0b246e3 and its RZX replay IDENTICAL again, 5 of 5
-              negatives; hook-speed build (2026-11-04, both sets): RZX
-              IDENTICAL, 7039 frames, at incoming clocks 3.5, 7, 14 and 28 MHz
-              (every hook site restores the speed it found; a build with a
-              forced 3.5 MHz exit fails 5266 times in 1500 frames); the
-              picture after each of the 2257 commits (ULA and sprite layer)
-              equal to the v1.1 candidate's in both sets; unit tests PASS
-              (default 5 of 5, Enhanced 8 of 8 negatives) and the speed cases
-              PASS (cache hits from RAM, cache full, generation wrap,
-              directory full, hash collision) with 3 more negatives caught
-              (cache kept over the screen clear, the hash trusted without the
-              key, cache kept over a level change); lying-figure repaint
-              (speed2, 2026-11-04): RZX IDENTICAL again in both sets (7039
-              frames, 2257 commits, 3849290 sprite pixels), also with every
-              hook entered at 28 MHz; unit PASS, default 5 of 5 and Enhanced 8
-              of 8 negatives, speed cases PASS with 3 of 3 negatives, the
-              forced 3.5 MHz exit caught (5266 failures); the look sheet's
-              flags 0 on every frame of every level; speed3 (2026-11-04): RZX
-              IDENTICAL again in both sets (also at 28 MHz in), unit PASS with
-              default 5 of 5 and Enhanced 8 of 8 negatives, speed cases PASS
-              (3 of 3), forced 3.5 MHz exit caught (5266); look sheet flags 0;
-              speed4 (2026-11-04): RZX IDENTICAL again in both sets (also at
-              28 MHz in), unit PASS with default 5 of 5 and Enhanced 8 of 8
+  Replay      1.2 (2026-11-07): the 1.1 builds with only the start-up fix for
+              NextZXOS v2.10 added (game banks byte for byte 1.1's); in
+              NexClash's Next model the game starts in the same state on v2.09
+              but for R, and on v2.10 alt ROM image 1 differs only at the
+              restored fix-up bytes. 1.1: RZX IDENTICAL (level 1), unit +
+              guard + cache / log full + map + 5 negative controls PASS;
+              recolour round trip; Enhanced (v1.1): RZX IDENTICAL (level 1,
+              7039 frames, 24670 plots, 2257 commits, 3849290 sprite pixels
+              with their palette offsets), unit 530 cases PASS, the commit on
+              20 JNext captures of levels 1-5 equal to the model, 8 of 8
+              Enhanced negative controls detected (colour store left out,
+              palette class ignored, store shifted, level signatures wrong,
+              level tables swapped, one graphic repainted, IY written, a
+              palette byte changed); default rebuilt by the engine = e0b246e3
+              and its RZX replay IDENTICAL again, 5 of 5 negatives; hook-speed
+              build (2026-11-04, both sets): RZX IDENTICAL, 7039 frames, at
+              incoming clocks 3.5, 7, 14 and 28 MHz (every hook site restores
+              the speed it found; a build with a forced 3.5 MHz exit fails
+              5266 times in 1500 frames); the picture after each of the 2257
+              commits (ULA and sprite layer) equal to the v1.1 candidate's in
+              both sets; unit tests PASS (default 5 of 5, Enhanced 8 of 8
+              negatives) and the speed cases PASS (cache hits from RAM, cache
+              full, generation wrap, directory full, hash collision) with 3
+              more negatives caught (cache kept over the screen clear, the
+              hash trusted without the key, cache kept over a level change);
+              lying-figure repaint (speed2, 2026-11-04): RZX IDENTICAL again
+              in both sets (7039 frames, 2257 commits, 3849290 sprite pixels),
+              also with every hook entered at 28 MHz; unit PASS, default 5 of
+              5 and Enhanced 8 of 8 negatives, speed cases PASS with 3 of 3
+              negatives, the forced 3.5 MHz exit caught (5266 failures); the
+              look sheet's flags 0 on every frame of every level; speed3
+              (2026-11-04): RZX IDENTICAL again in both sets (also at 28 MHz
+              in), unit PASS with default 5 of 5 and Enhanced 8 of 8
               negatives, speed cases PASS (3 of 3), forced 3.5 MHz exit caught
-              (5266); every frame's opaque pixels as the default's; look sheet
-              flags 0; speed5 (2026-11-05, Jon's hand-painted sheets): RZX
-              IDENTICAL again in both sets (7039 frames, 2257 commits, 3849290
-              sprite pixels), also with every hook entered at 28 MHz; unit
-              PASS with default 5 of 5 and Enhanced 8 of 8 negatives, speed
-              cases PASS (3 of 3); forced 3.5 MHz exit caught (29186 over the
-              whole replay); silhouette unchanged outside the named exception
-              (20 bouncer hole pixels), its negative caught; look sheet flags
-              0
+              (5266); look sheet flags 0; speed4 (2026-11-04): RZX IDENTICAL
+              again in both sets (also at 28 MHz in), unit PASS with default 5
+              of 5 and Enhanced 8 of 8 negatives, speed cases PASS (3 of 3),
+              forced 3.5 MHz exit caught (5266); every frame's opaque pixels
+              as the default's; look sheet flags 0; speed5 (2026-11-05, Jon's
+              hand-painted sheets): RZX IDENTICAL again in both sets (7039
+              frames, 2257 commits, 3849290 sprite pixels), also with every
+              hook entered at 28 MHz; unit PASS with default 5 of 5 and
+              Enhanced 8 of 8 negatives, speed cases PASS (3 of 3); forced 3.5
+              MHz exit caught (29186 over the whole replay); silhouette
+              unchanged outside the named exception (20 bouncer hole pixels),
+              its negative caught; look sheet flags 0
 
-  Emulator    JNext 1.1.104 headless, through the real loader, reached play;
-              frames viewed; no person played it; with the loading screen:
-              JNext 1.1.104 headless through the real loader, MD5 exact,
-              reached the screen, the game and play frames, viewed; no person
-              played it; JNext 1.1.104 headless through the real loader,
-              2026-11-03: chosen in the Browser with every cheat on,
-              /tmp/NEXCLASH.NEX equal to apply; Enhanced (v1.1): JNext 1.1.104
-              headless, the .nex nxc.py writes with Enhanced and every cheat
-              on, levels 1-5 reached, frames and sprite snapshots viewed; no
-              person played it; hook-speed build: JNext 1.1.104 headless, 30
-              game updates of 600 compared as machine snapshots with the v1.1
-              candidate, same game state, ULA, sprites and palette in both
-              sets; the .nex nxc.py writes, with its menu and bare, reached
-              play in each set; no person played it; speed2: JNext 1.1.104
-              headless, Enhanced with every cheat on, levels 1-5, players 1
-              and 2 knocked down and lifted viewed; no person played it;
-              speed3: JNext 1.1.104 headless, Enhanced with every cheat on,
-              the helmet bikers, player 1 lying and lifted, player 2 viewed;
-              no person played it
+  Emulator    1.2 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+              card, Browser, the .nxc, the loader's menu with Enhanced on,
+              ENTER: /tmp/NEXCLASH.NEX equal to the bare Enhanced build
+              (52ab63f4), the loading screen and level 1 play reached, frames
+              viewed; no person played it. 1.1: JNext 1.1.104 headless,
+              through the real loader, reached play; frames viewed; no person
+              played it; with the loading screen: JNext 1.1.104 headless
+              through the real loader, MD5 exact, reached the screen, the game
+              and play frames, viewed; no person played it; JNext 1.1.104
+              headless through the real loader, 2026-11-03: chosen in the
+              Browser with every cheat on, /tmp/NEXCLASH.NEX equal to apply;
+              Enhanced (v1.1): JNext 1.1.104 headless, the .nex nxc.py writes
+              with Enhanced and every cheat on, levels 1-5 reached, frames and
+              sprite snapshots viewed; no person played it; hook-speed build:
+              JNext 1.1.104 headless, 30 game updates of 600 compared as
+              machine snapshots with the v1.1 candidate, same game state, ULA,
+              sprites and palette in both sets; the .nex nxc.py writes, with
+              its menu and bare, reached play in each set; no person played
+              it; speed2: JNext 1.1.104 headless, Enhanced with every cheat
+              on, levels 1-5, players 1 and 2 knocked down and lifted viewed;
+              no person played it; speed3: JNext 1.1.104 headless, Enhanced
+              with every cheat on, the helmet bikers, player 1 lying and
+              lifted, player 2 viewed; no person played it
 
   Coverage    loading screen stub added in bank 20, 2026-11-03: the replay and
               hardware lines are of the build without it, whose game memory
