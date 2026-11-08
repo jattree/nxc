@@ -103,8 +103,14 @@ def nfo(d, base):
                                     '; '.join('%s needs a %s Next, and is not offered on a smaller one' % (e['name'].decode('ascii', 'replace'), '2MB' if e['top'] > nxc.NEXT_1MB else '1MB')
                                               for e in big)), o)
     rule(o, 'WHAT IT DOES')
-    o.append('  Moving figures become Next hardware sprites, so they keep their own colours')
-    o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
+    if 'layer 2' in prf.get('display_model', '').lower():
+        o[2] = o[2].replace('with hardware sprites', 'on Next hardware')
+        o.append('  Moving figures are drawn on the Next\'s own graphics layers, so they keep their')
+        o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
+        o.append('  unchanged.')
+    else:
+        o.append('  Moving figures become Next hardware sprites, so they keep their own colours')
+        o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
     if colours:
         names = [e['name'].decode('ascii', 'replace') for e in colours]
         o.append('')

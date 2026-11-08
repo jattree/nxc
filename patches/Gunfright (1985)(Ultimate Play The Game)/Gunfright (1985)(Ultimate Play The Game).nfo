@@ -1,6 +1,6 @@
      _   _ __  __  ____
     | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
-    |  \| | \  / | |       colour clash removed with hardware sprites
+    |  \| | \  / | |       colour clash removed on Next hardware
     | |\  | /  \ | |___    (built with NexClash)
     |_| \_|/_/\_\ \____|
 
@@ -23,8 +23,9 @@
               a 1MB Next, and is not offered on a smaller one.
 
 -- WHAT IT DOES --------------------------------------------------------------
-  Moving figures become Next hardware sprites, so they keep their own colours
-  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+  Moving figures are drawn on the Next's own graphics layers, so they keep their
+  own colours and no longer take on the scenery's (colour clash). Game logic is
+  unchanged.
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
