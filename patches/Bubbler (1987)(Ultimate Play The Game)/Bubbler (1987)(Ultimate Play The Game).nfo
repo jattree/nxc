@@ -1,0 +1,107 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Bubbler
+  Publisher   Ultimate, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Bubbler (1987)(Ultimate Play The Game).z80
+  MD5         85d7841306333321838d372ea8797ff2
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    MatGubbins' colours: the bubble white, the creatures green, the
+              targets red and cyan, the floors grey with the original's yellow
+              walls and slopes; the panel, score and gauges unchanged. No
+              outlines added. Source: Enhanced colours: MatGubbins, from his
+              Spec256 conversion of the game.
+
+  Pace        original (-0.17% measured in JNext 1.1.104 headless; nine
+              original scenes, three raster phases each, 120 updates, at the
+              player's own update; every whole and steady trial faster than
+              the original, by 0.1 to 1.6%)
+
+  Changes     1.0: Enhanced colours from MatGubbins' Spec256 conversion, drawn
+              in the original order with its masks on a double-buffered Layer
+              2 view; the original loading screen; Sinclair's 48K ROM as the
+              whole alt ROM (NextZXOS 26.11 safe); the game's speed restored
+              after every hook; four cheats from the archive.
+
+  Note        Keys: on the game's menu A for one player or B for two, choose
+              keyboard, Kempston, cursor or Interface II for each player, then
+              0 to start. The default is the original game, picture and all:
+              its play area is drawn in one colour, so it never had colour
+              clash; the patch gives it Sinclair's whole 48K ROM so it runs on
+              NextZXOS 26.11. Enhanced paints the bubble, creatures, items and
+              floors in their own colours, drawn on the Next's Layer 2 so the
+              original's masks, scenery and panel stay as they were; off by
+              default. The original 48K game with its beeper sound; fits a 1MB
+              Next. Known issues: the original's stepped movement, deliberate
+              pauses and low update rate remain; in JNext it runs 0.1 to 1.6
+              percent faster than the original in every scene measured.
+              Missing: not reached in testing: natural play to the end (all
+              five stages reached with the next-level cheat), joysticks;
+              hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite time
+   2  Infinite lives
+   3  Immunity
+   4  Next level on life loss
+
+  The archive's four POKEs match this release once the original loader's
+  inversion is allowed for; the patch stores them inverted so the game gets
+  the right bytes. Infinite time stops time running out but the clock still
+  counts; Immunity keeps the start-of-life protection and must be on before
+  play starts.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours:
+              MatGubbins, from his Spec256 conversion of the game
+  Original    Ultimate, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
+              by script through the real loader on NextZXOS 26.11 card copies.
+
+  Replay      IDENTICAL on a 10,000-frame recording and a 21,901-frame
+              recording through all five stages (next-level cheat): at every
+              hook original and patched code compared from the same state,
+              every register with R and all 48K RAM, every Enhanced picture
+              checked pixel for pixel; 6 deliberately broken builds rejected
+
+  Emulator    JNext 1.1.104 headless: 20,000-frame soaks of the original,
+              default and Enhanced, each with ten deaths and two game overs,
+              no errors; the real loader (.NEXCLASH) on private NextZXOS 26.11
+              card copies
+
+  Coverage    Recordings and soaks by script, no human play: menus, play,
+              deaths, game over, all five stages via the next-level cheat; not
+              reached: natural completion, joysticks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
