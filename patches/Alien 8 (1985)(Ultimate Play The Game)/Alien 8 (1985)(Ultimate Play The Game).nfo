@@ -1,0 +1,107 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Alien 8
+  Publisher   Ultimate, 1985
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Alien 8 (1985)(Ultimate Play The Game).z80
+  MD5         91a07828482c3e9b0fb76564abe3fe87
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Every figure painted in its own colours: the robot in white and
+              blue with red, fires in yellow and orange on red, the doorway
+              arches blue-grey, and the droids, cryogenic chambers, items and
+              hazards each in their own colours, on a dark grey floor; the
+              room walls keep the original's ink. No outlines added. Source:
+              Enhanced colours: Jon Attree, painted over the original game's
+              own figures.
+
+  Pace        original (-1.71% measured in JNext 1.1.104 headless; 18 paired
+              trials, default and Enhanced, three scenes, three R and raster
+              phases each; player state, inputs and beeper writes equal to the
+              original at every update; one cold redraw adds up to 117.5 ms)
+
+  Changes     1.0: review build, not published: figures as Next sprites, the
+              original's order and masks, Sinclair's 48K ROM as the whole alt
+              ROM, translated cheats.
+              1.1: Enhanced colours on every figure, painted by Jon Attree,
+              and the dark grey floor; steady walking pace recalibrated to the
+              original's.
+
+  Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
+              Interface II joystick, 5 directional control, then 0 to start.
+              The default is the original game's look, its figures moved onto
+              Next sprites, with Sinclair's whole 48K ROM so it runs on
+              NextZXOS 26.11. Enhanced paints every figure in its own colours
+              on a dark grey floor; off by default. The original 48K game with
+              its beeper sound; fits a 1MB Next. Known issues: entering a room
+              cold or losing a life redraws the room up to about 0.12 seconds
+              slower than the original, made up over the next few seconds
+              (death stretches up to 5 percent slower, then up to 2.5 percent
+              faster); steady play is within 2 percent of the original. With
+              Infinite lives and Start 10 lives both on, the lives counter
+              shows 00 although you have 10. Missing: not reached in testing:
+              natural play to the end, joysticks; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  No time-out
+   3  Immunity
+   4  Freeze objects
+   5  Mega jumps
+   6  Start 10 lives
+   7  Time 999
+   8  One room goal
+
+  The archive's POKEs translated to this exact 48K release and checked to
+  survive a restart; One room goal sets the original's real target (24 rooms,
+  stored as BCD, not the archive's 36); the archive's inventory POKEs are
+  unsafe on this release and left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree, painted over the original game's own figures
+  Original    Ultimate, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
+              by script through the real loader on NextZXOS 26.11 card copies.
+
+  Replay      IDENTICAL on an 18,000-frame recording per mode (4 starts, 17
+              deaths, 3 game overs): at every hook original and patched code
+              compared from the same state, every register with R and all 48K
+              RAM, and every picture drawn checked pixel for pixel; 5
+              deliberately broken builds rejected
+
+  Emulator    JNext 1.1.104 headless: 20,000-frame soaks per mode, no pattern
+              overflow or errors; beeper writes all at 3.5 MHz; the real
+              loader (.NEXCLASH) on private NextZXOS 26.11 card copies
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
