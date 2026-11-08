@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Alien 8
   Publisher   Ultimate, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -44,6 +44,9 @@
               1.1: Enhanced colours on every figure, painted by Jon Attree,
               and the dark grey floor; steady walking pace recalibrated to the
               original's.
+              1.2: the original-colours mode's palette lists exactly the
+              Spectrum's shades (the Next's own ULA colours); what you see is
+              unchanged.
 
   Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
               Interface II joystick, 5 directional control, then 0 to start.
@@ -85,7 +88,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
-              by script through the real loader on NextZXOS 26.11 card copies.
+              by script through the real loader on NextZXOS 26.11 card copies;
+              1.2 approved by the owner 2026-11-07 (no visible change)
 
   Replay      IDENTICAL on an 18,000-frame recording per mode (4 starts, 17
               deaths, 3 game overs): at every hook original and patched code
