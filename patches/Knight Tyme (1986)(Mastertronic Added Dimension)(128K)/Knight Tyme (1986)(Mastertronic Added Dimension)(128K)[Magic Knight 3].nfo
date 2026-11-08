@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Knight Tyme
   Publisher   Mastertronic Added Dimension, 1986
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -24,23 +24,24 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original (+1.24% measured in JNext 1.1.104 headless, v2.09 card,
-              against the plain build, input keyed to updates, 2 seeds
-              (+1.11%, +1.24%))
+  Pace        original
 
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
               1.2: the game keeps its own CPU speed after each sprite update
               instead of being set back to 3.5 MHz; no change to what you see.
+              1.3: the Knight's pictures are made about three times faster, so
+              the start of play and his colour changes no longer slow the
+              game; the same pictures, pixel for pixel.
 
   Note        Known issues: the star map reads data from the Next's ROM rather
               than the 128K machine's; whether it looks different is not
-              checked; plays about 1% slower than the original in JNext (+0.5
-              to +0.7% once walking; the first second of play +13 to +18%).
-              Missing: no Enhanced colour set; the cheats are unplayed by a
-              person (strength and fuel not run); not reached in testing: the
-              story puzzles, transporter trips by play and the ending;
-              hardware untested.
+              checked; plays 0.1% slower than the original in JNext (the same
+              pace once walking; the first second of play +3%). Missing: no
+              Enhanced colour set; the cheats are unplayed by a person
+              (strength and fuel not run); not reached in testing: the story
+              puzzles, transporter trips by play and the ending; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
@@ -62,22 +63,28 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.2 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.3 approved by the owner, 2026-11-07; run by script
+              through the real loader in JNext on a NextZXOS card copy
 
-  Replay      1.2 (2026-11-07, nexclash main 102091f, hooks give back the
-              caller's CPU speed): IDENTICAL on the same 4 recordings, 33534
-              frames, every hook exit checked (25064), 20 of 20 negatives
-              detected, unit tests pass. 1.1: IDENTICAL on 4 recordings, 33534
-              frames, default colours, on the whole alt ROM build (2026-11-04:
-              alt ROM image 1 is Sinclair's 48K ROM plus the hooks,
-              0x0000-0x3FFF all written by the build): original and patched
-              machines in lockstep, the patched machine's ROM 1 modelled as
-              the Next fills it, NextZXOS's ROM3 first then the build's
-              writes, so the IM 2 handler's jumps to 0x0038 run that image;
-              hook instructions uncounted, whole 128K compared each frame
-              apart from the screen pixels and the draw buffers built from
-              them; sprite layer and ULA against an independent model at 3625
-              stable frames, including the Bridge's seated crew as sprite
+  Replay      1.3 (2026-11-07, nexclash PR #154, merged ad8d90b: the Knight's
+              image conversion about 3x faster, same pixels): IDENTICAL on the
+              same 4 recordings, 33534 frames, every hook exit checked
+              (25064), 19 of 19 negatives detected, unit tests pass; old and
+              new conversion code identical on 260 simulator cases (canvas,
+              patterns, sprite table). 1.2 (2026-11-07, nexclash main 102091f,
+              hooks give back the caller's CPU speed): IDENTICAL on the same 4
+              recordings, 33534 frames, every hook exit checked (25064), 20 of
+              20 negatives detected, unit tests pass. 1.1: IDENTICAL on 4
+              recordings, 33534 frames, default colours, on the whole alt ROM
+              build (2026-11-04: alt ROM image 1 is Sinclair's 48K ROM plus
+              the hooks, 0x0000-0x3FFF all written by the build): original and
+              patched machines in lockstep, the patched machine's ROM 1
+              modelled as the Next fills it, NextZXOS's ROM3 first then the
+              build's writes, so the IM 2 handler's jumps to 0x0038 run that
+              image; hook instructions uncounted, whole 128K compared each
+              frame apart from the screen pixels and the draw buffers built
+              from them; sprite layer and ULA against an independent model at
+              3625 stable frames, including the Bridge's seated crew as sprite
               tiles (5 Bridge builds, 512 crew checks); 25,064 hook exits with
               registers checked; 19 of 19 negatives detected, the 3 crew
               negatives on a recording that reaches the Bridge, and the new
@@ -87,10 +94,15 @@
               option is neutralised and has no lockstep replay, only a check
               that its flag stays 0
 
-  Emulator    1.2 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
+  Emulator    1.3 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
               card, Browser, the .nxc, the loader's menu, ENTER:
-              /tmp/NEXCLASH.NEX equal to the bare build (6222fc96), title,
-              control menu and play reached, the Knight walking in the
+              /tmp/NEXCLASH.NEX equal to the bare build (bc2c840f), title,
+              control menu and play reached, the Knight walking the
+              Transporter Room and the Transputer Room, frames viewed; no
+              person played it. 1.2 (2026-11-07): JNext 1.1.104 headless on a
+              copy of the v2.09 card, Browser, the .nxc, the loader's menu,
+              ENTER: /tmp/NEXCLASH.NEX equal to the bare build (6222fc96),
+              title, control menu and play reached, the Knight walking in the
               Transporter Room, frames viewed; no person played it. 1.1: JNext
               1.1.104 headless, whole alt ROM build (2026-11-04): menu, story
               screens, play, the command window and the Transporter Room
