@@ -1,0 +1,96 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Gunfright
+  Publisher   Ultimate, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Gunfright (1985)(Ultimate Play The Game).z80
+  MD5         0cd9e86a2c6c7afa22025f8d593af093
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original (-1.08% measured in JNext 1.1.104 headless; probe A3C6
+              (the player's own update); 3 trials per scene with different R
+              seeds; figures are the fastest trial; every trial faster than
+              the original by 0.3 to 1.2%, none slower; player state equal to
+              the original at every update)
+
+  Changes     1.0: the town and duels on the Next's hardware sprite layer at
+              the original's pace; the original loading screen; Sinclair's 48K
+              ROM as the whole alt ROM (NextZXOS 26.11 safe); the game's speed
+              restored after every hook; eight cheats from the archive, ammo
+              and money corrected.
+
+  Note        Keys: on the game's menu 3 starts; on the keyboard X and C move
+              left and right, A up, 1 down and Q fires. The original game's
+              look and pace, its town and duels drawn on the Next's hardware
+              sprite layer, with Sinclair's whole 48K ROM so it runs on
+              NextZXOS 26.11. The original 48K game with its beeper sound;
+              fits a 1MB Next. Enhanced colours are coming in a later version.
+              Known issues: none found in testing; in JNext it runs 0.3 to 1.2
+              percent faster than the original in every scene measured.
+              Missing: not reached in testing: natural play to the end,
+              joysticks; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite ammo
+   3  Infinite money
+   4  Bandit cannot move
+   5  Bandit cannot shoot
+   6  No horses
+   7  No jumping boys
+   8  No townsfolk
+
+  The archive's POKEs checked against this exact 48K release, written where
+  the game's loader copies its code from; Infinite ammo and Infinite money
+  corrected so the original display and arithmetic still work.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ultimate, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Approved by the owner 2026-11-07; run by script through the real
+              loader in JNext 1.1.104 on a NextZXOS card copy, default and all
+              eight cheats
+
+  Replay      IDENTICAL on 11,500 recorded frames (town and duel): at every
+              hook original and patched code compared from the same state,
+              every register with R and the original's RAM; 5 deliberately
+              broken builds rejected
+
+  Emulator    JNext 1.1.104 headless: 18 pace trials, 17 frozen states
+              matching the original's picture and RAM exactly, beeper writes
+              at the original clock (5,650 pulses compared), a 12,000-frame
+              restart soak; the real loader (.NEXCLASH) on a private card copy
+
+  Coverage    Recordings and soaks by script, no human play: menu, town,
+              duels, deaths, game over and restart; not reached: natural
+              completion, joysticks
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
