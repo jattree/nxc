@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Lunar Jetman
   Publisher   Ultimate, 1983
-  Version     1.0
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,13 +31,32 @@
               outlines or edges. Source: Jetman's Enhanced suit from an older
               Spec256 Jetpac conversion, painter not established.
 
+  Pace        original (+0.37% measured in NexClash verifier replay pace: the
+              same recording on both sides (the game takes its randomness from
+              R, so JNext runs of two builds play different games), the hooks'
+              added time at the Next's 28 MHz per game update (0x9ED2), 3
+              recordings from the title)
+
+  Changes     1.1: (never released) plays closer to the original's pace (about
+              4% slow, was about 14%); the hooks hand back the CPU speed the
+              game was running at
+              1.2: plays within about half a percent of the original's pace;
+              sprite images are shared between figures and uploaded only when
+              no pattern holds them; the game's random numbers (taken from R)
+              as the original's
+
   Note        The patch writes the whole alt ROM image (Sinclair's ROM plus
               its hooks), so the ROM's own interrupt code can never run the
-              hooks. Known issues: none found in testing. Missing: pace not
-              measured against the original; the cheats are unplayed by a
-              person; not reached in testing: the alien base, the missile's
-              flight, the rover carrying items and later levels; hardware
-              untested.
+              hooks. From 1.2 the figures and the rover share their sprite
+              images, uploaded only when no pattern already holds them, and
+              the hooks leave R as the original would, so the game's random
+              numbers are the original's. Known issues: about 0.4% slower than
+              the original (replay pace, the same game on both sides: +0.37%
+              to +0.57% over three recordings, up to +1.8% in the quietest
+              third of game updates); 1.0 was about 14% slower, the unreleased
+              1.1 about 4%. Missing: the cheats are unplayed by a person; not
+              reached in testing: the alien base, the missile's flight, the
+              rover carrying items and later levels; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -55,42 +74,44 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-04
+  Tested      1.2 played by the owner in JNext 1.1.104, 2026-11-07: approved;
+              1.1 never released; 1.0 played by Jon Attree in JNext through
+              the real loader, 2026-11-04
 
   Replay      IDENTICAL on 3 recordings from the title, 22,090 frames, default
-              and Enhanced, on the whole alt ROM build (2026-11-04: alt ROM
-              image is Sinclair's 48K ROM plus the hooks, 0x0000-0x3FFF all
-              written by the build): at every hook call (h_new 30,374, h_tnew
-              19,761, h_clr 105,103, h_eo 271, h_teo 4, h_cls 44, h_msg 4)
-              original and patched code run from the same state to the same
-              point, registers and 48K memory compared (dead stack aside),
-              slot 4 restored, the patched ROM modelled as the Next fills it
-              (NextZXOS's ROM3 first, then the build's writes); at all 21,398
-              IM 1 interrupts the alt ROM image's handler run against the
-              original's, IDENTICAL, no hook code reached; at 11,971
-              interrupts outside the plot code each object's sprite ink equals
-              the pixels its own XOR stores put on the original screen (35,595
-              object checks), palette offset equal to the object's colour at
-              every draw, setup palette checked entry by entry; 10 of 10
-              negatives detected on the default and 7 of 7 on Enhanced, the
-              new one in both the previous build's image (hooks only over
-              ROM3): hook code ran from the IM 1 handler at every interrupt;
-              Enhanced tiles checked against their default tiles, silhouette
-              for silhouette; the verified start is the stepped s0 state, and
-              the shipped build starts at the file's own decrypter, proven in
-              the simulator to reach the same memory at 0x8000 apart from 16
-              bytes of ROM keyboard and frame variables and dead stack
+              and Enhanced (1.2): at every hook call (155,561: h_new, h_tnew,
+              h_clr, h_eo, h_teo, h_cls, h_msg) original and patched code run
+              from the same state to the same point, registers with R and 48K
+              memory compared (dead stack aside), slots 4 and 5 restored, the
+              patched ROM modelled as the Next fills it (NextZXOS's ROM3
+              first, then the build's writes); at all 21,398 IM 1 interrupts
+              the alt ROM image's handler run against the original's, no hook
+              code reached; at every interrupt outside the plot code each
+              object's sprite ink equals the pixels its own XOR stores put on
+              the original screen (35,595 object checks), palette offset equal
+              to the object's colour at every draw, sprite attributes modelled
+              through NEXTREG and port 0x57, patterns through 0x303B / 0x5B;
+              the shared pattern pool checked full and churning (2,500 random
+              calls over all 222 figure graphics and the rover frames, some
+              hidden and shown again: every shown sprite shows its graphic's
+              tiles); 15 of 15 negatives detected on the default and 8 of 8 on
+              Enhanced (new: tile ids moved, a pattern reused while shown, R
+              one off, a live instruction NOPed); every 32nd screen read
+              checked from the read to the line routine's end against the
+              original, registers with R and memory outside the bitmap equal;
+              Enhanced tiles checked against their default tiles; the shipped
+              build starts at the file's own decrypter, proven in the
+              simulator to reach the verified start state apart from 16 bytes
+              of ROM keyboard and frame variables and dead stack
 
-  Emulator    JNext 1.1.104 headless, whole alt ROM build (2026-11-04): menu,
-              play, the rover, aliens and bombs, default and Enhanced, frames
-              viewed; the alt ROM image dumped in JNext equals the modelled
-              Sinclair-plus-hooks image; with NextZXOS's DivMMC 0x0038 trap
-              removed IM 1 ran Sinclair's handler 4,470 times and play ran to
-              game over and the Hall of Fame; earlier, on the previous build:
-              the tape's loading picture held then the game, walking pace
-              equal to the plain build, real loader from the Browser, MD5
-              exact
+  Emulator    JNext 1.1.104 headless through the real loader on a private copy
+              of the NextZXOS v2.09 card (1.2, 2026-11-08): menu v1.2, loading
+              screen, game selection, play with Jetman, aliens, items and the
+              rover as sprites, game over and the Hall of Fame, default and
+              Enhanced; /tmp/NEXCLASH.NEX equal to the bare build each time.
+              Earlier (1.0, 2026-11-04): the alt ROM image dumped in JNext
+              equals the modelled Sinclair-plus-hooks image; walking pace
+              equal to the plain build
 
   Coverage    random play with infinite lives on 3 recordings: walking,
               flying, firing, aliens of the first levels, bombs, the rover
