@@ -2030,13 +2030,13 @@ def field_place(f, key):
     """Which block a field of `set` goes in, b'INF1' or b'PRF1', with its key as stored; Wrong for one this tool does not
     know. 'enhanced' alone is enhanced_N of the patch's one colour set."""
     if key == 'enhanced':
-        cs = offered(f, KIND_COLOURS)
+        cs = offered(f, KIND_COLOURS, big=True)
         if len(cs) != 1: raise Wrong('this patch has %d colour sets: say which, as enhanced_N, N its choice' % len(cs))
         key = 'enhanced_%d' % cs[0]['choice']
     if key in INFO_KEYS: return b'INF1', key
     m = re.fullmatch(r'enhanced_([0-9]{1,3})', key)
     if m:
-        if not any(e['choice'] == int(m.group(1)) for e in offered(f, KIND_COLOURS)): raise Wrong('this patch has no colour set of choice %s' % m.group(1))
+        if not any(e['choice'] == int(m.group(1)) for e in offered(f, KIND_COLOURS, big=True)): raise Wrong('this patch has no colour set of choice %s' % m.group(1))
         return b'INF1', key
     if key in PROOF_KEYS or re.fullmatch(r'toggle_[0-9]{1,3}', key): return b'PRF1', key
     raise Wrong('%s is not a field of INF1 or PRF1 that this tool sets' % key)
