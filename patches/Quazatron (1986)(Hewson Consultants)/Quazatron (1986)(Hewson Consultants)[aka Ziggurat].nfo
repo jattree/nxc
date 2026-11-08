@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Quazatron
   Publisher   Hewson, 1986
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,13 +33,15 @@
 
   Pace        original
 
-  Changes     1.2: droids in front of and behind each other as in the original
-              (v1.2's drafts drew them the wrong way round); no black strips
-              from new scenery at the view's edge; Centred view's pace; droids
-              and shots glide in Centred view; fewer missed interrupts; the
-              Space also fires option. 1.1: Centred view toggle. 1.0: colour
-              scenery and painted sprites, Smooth scrolling, the original's
-              pace kept by a pace limiter
+  Changes     1.3: the pace limiter now uses NexClash's shared pace library;
+              the game's pace as 1.2 (within 0.4%). 1.2: droids in front of
+              and behind each other as in the original (v1.2's drafts drew
+              them the wrong way round); no black strips from new scenery at
+              the view's edge; Centred view's pace; droids and shots glide in
+              Centred view; fewer missed interrupts; the Space also fires
+              option. 1.1: Centred view toggle. 1.0: colour scenery and
+              painted sprites, Smooth scrolling, the original's pace kept by a
+              pace limiter
 
   Note        Controls: choose 2 on CONTROL SELECTION for the cursor keys
               (fire 0), or 4 for a Kempston joystick. Space also fires (off by
@@ -53,14 +55,13 @@
               view a few pixels at the edge of the play area can show, for
               some frames, what the game never drew there (the void's colour,
               or scenery from elsewhere, sometimes black), in about 1 frame in
-              18 in the simulator; Centred view runs about 1.3% slower than
-              the original in long scrolling (measured before this version's
-              display changes); on fast diagonal walks its view can jump up to
-              6 px in a frame; with a lot of sound a few more interrupts are
-              missed than in the original. Missing: an even update rhythm, so
-              the camera still wobbles 0.6-1.5 px on steady walks; the play
-              area's edges in Centred view drawn ahead of the camera. JNext
-              only; hardware untested.
+              18 in the simulator; Centred view runs about 1% slower than the
+              original in long scrolling; on fast diagonal walks its view can
+              jump up to 6 px in a frame; with a lot of sound a few more
+              interrupts are missed than in the original. Missing: an even
+              update rhythm, so the camera still wobbles 0.6-1.5 px on steady
+              walks; the play area's edges in Centred view drawn ahead of the
+              camera. JNext only; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -78,21 +79,17 @@
 -- TESTING -------------------------------------------------------------------
   Tested      1.0 played by the owner in JNext 2026-11-06: approved; 1.1
               (Centred view) approved; 1.2 played by the owner in JNext
-              2026-11-06: approved
+              2026-11-06: approved; 1.3 approved by the owner 2026-11-07, run
+              by script against v1.2 and the original
 
-  Replay      Game state IDENTICAL in 43 runs: v1.0's 6 recordings in 4
-              states, 4 bot recordings against the Centred reference game in 4
-              states, 3 with Space also fires; no register or memory
-              difference at any hook. 88,174,592 canvas pixels equal to the
-              colour model at 2,266 commits; 114,583 sprite groups equal to
-              their records; 99,689 frames locked; the camera filter model
-              equal in 34,281 frames. Depth: at every update the sprites the
-              Next shows equal the game's own drawing order (632,321
-              overlapping pixels). Display, every frame: every shown play-area
-              pixel comes from a committed view in all states but Centred
-              view; in Centred view 821 of 14,765 frames still show a few
-              pixels no view drew for that place (v1.2 before this round:
-              36%). Negatives detected (16), new: the sprite priority of v1.2
+  Replay      Game state IDENTICAL in 43 runs, as 1.2's: v1.0's 6 recordings
+              in 4 states, 4 bot recordings against the Centred reference game
+              in 4 states, 3 with Space also fires; every run's verifier log
+              (canvas against the colour model, sprite groups against their
+              records, frames locked, camera filter, depth order, every-site
+              clock matrix, 175,717 frames, 8,664 clock cases) equal to 1.2's
+              line for line, so the picture is 1.2's; negatives detected 16 of
+              16
 
   Emulator    JNext 1.1.104 headless, v2.09 card read-only: an 8-direction
               Centred walk captured every frame (1,480 frames); option 2 with
