@@ -157,7 +157,7 @@ On a 128K game, a `.pok` line at 0xC000 or above with bank 8 doesn't say which b
 there when it reads the byte, and the snapshot only knows the one paged when it was saved. Such a line is
 refused until you say which with `--top-bank N`, having watched the game run (or put the bank in the `.pok`).
 
-**3. Add colours or languages** when you package it. Each is the same build with that one change applied,
+**3. Add colours or languages** when you package it. Colours follow the [colour standard](docs/COLOUR-STANDARD.md). Each is the same build with that one change applied,
 and they can be combined if they don't touch the same bytes:
 
 ```sh
@@ -263,6 +263,7 @@ checking another implementation.
 
 - [docs/BUILDING-A-NEX.md](docs/BUILDING-A-NEX.md): building a .nex from a patch on a PC, step by step
 - [spec/NXC-FORMAT.md](spec/NXC-FORMAT.md): the format
+- [docs/COLOUR-STANDARD.md](docs/COLOUR-STANDARD.md): how colours are chosen: the Next's standard 256-colour palette, and how many colours a figure can use
 - [firmware/README.md](firmware/README.md): the loader and its setup
 - [tools/setup_card.py](tools/setup_card.py): the one-time card setup
 - [backgrounds/README.md](backgrounds/README.md): a picture behind any game, an experiment that has only run in JNext
