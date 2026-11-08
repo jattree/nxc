@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gunfright
   Publisher   Ultimate, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -19,32 +19,58 @@
   dump, under that name or any other: anything else is refused, with a
   message naming the file it wants.
 
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The sheriff, townsfolk, horses and street bandits each painted
+              in their own colours, the bandits dressed apart from the
+              townsfolk; the buildings and street scenery painted; each of the
+              twenty duel opponents in their own colours. Drawn on the Next's
+              Layer 2 with no outlines added; the wanted poster, score and the
+              rest of the screen keep the original's look. Source: Patch and
+              colours: Jon Attree, painted over the original game's own
+              figures.
 
   Pace        original (-1.08% measured in JNext 1.1.104 headless; probe A3C6
               (the player's own update); 3 trials per scene with different R
               seeds; figures are the fastest trial; every trial faster than
               the original by 0.3 to 1.2%, none slower; player state equal to
-              the original at every update)
+              the original at every update. Enhanced, same method: quiet
+              -0.30..-0.09%, moving -0.19..-0.12%, moving and firing
+              -0.20..-0.04%, death and respawn -0.16..+0.01% (steady); duels
+              -1.00..+0.18%; street after a duel +0.03..+0.12%)
 
   Changes     1.0: the town and duels on the Next's hardware sprite layer at
               the original's pace; the original loading screen; Sinclair's 48K
               ROM as the whole alt ROM (NextZXOS 26.11 safe); the game's speed
               restored after every hook; eight cheats from the archive, ammo
               and money corrected.
+              1.1: Enhanced colours, painted by Jon Attree, chosen on the menu
+              and off by default: the town, its figures and the twenty duel
+              opponents drawn in colour on the Next's Layer 2 at the
+              original's pace. The default build is unchanged from 1.0.
 
   Note        Keys: on the game's menu 3 starts; on the keyboard X and C move
               left and right, A up, 1 down and Q fires. The original game's
               look and pace, its town and duels drawn on the Next's hardware
               sprite layer, with Sinclair's whole 48K ROM so it runs on
               NextZXOS 26.11. The original 48K game with its beeper sound;
-              fits a 1MB Next. Enhanced colours are coming in a later version.
-              Known issues: none found in testing; in JNext it runs 0.3 to 1.2
-              percent faster than the original in every scene measured.
-              Missing: not reached in testing: natural play to the end,
-              joysticks; hardware untested.
+              fits a 1MB Next. Enhanced paints the town, its figures and the
+              duel opponents in their own colours on the Next's Layer 2, at
+              the original's pace; off by default. Known issues: in JNext the
+              default runs 0.3 to 1.2 percent faster than the original in
+              every scene measured; Enhanced is within 1 percent of the
+              original in steady play and duels, and the first second or so of
+              a scene or duel can run up to 2.3 percent faster. The wanted
+              poster keeps the original picture in Enhanced. Missing: not
+              reached in testing: natural play to the end, joysticks; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -63,28 +89,40 @@
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
-              bleughb/nexclash, GPL-3.0-or-later)
+              bleughb/nexclash, GPL-3.0-or-later); Patch and colours: Jon
+              Attree, painted over the original game's own figures
   Original    Ultimate, 1985, by its original authors. All rights to the game
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Approved by the owner 2026-11-07; run by script through the real
-              loader in JNext 1.1.104 on a NextZXOS card copy, default and all
-              eight cheats
+  Tested      Played and approved by the owner 2026-11-07 (Enhanced in a
+              review build; 1.1 only tunes its pace closer to the original,
+              picture unchanged). Run by script through the real loader in
+              JNext 1.1.104 on NextZXOS v2.09 and 26.11 card copies: default,
+              Enhanced, and Enhanced with all eight cheats
 
   Replay      IDENTICAL on 11,500 recorded frames (town and duel): at every
               hook original and patched code compared from the same state,
               every register with R and the original's RAM; 5 deliberately
-              broken builds rejected
+              broken builds rejected. Enhanced: 159 complete updates (town,
+              street bandits, all twenty duel opponents, defeat and return to
+              town, opponent collapse) run from the same states as the
+              original, every register with R, all 48K, memory paging and
+              clock equal, and every Layer 2 picture equal pixel for pixel to
+              an independent painting of the original renderer; 7 deliberately
+              broken renderers rejected
 
-  Emulator    JNext 1.1.104 headless: 18 pace trials, 17 frozen states
-              matching the original's picture and RAM exactly, beeper writes
-              at the original clock (5,650 pulses compared), a 12,000-frame
-              restart soak; the real loader (.NEXCLASH) on a private card copy
+  Emulator    JNext 1.1.104 headless: default as 1.0 (18 pace trials, 17
+              frozen states, 5,650 beeper pulses, a 12,000-frame restart
+              soak). Enhanced: 18 pace trials with player state equal to the
+              original at every update; 9 native Layer 2 readbacks equal to
+              the independent painting on screen; 20,000-frame soaks per mode;
+              beeper writes all at the original clock. The real loader
+              (.NEXCLASH) on private NextZXOS v2.09 and 26.11 card copies
 
-  Coverage    Recordings and soaks by script, no human play: menu, town,
-              duels, deaths, game over and restart; not reached: natural
-              completion, joysticks
+  Coverage    Recordings, soaks and fixtures by script: menu, town, duels with
+              each opponent, deaths, game over and restart; Enhanced also
+              played by the owner; not reached: natural completion, joysticks
 
   Hardware    none
 
