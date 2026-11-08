@@ -5,9 +5,9 @@
     |_| \_|/_/\_\ \____|
 
 -- GAME ----------------------------------------------------------------------
-  Title       Dizzy
-  Publisher   Code Masters
-  Version     1.1
+  Title       Dizzy - The Ultimate Cartoon Adventure
+  Publisher   Code Masters, 1987
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -19,20 +19,48 @@
   dump, under that name or any other: anything else is refused, with a
   message naming the file it wants.
 
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Jao Paulo's colours: a yellow Dizzy, olive and yellow tree tops
+              over brown trunks, timber huts and fences, dark grass on brown
+              earth, a pale green castle and blazing orange dead trees; the
+              panel and score unchanged. Source: Enhanced colours: Jao Paulo
+              (Spec256).
+
+  Pace        original (+0.86% measured in JNext 1.1.104 headless; three
+              rooms, three seeds, at the player's own update, all 251 states
+              matched per trial; positive is slower than the original)
+
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11); the hooks hand
               back the CPU speed the game was running at, at the original's
-              pace
+              pace. 1.2: Enhanced colours from Jao Paulo's Spec256 conversion,
+              off by default; Sinclair's whole 48K ROM as the alt ROM, so the
+              game's ROM reads get the right bytes; R kept as the original's
+              at every hook; faster particle and scenery drawing. The default
+              look is unchanged.
 
-  Note        Known issues: the game reads a few ROM bytes as data and gets
-              the Next ROM's values, not the 48K ROM's (found by replay;
-              effect on play not established). Missing: no Enhanced colour
-              set, though the Spec256 version has colours for this game; an
-              earlier build ran on a real Next for Dean (2026-10-14), but this
-              one has not; hardware untested.
+  Note        Keys: Z and X walk, Space jumps and starts the game, P pauses.
+              The default keeps the published look: the game's own colours
+              with the clash removed. Enhanced repaints Dizzy, the scenery,
+              creatures and items in Jao Paulo's Spec256 colours; off by
+              default. The patch carries Sinclair's whole 48K ROM, so it runs
+              on NextZXOS 26.11. The original 48K game with its beeper sound;
+              fits a 1MB Next. Known issues: the game's own screen-copy and
+              rotate effects stay in Spectrum colours; a room redraw can show
+              a brief attribute change, slightly more than the original does
+              (18 cells against 12 in testing); in JNext quiet play runs from
+              1.8 percent faster to 0.9 percent slower than the original, busy
+              scenes from 2.8 percent faster to 1.3 percent slower. Missing:
+              natural play to the end was not reached in testing; the
+              archive's cheats that ask for a value (Lives, Walk Speed);
+              hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -40,59 +68,41 @@
    3  Walk through walls
    4  Forest floor holds
 
-  Cheats come from the archive's POKEs for this release.
+  The archive's Dizzy.pok. Its Infinite Lives address (62745) is wrong for
+  this release; the patch uses the DEC A at 62746. Left out: Lives and Walk
+  Speed, which ask for a value.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Dean Woodyatt
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
-              bleughb/nexclash, GPL-3.0-or-later)
-  Original    Code Masters, by its original authors. All rights to the game
-              remain theirs.
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jao Paulo
+              (Spec256)
+  Original    Code Masters, 1987, by its original authors. All rights to the
+              game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      1.1 played by the owner in JNext 1.1.104, 2026-11-07: approved;
-              1.0 played by Jon Attree in JNext through the real loader,
-              2026-11-03
+  Tested      1.2 played by the owner in JNext 1.1.104, 2026-11-07: approved;
+              run by script through the real loader on NextZXOS 26.11 card
+              copies; 1.1 played by the owner in JNext 1.1.104, 2026-11-07:
+              approved; 1.0 played by Jon Attree in JNext through the real
+              loader, 2026-11-03
 
-  Replay      RZX IDENTICAL with the painted colour map (registers, memory,
-              ULA ^ shadows, Layer 2, Dizzy sprite vs plotter), 83 unit cases
-              + 13 negative controls PASS (1.1, NexClash main 0dbf308)
+  Replay      IDENTICAL on a 6,346-frame recording in each mode: at every hook
+              and inner byte-writer continuation, original and patched code
+              compared from the same state, every register with R, memory,
+              figure pixels and colours; 15 and 22 deliberately broken builds
+              rejected
 
-  Emulator    1.1, 2026-11-08: JNext 1.1.104 headless through the real loader
-              from the Browser: menu v1.1, loading screen, title, play;
-              /tmp/NEXCLASH.NEX equal to apply; pace against the original
-              -0.33 / -0.27 / -0.15% over 3 seeds, quiet and busy thirds
-              within 0.51% (1.0 -0.28 / -0.05%). 1.0: JNext 1.1.104 headless,
-              through the real loader, reached play; frames viewed; no person
-              played it; with the loading screen: JNext 1.1.104 headless
-              through the real loader, MD5 exact, reached the screen, the game
-              and play frames, viewed; no person played it; JNext 1.1.104
-              headless through the real loader, 2026-11-03: chosen in the
-              Browser with every cheat on, /tmp/NEXCLASH.NEX equal to apply
+  Emulator    JNext 1.1.104 headless: five-minute soaks of the original and
+              Enhanced with deaths and respawns, no errors; the real loader
+              (.NEXCLASH) on private NextZXOS 26.11 card copies: default,
+              Enhanced, Enhanced with all cheats
 
-  Coverage    loading screen stub added in bank 28, 2026-11-03: the replay and
-              hardware lines are of the build without it, whose game memory
-              the stub restores at the original start; the stub is emulator-
-              tested only; cheats proved in a simulator on the original game:
-              Infinite lives: SkoolKit, original file, Walk through walls on
-              to reach hazards, right and left held 6000 frames: death routine
-              (0xF514) ran 19 and 38 times, lives (62700) stayed 2 (without it
-              fell 1, 0, game over). The .pok's 62745 set lives to 202 at each
-              death instead; Immunity: SkoolKit, original file, same runs:
-              hazard contact reached the dying-flag DEC (0xD3C8, now NOP) 168
-              and 166 times, the death routine never ran, lives never fell;
-              Walk through walls: SkoolKit, original file, left or right held
-              from the start room 1200 frames: original stops at the well (x
-              37) and the cauldron (x 45); with it Dizzy passes both into
-              other rooms (frames viewed); Forest floor holds: SkoolKit,
-              original file, 2 random walks (Walk through walls and Immunity
-              on to get there): the forest floor object (record 0x95FE) falls,
-              its y 18 to 36, in the original; with it the y stays 18 and the
-              floor stays (frame 2712 viewed side by side)
+  Coverage    Recordings and soaks by script, no human play: play, movement,
+              several rooms, deaths and respawns; not reached: natural
+              completion, joysticks
 
-  Hardware    83ea050d (default colours) works on a real Next, looks perfect
-              (Dean, 2026-10-14); fb4cb148 = 38e1a491 drawn identically (only
-              never-drawn paper nibbles differ), untested
+  Hardware    none
 
   Nothing here claims a result on real hardware unless the line above says so.
 
