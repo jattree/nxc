@@ -1,0 +1,99 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Game Over
+  Publisher   Imagine / Dinamic, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Game Over (1987)(Imagine)(128K)[re-release].z80
+  MD5         e1c2ff3cfbd4f6f5a84034d57b666acf
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures are drawn on the Next's own graphics layers, so they keep their
+  own colours and no longer take on the scenery's (colour clash). Game logic is
+  unchanged.
+
+  Pace        original (-1.06% measured in JNext 1.1.104, against the original
+              .z80 on a 128K machine, game state in lockstep)
+
+  Changes     1.0: figures in their own colours on a double-buffered Layer 2,
+              in the game's own plot order, over the original bitmap; scenery
+              in its own attributes; the barrel's own cell colours; both
+              worlds; the plot, restore and copy run whole at 28 MHz in pace
+              windows; a loading screen from the same re-release's tape;
+              Sinclair's 48K ROM as the whole alt ROM (NextZXOS 26.11 safe);
+              the game's speed restored after every hook
+
+  Note        Keys: on the game's menu 1 keyboard (it asks for each key), 2
+              joystick, 3 play, 4 the other world; world 2 asks for the access
+              code the game gives at the end of world 1. The original look:
+              figures keep their own colours and the scenery keeps its own,
+              each figure's ink drawn on Layer 2 in the game's own order over
+              the original bitmap. The 128K release, both worlds, with its AY
+              music. Fits a 1MB Next. Known issues: in JNext whole runs are
+              1.1 to 1.8 percent faster than the original, but quiet scenes
+              run up to 3.4 percent fast, world 2's busy scenes up to 0.6
+              percent slow, and its slowest 20-update stretches reach +4.5
+              percent, with one +35 percent reading not yet explained; long
+              passes can take up to 3 frames longer; an occasional interrupt
+              was lost (1 in about 3,750 frames). Missing: no Enhanced colour
+              set yet; no cheats (the archive's POKEs do not match this
+              release); natural play to the end; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Imagine / Dinamic, 1987, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Played by the owner in JNext, 2026-11-08: approved; run by
+              script through the real loader on a NextZXOS 26.11 card copy
+
+  Replay      6 scripted recordings over both worlds (menus, redefining keys,
+              play, deaths, game over, restart), 30115 frames: 62272 hooks run
+              original and build from one state each: every register including
+              R, all 48K RAM but the attributes the copy shows (checked
+              against the clean buffer), the copy's source pointer and the
+              stack below SP: IDENTICAL; 6400 Layer 2 pictures, 3673119
+              pixels, against an independent model and against the bitmap the
+              copy wrote: IDENTICAL; 9 broken builds caught; 448 ABI cases,
+              each hook entered at all 4 CPU speeds, both IFF values, 8 R
+              phases; the start-up exact with and without NEXLOAD
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, output byte for byte as nxc.py
+              makes it, reaching play; 15-minute soak of each world against
+              the original and a flicker check, on the build before the
+              loading screen was added; the overlay published outside the play
+              area's rows
+
+  Coverage    Scripted input, no human play: both worlds' first rooms, menus,
+              redefine, pause, abort, deaths, game over and a new game; the
+              shifted-picture copy path by a test poke; not reached: later
+              rooms in full, world 1's end and its code screen, natural
+              completion
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

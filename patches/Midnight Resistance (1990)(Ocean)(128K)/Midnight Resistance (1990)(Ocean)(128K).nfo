@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Midnight Resistance
   Publisher   Ocean, 1990
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,16 +25,20 @@
 
   Changes     1.1: the game keeps its own CPU speed after each sprite update
               instead of being set back to 3.5 MHz; works on NextZXOS v2.10
-              (System/Next 26.11).
+              (System/Next 26.11). 1.2: the game now holds the original's
+              pace: quiet scenes were faster than the original and some busy
+              scenes slower.
 
-  Note        Known issues: quiet scenes run about 7% faster than the original
-              in JNext (-6.6 to -8.3% in 3 runs), while busy scenes keep its
-              pace (-0.4 to +1.8%); the game has no frame limiter of its own,
-              so holding quiet scenes to the original's pace needs a pace
-              limiter in the hooks, not in this version. Missing: no Enhanced
-              colour set; an earlier build ran on a real Next for Dean
-              (2026-10-14), but this one, with the loading screen, has not;
-              hardware untested.
+  Note        Known issues: pace against the original in JNext, 6 runs of 600
+              updates with the same input: overall -0.81 to +0.35%, quiet
+              scenes -1.59 to +0.73%, busy scenes -0.70 to +0.95% (1.1: quiet
+              -9.3 to +1.1%, busy -1.1 to +5.8%); the game waits for a whole
+              TV frame each update, so where it is close to a frame boundary
+              one update can take a frame more or less than the original, and
+              a stretch of 20 game frames can read up to 7% slow or 5% fast.
+              Missing: no Enhanced colour set; an earlier build ran on a real
+              Next for Dean (2026-10-14), but this one, with the loading
+              screen, has not; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -54,13 +58,17 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
+              played by the owner in JNext, 2026-11-08: approved; through the
+              real loader in JNext
 
-  Replay      1.1 (2026-11-07, nexclash main 102091f, hooks give back the
-              caller's CPU speed): 2 RZX IDENTICAL, 16513 frames, 25527 plots
-              converted, unit 8856 cases, 48 of 48 negatives detected. 1.0: 2
-              RZX IDENTICAL with the painted colour map, unit + interrupt +
-              level / shop exit + full table + flipped + map PASS
+  Replay      1.2 (2026-11-08, pace limiter): 2 RZX identical, unit,
+              interrupt, level / shop exit, map and limiter checks pass; game
+              state equal at every update against the plain build in JNext, 6
+              runs of 600 updates. R is not compared at each hook: the game
+              reads it only for its random seed (interrupts off, no hook in
+              between), its frame sync (sign only) and its sound, and no hook
+              writes it.
 
   Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
               card, Browser, the .nxc, the loader's menu, ENTER:

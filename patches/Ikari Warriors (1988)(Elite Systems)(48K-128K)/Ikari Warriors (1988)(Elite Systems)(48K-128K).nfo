@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ikari Warriors
   Publisher   Elite Systems, 1988
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,19 +32,25 @@
 
   Changes     1.1: the game keeps its own CPU speed after each sprite update
               instead of being set back to 3.5 MHz, the screen copy at 14 MHz
-              or faster; works on NextZXOS v2.10 (System/Next 26.11).
+              or faster; works on NextZXOS v2.10 (System/Next 26.11). 1.2: the
+              game now holds the original's pace: quiet scenes were faster
+              than the original and busy scenes slower; sprite images already
+              seen are kept in memory and no longer worked out again.
 
   Note        No outline on the figures, in both default and Enhanced: the
               owner chose that for this game. Known issues: the game reads a
               few ROM bytes as data and gets the Next ROM's values, not the
               48K ROM's (found by replay; effect on play not established);
-              quiet scenes run 12 to 15% faster than the original in JNext, as
-              in 1.0: the game has no frame limiter of its own, and holding
-              them to the original's pace needs a pace limiter in the hooks,
-              not in this version. Missing: no AY music, as this snapshot is
-              the game's 48K form; the cheats are the archive's and have not
-              been played; not yet checked: a level end and driving a tank;
-              hardware untested.
+              pace against the original in JNext, 6 runs of 600 updates with
+              the same input: overall -0.62 to +0.64%, quiet scenes -1.84 to
+              -0.37%, busy scenes -0.46 to +1.81% (1.1: quiet -0.9 to -17.8%,
+              busy +4.9 to +25.9%); the first sight of a new sprite image
+              still takes time, so a stretch of 20 game frames with many of
+              them can run up to 16% slow and the next up to 14% fast while it
+              catches up. Missing: no AY music, as this snapshot is the game's
+              48K form; the cheats are the archive's and have not been played;
+              not yet checked: a level end and driving a tank; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -64,21 +70,16 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
+              played by the owner in JNext, 2026-11-08: approved; through the
+              real loader in JNext on a v2.09 card copy
 
-  Replay      1.1 (2026-11-07, nexclash main 102091f, hooks give back the
-              caller's CPU speed, the blit at 14 MHz or faster): IDENTICAL on
-              the same 8 recordings, 74864 frames, default and Enhanced;
-              negatives 7 of 7 (engine) and 12 of 12 (colour sets) detected.
-              1.0: lockstep memory, registers and picture IDENTICAL on 8
-              scripted recordings, 20982 game frames, default and Enhanced
-              (both without outline or paper edge, seams closed); negatives
-              detected: 7 (engine), 4 for the default figure edges (the old
-              default, outline kept, paper edge kept, seams open), 15 for
-              Enhanced (player, player 2, rotation map, pick-up keys, store
-              off, outline kept, paper edge kept, the third pass, paper border
-              painted, skin outside an enemy face, enemy without a face, seams
-              open, the fourth pass, the fifth pass, the 17:00 build)
+  Replay      1.2 (2026-11-08, pace limiter and pattern store): 8 recordings,
+              default and Enhanced, identical through the colour-set checker;
+              every negative detected, two new; game state equal at every
+              update against the plain build in JNext, 6 runs of 600 updates.
+              R is not compared at each hook: the game never reads or writes
+              R.
 
   Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
               card, Browser, the .nxc, the loader's menu with Enhanced on,
