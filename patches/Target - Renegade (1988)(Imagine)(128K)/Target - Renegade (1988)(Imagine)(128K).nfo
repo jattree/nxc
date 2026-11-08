@@ -47,10 +47,9 @@
   Note        Needs a 1MB Next: the faster hooks keep built sprite images in
               spare RAM. Known issues: Enhanced is a first pass: the level 2
               street gangs' sprites still need some clean-up, coming in a
-              later version; each sprite update still sets the CPU back to 3.5
-              MHz, so a faster speed chosen on the Next is not kept. Missing:
-              Enhanced on levels 2-5 checked on captured states, not by a
-              replay; player 2's lives cheat not played; hardware untested.
+              later version. Missing: Enhanced on levels 2-5 checked on
+              captured states, not by a replay; player 2's lives cheat not
+              played; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
