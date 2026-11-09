@@ -1,0 +1,100 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Head Over Heels
+  Publisher   Ocean, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Head over Heels (1987)(Ocean)(128K)[aka Foot and Mouth].z80
+  MD5         757bbabf443a643cbe376ebfb11baa79
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Next presentation line adds more; see the note. Game
+  logic is unchanged. Enhanced colours, an option on the menu, are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Anthony Lycett's colours: Head and Heels in their own colours,
+              red and blue brick walls, chequered floors, gold doors and
+              coloured panel icons; the game's printed text keeps its original
+              look. Source: Enhanced colours: Anthony Lycett (Spec256).
+
+  Pace        original
+
+  Note        Keys: the game's own menu sets keys or joystick; Head and Heels
+              swap, join and use items as in the original. The 128K release
+              with its AY music and the original loading screen. Default keeps
+              the original monochrome look: the play area has no colour clash
+              to remove. Enhanced paints the figures, rooms, doors, floors and
+              panel icons in Anthony Lycett's Spec256 colours; off by default.
+              Fits a 1MB Next. Known issues: channel C sound effects can start
+              on a different interrupt phase than the original after faster
+              drawing; music channels A and B match. In JNext pace is within
+              0.02 percent in quiet scenes and up to 0.41 percent faster in
+              busy ones, slowest 20-update stretch +0.02 percent. Missing:
+              natural play to the end and every room; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  Infinite ammo/specials
+   4  Springy jumps
+   5  Mega jumps
+   6  Respawn special items
+   7  Keep hush puppies
+   8  All items + 99 shots
+
+  Archive Head Over Heels POK. Use the verified alternate infinite-lives
+  address 42195; first lives entry still decrements. Starter equipment/ammo
+  translated to new-game templates 41602/41609 because archive runtime
+  addresses are reset. Overlapping starter variants consolidated into all
+  items and 99 shots.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Anthony
+              Lycett (Spec256)
+  Original    Ocean, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on NextZXOS 26.11 card
+              copies (default, Enhanced, Enhanced with all cheats),
+              2026-11-08; recorded-input checks of registers with R, game
+              memory and pixels, deliberate faults and interrupt injection;
+              not yet played by the owner
+
+  Replay      head_over_heels_walk.rzx; head_over_heels_death.rzx;
+              head_over_heels_game_over.rzx. Death/game-over use declared
+              initial collision/lives setup, no runtime intervention.
+
+  Emulator    JNext 1.1.104; NextZXOS v2.10 (26.11). Full 128K RAM,
+              registers/R and hidden ROM checked at boot, including NEXLOAD
+              workspace overwrite. Disposable-card real-loader evidence
+              supplied separately.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
