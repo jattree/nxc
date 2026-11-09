@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Lode Runner
   Publisher   Software Projects, 1984
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,23 +23,42 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original (-0.00% measured in JNext 1.1.104 headless, the plain
-              .nex as control, input keyed to the runner's update 0x92FC,
-              lockstep checked at every update)
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Based on the Spec256 colours, with a white runner. Also changed
+              from them: shaded runner and guards, shaded orange-red bricks,
+              cyan ladders with a light and a dark rail, gold as a solid
+              bright bar, a shadow under the yellow bars, shaded status bar.
+              Optional with it: Backdrop, the Spec256 night picture dimmed
+              behind the level. Source: Enhanced colours: Spec256 team
+              (Spec256).
+
+  Pace        original
 
   Changes     1.0: Dean Woodyatt's Lode Runner engine rebuilt on the 128K
               release (AY music), with the whole alt ROM image and the start-
-              up checks
+              up checks. 1.1: Enhanced colours, an option on the menu;
+              Backdrop, an option with it; the tape's loading screen; R left
+              as the original's at every hook; the level editor keeps its
+              start positions and guards, which 1.0 lost on leaving the editor
 
-  Note        The 128K release, so the AY music plays. Dean Woodyatt's engine,
-              unchanged: the runner and the guards are hardware sprites in the
-              game's colours, the scenery keeps its own. The alt ROM holds the
-              128K machine's ROM 1, so the fade between lives looks as on a
-              real 128K. Known issues: none found in testing. Missing: no
-              Enhanced colour set; no loading screen (the tape has none); only
-              level 1 checked in testing: no level completed, and the editor,
-              load/save screens and redefine keys not checked; hardware
-              untested.
+  Note        Keys: menu 1 keyboard, 0 start, any key begins a level; I left,
+              P right, Q up, A down, N and M dig; menu 5 redefines. The 128K
+              release, AY music. Default: Dean Woodyatt's engine, runner and
+              guards as hardware sprites in the game's colours. Enhanced
+              (off): a white runner, shaded guards, bricks, ladders and gold
+              on the tile layer. Backdrop (off; turning it on turns Enhanced
+              on): a dimmed night picture behind the level, title and menus.
+              Known issues: pace in JNext against the original, 5 seeds a
+              scene, in lockstep: whole runs default +0.00 to +0.15%, Enhanced
+              and Backdrop -0.20 to +0.00%, slowest 20 updates +0.20%. In
+              Enhanced, bricks being dug or refilling show the game's red
+              frames; between lives the scenery stays up while the text fades;
+              the level editor keeps the game's colours. Missing: a guard
+              carrying gold looks like the others; tape load and save not run;
+              level complete and the hall of fame by a test copy only; the
+              editor's Test and Move, Kempston, Interface 2 and Cursor
+              unchecked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -50,40 +69,44 @@
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
-              bleughb/nexclash, GPL-3.0-or-later)
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Spec256
+              team (Spec256)
   Original    Software Projects, 1984, by its original authors. All rights to
               the game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05: approved (1.0); 1.1
+              through the real loader in JNext on a NextZXOS 26.11 card copy,
+              default, Enhanced, Backdrop and with cheats; 1.1 not yet played
+              by the owner; published at his request
 
-  Replay      4 recordings of the 128K release IDENTICAL on Dean's engine
-              (rework v2): 3 bot RZX of 20,042 / 20,021 / 20,049 frames + a
-              6,000-frame free run (registers, memory, sprite pixels vs the
-              plotter, the patched screen frame by frame, every screen /
-              attribute read); every hook ran (draws 14,859 + 24 runner,
-              erases 14,882, guard death 0x96B6 1 with its respawn draw
-              0x970C, level-start prints 60 + 240, paints 42,210, fades and
-              clears 96); 6,074 unit cases PASS, 3 negative controls detected;
-              clock matrix 8 hook sites x 4 incoming clocks = 32 cases, exit
-              speed = the incoming one, a forced 3.5 MHz exit detected; ROM
-              paths: every ROM byte as recorded but the 20-byte start-up
-              register block (known, read only by the fade); start-up tail
-              never read before written
+  Replay      6 recordings and a free run, 92098 frames each in default,
+              Enhanced and Enhanced with Backdrop, IDENTICAL, R compared at
+              every hook: draws 19644 + 26, erases 19669, guard deaths 1,
+              level-start prints 74 + 284, paints 54232, fades 128, clears
+              129; Enhanced also tile prints 69446, cell XORs 948, the tile
+              layer checked against the ULA on 66361344 cells, 0 wrong. Unit
+              cases: default 6055, Enhanced 7112, Backdrop 7112. Deliberate
+              faults caught: default 4 of 4 replayed plus 24 unit, Enhanced 9
+              of 9 plus 24, Backdrop 9 of 9 plus 24
 
-  Emulator    JNext 1.1.104 headless: reaches play, AY music written (146-169
-              data writes a second, as the original); flicker 300 frames: 0
-              out of step, 0 vanished; 15-minute soak against the original
-              .z80: no freeze, loop or crash, game overs and restarts in both;
-              frames viewed; no person played it
+  Emulator    JNext 1.1.104 headless: the real .NEXCLASH on a private NextZXOS
+              26.11 card copy wrote each build byte for byte (default,
+              Enhanced, Enhanced with Backdrop, all cheats, menu .nex) and
+              reached play, frames viewed; 15-minute soak of each exact build
+              against the original .z80: no freeze, loop or crash, input
+              reached play on the sheets; AY: music data and player bytes as
+              the original; written blocks all in the original's stream but
+              the start-up's own
 
-  Coverage    level 1 only (the bot dies there); a guard trapped by a
-              refilling brick once; no level complete, editor, load / save
-              screens or redefine keys; cheats proved in the simulator on the
-              original 128K file: Infinite lives: 17 deaths, lives held at 5
-              (without: 5 to 0, game over); Immunity: guard touches never kill
-              (0x9CD2 death path 0 times, 15 without), deaths by a refilling
-              brick still happen
+  Coverage    Bot recordings and scripted key runs, no human play. Reached:
+              level 1 with deaths, digging, a guard trapped, game over; level
+              complete, next level and the hall of fame name entry with a test
+              copy (a level ends at its first gold, score table lowered);
+              redefine keys, load and save prompts, the level editor; levels 7
+              and 45 by a test copy's start level. Not reached: a level
+              completed as played; tape load or save; the editor's Test and
+              Move beyond their prompts; other control methods
 
   Hardware    none
 

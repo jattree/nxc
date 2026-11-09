@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ikari Warriors
   Publisher   Elite Systems, 1988
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -19,6 +19,9 @@
   dump, under that name or any other: anything else is refused, with a
   message naming the file it wants.
 
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
@@ -27,7 +30,9 @@
               by default.
   Enhanced    Players get bare skin with a red headband for player 1 and a
               blue one for player 2; enemies wear steel-blue uniforms with
-              skin faces, so players stand out at a glance. A painted set,
+              skin faces, so players stand out at a glance. The scenery takes
+              the arcade's colours: dark olive ground, green foliage, blue
+              water, wooden bridges, grey rocks and bunkers. A painted set,
               colourist not named.
 
   Changes     1.1: the game keeps its own CPU speed after each sprite update
@@ -35,22 +40,28 @@
               or faster; works on NextZXOS v2.10 (System/Next 26.11). 1.2: the
               game now holds the original's pace: quiet scenes were faster
               than the original and busy scenes slower; sprite images already
-              seen are kept in memory and no longer worked out again.
+              seen are kept in memory and no longer worked out again. 1.3:
+              Enhanced gains scenery in the arcade's colours: the ground,
+              foliage, water, wooden bridges, rocks and bunkers are coloured
+              pixel by pixel on the tilemap, under the game's own black ink;
+              the colour now scrolls with the scenery. The default is
+              unchanged.
 
   Note        No outline on the figures, in both default and Enhanced: the
               owner chose that for this game. Known issues: the game reads a
               few ROM bytes as data and gets the Next ROM's values, not the
-              48K ROM's (found by replay; effect on play not established);
-              pace against the original in JNext, 6 runs of 600 updates with
-              the same input: overall -0.62 to +0.64%, quiet scenes -1.84 to
-              -0.37%, busy scenes -0.46 to +1.81% (1.1: quiet -0.9 to -17.8%,
-              busy +4.9 to +25.9%); the first sight of a new sprite image
-              still takes time, so a stretch of 20 game frames with many of
-              them can run up to 16% slow and the next up to 14% fast while it
-              catches up. Missing: no AY music, as this snapshot is the game's
-              48K form; the cheats are the archive's and have not been played;
-              not yet checked: a level end and driving a tank; hardware
-              untested.
+              48K ROM's (effect on play not established); pace in JNext
+              against the original, 6 runs of 600 updates: default overall
+              -0.62 to +0.64%, busy +1.81% at most; Enhanced overall -0.27 to
+              +0.91%, quiet -1.81 to -0.14%, busy +0.05 to +2.13%; stretches
+              of 20 updates up to +15.7% default and +18.2% Enhanced where new
+              images are first drawn; in Enhanced, attract, hi-scores and GAME
+              OVER keep the original scenery colours, and the yellow paper of
+              the two gun icons shows black. Missing: no AY music, as this
+              snapshot is the game's 48K form; the cheats are the archive's
+              and have not been played; not yet checked: a level end, driving
+              a tank, scenery past the part traced (it takes each char's usual
+              colour); hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -71,24 +82,22 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
-              played by the owner in JNext, 2026-11-08: approved; through the
-              real loader in JNext on a v2.09 card copy
+              played by the owner in JNext, 2026-11-08: approved; 1.3 through
+              the real loader in JNext; 1.3 not yet played by the owner;
+              published at his request
 
-  Replay      1.2 (2026-11-08, pace limiter and pattern store): 8 recordings,
-              default and Enhanced, identical through the colour-set checker;
-              every negative detected, two new; game state equal at every
-              update against the plain build in JNext, 6 runs of 600 updates.
-              R is not compared at each hook: the game never reads or writes
-              R.
+  Replay      1.3 (2026-11-08, Enhanced scenery): 8 recordings Enhanced
+              identical through the colour-set checker, tile map and scroll
+              checked at every commit; 11 of 11 negatives detected, three new;
+              game state equal at every update against the plain build in
+              JNext, 6 runs of 600 updates. The default build is byte for byte
+              1.2's.
 
-  Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
-              card, Browser, the .nxc, the loader's menu with Enhanced on,
-              ENTER: /tmp/NEXCLASH.NEX equal to the bare Enhanced build
-              (1bf270bf), title, player select and play reached, frames
-              viewed; no person played it. 1.0: JNext headless, plain, sprites
-              and Enhanced reach play from the file's start; default and
-              Enhanced through the Browser and the loader, output byte-exact
-              with apply
+  Emulator    1.3 (2026-11-08): JNext 1.1.104 headless on a copy of the card,
+              Browser, the .nxc, the loader's menu with Enhanced on, ENTER:
+              /tmp/NEXCLASH.NEX equal to the bare Enhanced build (82ada11a),
+              title, player select and play reached, frames viewed; 15 minute
+              soak, no freeze or crash, sheet viewed; no person played it.
 
   Coverage    level 1 to beyond the bridge, one and two players, wading, game
               over, attract; no level end; no tank seen driven
