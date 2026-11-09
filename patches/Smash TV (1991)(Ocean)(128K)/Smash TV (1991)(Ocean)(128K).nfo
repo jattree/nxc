@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Smash TV
   Publisher   Ocean, 1991
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -26,14 +26,20 @@
   Changes     1.1: the game keeps its own CPU speed after each sprite update
               instead of being set back to 3.5 MHz; works on NextZXOS v2.10
               (System/Next 26.11).
+              1.2: the game now holds the original's pace; 1.1 ran about 7%
+              slower everywhere.
 
-  Note        Known issues: one recorded play path runs Next ROM routines that
-              differ from the 48K ROM's, and the game reads a few ROM bytes as
-              data (found by replay; JNext reached play; effect on play not
-              established). Missing: no Enhanced colour set; pace against the
-              original not measured (no routine runs once per game update in
-              both builds to time it by); 1.1 runs 0.9% slower than 1.0 in
-              JNext; hardware untested.
+  Note        Known issues: pace against the original in JNext, 4 runs of 600
+              updates with the same input and game state equal at every
+              update: overall -0.30 to -0.27%, quiet scenes -0.34 to -0.23%,
+              busy scenes -0.26 to -0.19%, stretches of 20 updates -1.0 to
+              +0.6% (1.1: overall +7.1 to +7.8%, slowest stretch +9.4%). These
+              runs are arena 1 only, by script; later arenas and the bosses
+              are not measured. One recorded play path runs Next ROM routines
+              that differ from the 48K ROM's, and the game reads a few ROM
+              bytes as data (found by replay; JNext reached play; effect on
+              play not established). Missing: no Enhanced colour set; hardware
+              untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -50,20 +56,34 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
+              played by the owner in JNext 1.1.104, 2026-11-08: approved;
+              through the real loader on a NextZXOS 26.11 card copy
 
-  Replay      1.1 (2026-11-07, nexclash main 102091f with the clean-release
-              start switch of 1.0, kept local): 2 bot recordings from the
-              start state, 18002 frames, IDENTICAL, 12712 plots, unit tests
-              pass, 46 of 46 negatives detected; Dean's recording from its own
-              snapshot IDENTICAL, 7010 plots, 24 of 24 negatives. 1.0: 2 bot
-              recordings from the start state, 18000 frames: IDENTICAL, 12712
-              plots, 2712078 sprite pixels. Dean's recording from its own
-              snapshot, same game banks: IDENTICAL, 7010 plots. Negative
+  Replay      1.2 (2026-11-08, pace limiter on the blit, nexclash branch
+              nexttang/smash_tv-pace aa54b95): 2 bot recordings from the start
+              state, 18002 frames, IDENTICAL, 12712 plots, unit tests pass, 46
+              of 46 negatives detected, 3 of 3 limiter negatives detected;
+              Dean's recording from its own snapshot IDENTICAL, 7010 plots;
+              game state equal at every update against the plain build in
+              JNext, 4 runs of 600 updates; R not compared: the game has no LD
+              A,R or LD R,A. 1.1 (2026-11-07, nexclash main 102091f with the
+              clean-release start switch of 1.0, kept local): 2 bot recordings
+              from the start state, 18002 frames, IDENTICAL, 12712 plots, unit
+              tests pass, 46 of 46 negatives detected; Dean's recording from
+              its own snapshot IDENTICAL, 7010 plots, 24 of 24 negatives. 1.0:
+              2 bot recordings from the start state, 18000 frames: IDENTICAL,
+              12712 plots, 2712078 sprite pixels. Dean's recording from its
+              own snapshot, same game banks: IDENTICAL, 7010 plots. Negative
               controls 46/46 detected
 
-  Emulator    1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the v2.09
-              card, Browser, the .nxc, the loader's menu, ENTER:
+  Emulator    1.2 (2026-11-08): JNext 1.1.104 headless on a private copy of
+              the NextZXOS 26.11 card, real .NEXCLASH, default and both
+              cheats: /tmp/NEXCLASH.NEX equal to nxc.py, menu v1.2, loading
+              screen, options and arena 1 reached, frames viewed; 15 emulated
+              minutes of soak with no freeze, sheet viewed; no person played
+              it. 1.1 (2026-11-07): JNext 1.1.104 headless on a copy of the
+              v2.09 card, Browser, the .nxc, the loader's menu, ENTER:
               /tmp/NEXCLASH.NEX equal to the bare build (2427346c), the
               loading screen, option menu and the first arena reached, frames
               viewed; no person played it. 1.0: JNext 1.1.104 headless: plain
