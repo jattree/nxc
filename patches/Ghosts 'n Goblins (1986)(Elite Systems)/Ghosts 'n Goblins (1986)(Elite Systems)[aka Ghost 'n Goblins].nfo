@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ghosts 'n Goblins
   Publisher   Elite, 1986
-  Version     1.6
+  Version     1.7
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,9 +32,16 @@
               trimmed from unarmoured Arthur. White HUD text and cyan weapon
               on black. Source: Enhanced colours: Jon Attree.
 
-  Pace        original
+  Pace        original (-0.00% measured in JNext 1.1.104 headless, both sets;
+              probe 0x82DC, 90 game addresses equal at every update against
+              the plain build; input keyed to updates; level 1 and level 3
+              with the patch's cheats)
 
-  Changes     1.6: the moving platform over the water no longer glitches with
+  Changes     1.7: the game now holds the original's pace on level 3, where
+              1.6 ran 15 to 29% slower; level 1 is exact. Figures' images are
+              found and sent to the sprites faster; pictures and game logic
+              unchanged.
+              1.6: the moving platform over the water no longer glitches with
               Always the dagger on (the cheat corrupted one of its four
               drawings)
               1.5: real cheats (invincibility; start at level 2 or 3; always
@@ -47,12 +54,16 @@
 
   Note        0 starts/fires; 5 left, 8 right, 7 up, 6 down, SPACE jump. J
               joystick, R redefine. Enhanced off by default. Original pace and
-              loading screen. Known issues: in one spot on level 3 a ladder
-              can blink for a frame as the scenery scrolls (the sprite engine
-              delays the game's redraw of it until after the screen has been
-              drawn there); the original does not do this; a fix is planned.
-              The mean pace is within 0.3% of the original's, but short
-              stretches with sound measured up to 7.5% slower. Missing:
+              loading screen. Known issues: pace against the original in
+              JNext, same input, game state equal at every update. Level 1, 7
+              runs of 800 to 3,000 updates: exact, no stretch of 20 updates
+              over +0.0%. Level 3, 6 runs of 1,500 updates: overall +0.00 to
+              +0.36%, quiet up to +0.60%, busy up to +0.35%, but stretches of
+              20 updates reach +10.0% where many figures are on screen: the
+              game's frame lock makes a late update cost a whole frame (2 to
+              14 of 1,500 updates; 1.6: up to 880). Level 2, the late levels
+              and bosses are not measured. 1.6's ladder blink on level 3 was
+              not seen in a 250-frame check (no figure out of step). Missing:
               Enhanced colours for the scenery (planned); not yet checked: the
               ending, the late bosses, joystick and redefine; hardware
               untested.
@@ -80,9 +91,17 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-06 (1.4 colours and engine,
               1.5 cheats): approved; the 1.6 platform fix checked in the
-              simulator and headless JNext
+              simulator and headless JNext; 1.7 played by the owner in JNext
+              1.1.104, 2026-11-08: approved; through the real loader on
+              NextZXOS 26.11 card copies
 
-  Replay      Both sets: 11 recordings, 53063 frames each, identical game
+  Replay      1.7 (2026-11-08, engine branch nexttang/ghosts_n_goblins-pace):
+              8 recordings, 52063 frames, default and Enhanced, every screen
+              and memory check IDENTICAL, registers including R; unit cases
+              pass; 23 of 23 negatives detected, 3 new (uploads cut short,
+              byte check cut short, a group on show replaced); game state
+              equal at every update in JNext against the plain build, 13 runs.
+              Both sets: 11 recordings, 53063 frames each, identical game
               state, registers, positions and 331570 exact painted patterns;
               every hook ran (125170 plots, 139028 object hooks, 24223 draw
               passes, 24209 Copper commits). Carried-pot oracle: 567 hidden,
@@ -90,10 +109,16 @@
               clock/R/IFF cases (incl. 2048 object hook). 34 replay, 5
               clipping/atlas and 1 stale-history negative controls caught.
 
-  Emulator    JNext headless: per set a 5000-frame death/reset run (8 reset
-              hooks, no Copper update during sprite drawing) and native pot-
-              emergence captures; actual loader rebuilt both sets byte for
-              byte from private card-image copies. Hardware untested.
+  Emulator    1.7 (2026-11-08): JNext 1.1.104 headless on a private copy of
+              the NextZXOS 26.11 card, real .NEXCLASH: default, Enhanced and
+              level 3 with Invincibility: /tmp/NEXCLASH.NEX equal to nxc.py;
+              menu, title and play reached, frames viewed; two 15-minute
+              soaks, default and level 3 Enhanced with cheats, no freeze; no
+              person played it. JNext headless: per set a 5000-frame
+              death/reset run (8 reset hooks, no Copper update during sprite
+              drawing) and native pot-emergence captures; actual loader
+              rebuilt both sets byte for byte from private card-image copies.
+              Hardware untested.
 
   Coverage    152 complete painted images, 315 recorded/audited variants. Six
               injected section-start fixtures (c0-c10; c6 is not a valid
