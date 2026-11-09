@@ -1,0 +1,114 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Scooby Doo in the Castle Mystery
+  Publisher   Elite, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Scooby Doo in the Castle Mystery (1986)(Elite Systems).z80
+  MD5         8a82e06f6829a2a1c30781491cfbc42e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The default keeps the original look, and the small colour clash the original
+  has stays (see the note). The patch adds the menu, its cheats and the Next
+  start-up. Game logic is unchanged. Enhanced colours, an option on the menu,
+  are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 set's colours as they are, for the play window only:
+              scenery, figures and the player in its 256 colours over the
+              set's background colour. The set's picture, not this release's
+              attributes, gives every colour. Source: Enhanced colours:
+              Armando Quaranta (Spec256).
+
+  Pace        original
+
+  Changes     1.0: the original game with Sinclair's 48K ROM as the whole alt
+              ROM, no game byte changed and no hook in the default; the tape's
+              loading screen; Enhanced: the play window in the Spec256 colours
+              on a double-buffered Layer 2, off by default; five tested cheats
+
+  Note        Keys: ENTER starts, J then K Kempston (or I, C), K keyboard, P
+              practice; X right, Z left, O up, K down, P punch, U pause, Y
+              quits. Default: the original game, picture and all, no hook.
+              Enhanced, on the menu, off by default: the play window in the
+              Spec256 set's colours on Layer 2, every figure in its own
+              colours, so no clash there. The 48K game, beeper sound; fits a
+              1MB Next. Known issues: default keeps the original's small clash
+              (0.35%, 0.13%, 0.08% of figure cells in levels 1-3, 3.6% in
+              level 4 rooms); Enhanced pace in JNext against the original, 12
+              runs of 800 updates in lockstep: whole -0.95 to -0.00%, quiet
+              thirds -0.04 to +0.11%, busy thirds -2.84 to -0.05%, slowest 20
+              updates up to +2.80%; the No ghosts and No enemies cheats lost a
+              life in some test runs (cause not established). Missing: in
+              Enhanced the panel, title and menus stay in the original colours
+              (the set paints the panel too); natural play to the end (later
+              levels by a test poke); hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune to nasties
+   3  No ghosts
+   4  No enemies
+   5  Invincibility
+
+  The archive's POKEs for this release, tested in the simulator with the same
+  keys with and without each: Infinite lives and Invincibility (lives never
+  fall), Immune to nasties (one life lost in one seed of three), No ghosts and
+  No enemies (no enemy drawn; a life lost in one or two seeds of three; cause
+  not established). Left out: Lives (asks a value); Immunity but you die on a
+  bad jump (29479: it opens LD BC,nn / LD (HL),E, writing a byte through HL
+  every update); Ghosts only (no clear result).
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Armando
+              Quaranta (Spec256)
+  Original    Elite, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy; 1.0 not yet played by the owner; published at his request
+
+  Replay      11 recordings, 33297 frames, 32758 hook runs, each against the
+              original to the same point: every register with R, all 48K RAM
+              bar the dead stack, MMU, clock; 5370 published pictures,
+              175964160 pixels against an independent plane model driven by
+              the game's own instructions; a second model on the mono bytes
+              against the real buffer and ULA. Failures: none. 14 broken
+              builds caught of 14; ABI cases 704.
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, default, Enhanced, all cheats
+              in each, output byte for byte as nxc.py makes it, reaching play;
+              soak 15 emulated minutes; flicker
+
+  Coverage    Scripted input, no human play: title, options, deaths, game
+              over; levels 1 to 9 by a test poke of the level number; not
+              reached: natural play to the end
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

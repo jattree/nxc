@@ -1,0 +1,104 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Silkworm
+  Publisher   Virgin Games, 1989
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Silkworm (1989)(Virgin Games)(128K).z80
+  MD5         8fad50cd8c218ade32bf3c2332c8ee03
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. Game logic is unchanged. Enhanced colours, an option on the menu,
+  are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The set's own colours: green helicopter and jeep, red and orange
+              enemies, coloured turrets and bubbles, the set's ground for each
+              wave, the tan and red logo. Source: Enhanced colours: Ynicky
+              (Spec256).
+
+  Pace        original
+
+  Changes     1.0: the original game on the Next, start-up only, with a
+              loading screen from the same game's Mastertronic Plus tape;
+              Enhanced colours from the Spec256 set, off by default: figures,
+              stars and ground on Layer 2, the title's logo, the jeep's lives
+              as sprites; three cheats from the archive, tested
+
+  Note        Keys: on the title 1 to 4 pick the helicopter's controls (3
+              keyboard, 4 Kempston), 5 to 8 the jeep's (7 keyboard, 8
+              Kempston), 0 starts. Keyboard: O left, P right, Q up, A down,
+              SPACE fire. Default: the original game, picture and pace; white
+              figures on black never reach the ground, so no colour clash and
+              none claimed fixed. Enhanced, off by default: the Spec256 set's
+              colours as they are. Fits a 1MB Next. Known issues: Enhanced
+              pace in JNext -2.80% to -0.47% over whole runs, slowest
+              20-update stretch +1.72% in play, +15.65% once at the end of
+              GAME OVER; the title's logo can blink when a control is picked.
+              Missing: the archive's Immunity (no effect found) and Bullets
+              (ask for a value) cheats; natural play to the end; hardware
+              untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immune jeep
+   3  Immune helicopter
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Ynicky
+              (Spec256)
+  Original    Virgin Games, 1989, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy, default, Enhanced and cheats; 1.0 not yet played by the
+              owner; published at his request
+
+  Replay      Default: no hooks, every snapshot bank byte for byte in the
+              .nex, unchanged from the earlier review. Enhanced: 7 scripted
+              recordings, 42006 frames, 425828 hooks run on the verifier:
+              every register with R, all 48K RAM bar the sites and dead stack,
+              the clock and MMU against the original at each; 9459 back-buffer
+              pictures, 271208448 pixels, against a model that reads the set
+              afresh; 12 broken builds caught
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, default, Enhanced and cheats,
+              output byte for byte as nxc.py makes it, reaching play;
+              15-minute soaks; flicker
+
+  Coverage    Scripted input, no human play: title, wave 1, every wave and the
+              ending by test pokes, deaths and game over; not natural
+              completion
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

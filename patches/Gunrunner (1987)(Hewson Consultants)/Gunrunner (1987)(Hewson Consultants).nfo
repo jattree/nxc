@@ -1,0 +1,110 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Gunrunner
+  Publisher   Hewson, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Gunrunner (1987)(Hewson Consultants).z80
+  MD5         c9d8ff6b87d413df486a42c988c7079e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. Game logic is unchanged. Enhanced colours, an option on the menu,
+  are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 set's colours as they are, for the play window only:
+              figures, scenery and stars in its 256 colours, the same look on
+              every level, the rails taking the level's attribute as the set's
+              renderer does. Source: Enhanced colours: Jao Paulo (Spec256).
+
+  Pace        original
+
+  Changes     1.0: the original game with Sinclair's 48K ROM as the whole alt
+              ROM, no game byte changed in the default; Enhanced: the play
+              window in the Spec256 colours on a double-buffered Layer 2, off
+              by default; six tested cheats
+
+  Note        Keys: press a key at the picture, then 1 keyboard (M right, N
+              left, S up, X down, A fire, Symbol Shift poison, P pause), 2
+              Kempston (Space poison), 3 Sinclair or 4 define keys. Default:
+              the original game, picture and all: each level's play area is
+              one colour on black, so it never had colour clash. Enhanced, on
+              the menu, off by default: the play window in the Spec256 set's
+              colours on Layer 2; one look for every level. Sinclair's whole
+              48K ROM; the 48K game with its beeper sound; fits a 1MB Next.
+              Known issues: pace in JNext against the original, 12 runs of 800
+              updates in lockstep: whole -1.87 to -0.08%, quiet thirds -1.64
+              to -0.07%, busy thirds -2.37 to +0.20%, slowest 20 updates up to
+              +6.59%. Missing: in Enhanced the panel, title, menus and level
+              text stay in the original colours (the set paints them too; the
+              panel's lit items would be lost); natural play past level 1;
+              hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  No enemies
+   3  Immunity
+   4  Infinite poison
+   5  Infinite jet pac
+   6  Infinite shield
+
+  The archive's POKEs for this release, each tested in the simulator with the
+  same keys with and without it: Infinite lives, No enemies and Immunity
+  (lives never fall), Infinite poison (three shots leave the count at 3,
+  Immunity on in both runs), Infinite jet pac and Infinite shield (the meter
+  never falls; the pick-up set by a test poke). None omitted.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jao Paulo
+              (Spec256)
+  Original    Hewson, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy; 1.0 not yet played by the owner; published at his request
+
+  Replay      9 recordings, 21270 frames, 43206 hook runs, each against the
+              original to the same point: every register with R, all 48K RAM
+              bar the dead stack, MMU, clock; 2931 published pictures,
+              76206000 pixels against an independent plane model driven by the
+              game's own instructions. Failures: none. 10 broken builds caught
+              of 10; ABI cases 1152.
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, default, Enhanced, all cheats
+              in each, output byte for byte as nxc.py makes it, reaching play;
+              soak 15 emulated minutes; flicker
+
+  Coverage    Scripted input, no human play: title, options, deaths, game
+              over; all 19 levels by a test poke of the level number; not
+              reached: natural play past level 1, natural game completion
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

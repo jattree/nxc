@@ -1,0 +1,114 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Mad Mix 2 - en el Castillo de los Fantasmas
+  Publisher   Topo Soft, 1990
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Mad Mix 2 - en el Castillo de los Fantasmas (1990)(Topo
+              Soft)(128K)(ES).z80
+  MD5         f5f5262f7a41d3c55408b45878c31d00
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. Game logic is unchanged. Enhanced colours, an option on the menu,
+  are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 colours as the set has them, the whole picture and
+              the panel, stages 1 to 3. Stages 4 to 9 stay as the original.
+              Source: Enhanced colours: Jao Paulo (Spec256).
+
+  Pace        original
+
+  Changes     1.0: the copy to the screen no longer writes port 0xFF, which on
+              a Next is Timex hi-colour; Sinclair's 48K ROM as the whole alt
+              ROM (NextZXOS 26.11 safe; the game takes random numbers from ROM
+              bytes); the tape's loading screen; three tested options;
+              Enhanced colours, a menu option, off by default, from the
+              Spec256 set by Jao Paulo, as they are: the whole play window on
+              a double-buffered Layer 2, flipped in the top border, with the
+              original still running and on the ULA underneath; each original
+              routine's exact time kept
+
+  Note        Keys: T fire and start, R up, C down, D left, F right, P pause
+              (any key resumes), V music on or off. Options: Kempston
+              joystick, or Q A O P Space (T then pauses). Default: the
+              original look, no clash to remove. Enhanced (off): the Spec256
+              colours, the whole picture and the panel on Layer 2, stages 1 to
+              3. Known issues: pace in JNext, Enhanced, +0.09 to +0.26%
+              against the original over 800 updates, 5 seeds; quiet thirds
+              +0.02 to +0.38%, busy thirds +0.07 to +0.26%; slowest 20 updates
+              +2.95%. Enhanced is original colours in stages 4 to 9 (the set
+              holds only the first three), on the menus, the STAGE screen, the
+              game over screen. The set's READY box keeps the screen's blue.
+              Missing: colours for stages 4 to 9; natural play past stage 1
+              (stages by a test copy); hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Kempston joystick
+   3  Keys Q A O P space
+
+  The archive's Infinite lives for this release, tested alone in the
+  simulator, 3 seeds x 7,000 frames, same keys with and without it: none lost
+  against 1, 4 and 5. Kempston joystick (the game's own mode 2) and Q A O P
+  Space (the game's key table): tested the same way, 3 seeds; without the
+  option those inputs do nothing.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jao Paulo
+              (Spec256)
+  Original    Topo Soft, 1990, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy; 1.0 not yet played by the owner; published at his request
+
+  Replay      Default: unchanged from 1.0, byte for byte (40067 frames
+              IDENTICAL). Enhanced: 4 scripted recordings, 70074 frames,
+              133046 hooks run original and build from one state: every
+              register including R, all RAM but the changed bytes and the
+              stack below SP, clock, MMU and write map: IDENTICAL; 4163
+              pictures, 115098624 pixels, against an independent model, after
+              every hook and every flip; 14 broken builds caught; 402 cases of
+              the handler interrupting a hook: picture and RAM as without it;
+              the start-up exact with and without NEXLOAD
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, default, Enhanced and with the
+              cheat, output byte for byte as nxc.py makes it, reaching play;
+              15-minute soak of Enhanced against the original; flicker check
+              clean; every flip outside the 192 screen rows
+
+  Coverage    Scripted input, no human play: stage 1 with deaths, game over
+              and a new game; all 9 stages through a test copy that ends a
+              stage at its first pill; not reached: natural completion
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

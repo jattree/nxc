@@ -1,0 +1,107 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       That Sinking Feeling
+  Publisher   Sunteam, 2017
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        That Sinking Feeling (2017-08-02)(Sunteam)(48K-128K).tap
+  MD5         5123adf2c0e828a380b9e260942def4a
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures are drawn on the Next's own graphics layers, so they keep their
+  own colours and no longer take on the scenery's (colour clash). Game logic is
+  unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Spec256 conversion's colours on every block, figure and
+              object, with its picture behind them: the wreck on the title and
+              six underwater scenes, changing with the room by the set's own
+              rules. Layer 2 for the scenery and the picture, sprites for the
+              figures; the game's ULA+ palette off, as the set is painted for
+              the Spectrum's colours. Source: Enhanced colours: Ynicky
+              (Spec256).
+
+  Pace        original
+
+  Changes     1.0: figures and objects are hardware sprites in their own
+              colour over the original screen, the plots run at 28 MHz, which
+              pays for the hooks; the tape's 128K version with its AY music;
+              the tape's loading screen; Sinclair's 48K ROM as the whole alt
+              ROM (NextZXOS 26.11 safe); Enhanced colours, a menu option, off
+              by default, from the Spec256 set; one tested cheat
+
+  Note        Keys: any key starts, Q rise, O left, P right (redefinable by
+              the game's table: none offered). The original look with the
+              clash gone: the game draws figures straight on the screen, and
+              in a cell of scenery a figure took that cell's colour. Here
+              figures and objects are hardware sprites in their own pale
+              yellow over the original screen, with the game's own ULA+
+              palette on a Next. 128K tape, AY music. Fits a 1MB Next,
+              Enhanced included. Known issues: pace in JNext against the
+              original, 4 rooms x 3 seeds, game state in lockstep: whole runs
+              default -0.90 to +0.01, Enhanced -0.90 to +0.69 percent; slowest
+              20-update stretch default +0.44, Enhanced +1.99 percent.
+              Missing: natural play past the first rooms (others by a test
+              poke); hardware untested, ULA+ included.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+
+  The archive's .pok for this release: its one entry, tested.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Ynicky
+              (Spec256)
+  Original    Sunteam, 2017, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy in default, Enhanced and with the cheat; 1.0 not yet played
+              by the owner; published at his request
+
+  Replay      32 replays in the two modes (title, play, every room by a test
+              poke, the next-room path by a test poke, game over, a new game),
+              58372 frames: 364184 hooks run original and build from one state
+              each, every register with R and all 48K RAM; sprites against the
+              game's own plots 151118 times; Layer 2 against an independent
+              picture from the set's planes and backdrops on 1740 pictures; 41
+              broken builds all caught.
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader from
+              the tape on a private NextZXOS 26.11 card copy in default,
+              Enhanced and with the cheat; output byte for byte nxc.py; 15
+              emulated minutes of soak and a flicker pass on each build;
+              pictures viewed. Hardware: none.
+
+  Coverage    Scripted input, no human play: every room reached by a test
+              poke, the next-room path by a test poke, title, deaths, game
+              over and a new game; not reached: completing a room by play, the
+              game's end.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

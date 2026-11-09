@@ -1,0 +1,95 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Flying Shark
+  Publisher   Firebird, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Flying Shark (1987)(Firebird).z80
+  MD5         c545645a8688f24428492937125fbfcd
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Figure outlines line adds more; see the note. Game
+  logic is unchanged.
+
+  Pace        original
+
+  Changes     1.0: a white one-pixel outline on figures on a double-buffered
+              Layer 2, from the game's own plot parameters; the play area's
+              blit at 28 MHz below the picture in its original time; the plot
+              pass, with its beeper, at the original clock
+
+  Note        Keys: any key on the loading screen, then on the title 1 or 2
+              players, fire to start. Keyboard P fire, L up, Symbol Shift
+              down, A left, S right; Kempston and Sinclair joysticks too. The
+              original look: the play area is monochrome, so there is no
+              colour clash to fix and none is claimed. Planes, tanks and boats
+              get lost against the scenery, so each figure has a white one-
+              pixel outline on Layer 2; bullets do not. The bitmap, colours,
+              sound and game are the original's, and the play area now arrives
+              below the picture in one piece. Fits a 1MB Next. Known issues:
+              pace in JNext -0.09% to -0.02% over whole runs, slowest 20
+              updates +3.28%. Scenery drawn in the map (ground guns) keeps no
+              outline. Missing: Enhanced (needs Jon's say); natural play to
+              the end; 2-player and later levels only partly tested; hardware
+              untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  Infinite bombs
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Firebird, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run by script through the real loader on a NextZXOS 26.11 card
+              copy; 1.0 not yet played by the owner; published at his request
+
+  Replay      3 scripted recordings (title, name entry, play, bombs, deaths,
+              game over, restart; one with an infinite lives test poke): 36045
+              frames, 32603 hooks run original and build from one state each:
+              every register including R, all 48K RAM, stack too, and every
+              port write: IDENTICAL; 7843 Layer 2 pictures, 1268507 pixels,
+              against an independent model: IDENTICAL; 14 broken builds
+              caught; 384 ABI cases, each hook entered at all 4 CPU speeds,
+              both IFF values, 8 R phases; the start-up exact with and without
+              NEXLOAD
+
+  Emulator    JNext 1.1.104 headless: through the real .NEXCLASH loader on a
+              private NextZXOS 26.11 card copy, output byte for byte as nxc.py
+              makes it, reaching play; 15-minute soak against the original;
+              flicker check clean; the overlay published outside the play
+              area's rows
+
+  Coverage    Scripted input, no human play: the first levels, bombs, deaths,
+              game over, restart, name entry. Not reached: the sea levels and
+              bosses of later stages, 2-player, natural completion
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
