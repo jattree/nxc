@@ -2,12 +2,16 @@
 ==========================
 
 Each .nxc here turns one original ZX Spectrum game file into a Spectrum Next
-version with the colour clash removed: the moving figures become hardware
-sprites. Each has a .nfo beside it with the details: the exact game file it
-needs, what it changes, its cheats, credits and how it was tested.
+version. Most remove the colour clash, drawing the moving figures with the
+Next's hardware sprites or Layer 2 so they keep their own colours. Games with
+no clash to remove keep their original look and gain the menu, cheats and a
+clean Next start-up. Many also offer Enhanced colours, off by default. Each
+has a .nfo beside it with the details: the exact game file it needs, what it
+changes, its cheats, credits, known issues and how it was tested.
 
 The patches carry none of the games' code. You need your own copy of each
-game: the exact dump whose MD5 its .nfo gives, under any name.
+game: the exact dump whose MD5 its .nfo gives, under any name. A few games
+load from their tape files (.tap or .tzx); their .nfo names every file.
 
 On the Next
 -----------
