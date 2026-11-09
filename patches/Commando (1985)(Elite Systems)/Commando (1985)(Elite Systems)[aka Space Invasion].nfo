@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Commando
   Publisher   Elite Systems
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,24 +23,30 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
-  Pace        original (+0.38% measured in JNext 1.1.104 headless on the
+  Pace        original (+0.01% measured in JNext 1.1.104 headless on the
               NextZXOS v2.09 card, against the plain build of the same start
-              state; probe 39120 (once per game update), keys keyed to updates
-              (QAOP, M, space); no state addresses, so lockstep not checked)
+              state; probe the player's plot 39120 at IX 23313; keys replayed
+              into the game's key variable at each update; R fixed in both
+              arms; 74 state addresses equal at every update)
 
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11); the hooks hand
               back the CPU speed the game was running at
+              1.2: the game holds the original's pace in busy scenes, where
+              1.1 lost whole frames: its logic now pays in advance for the
+              sprite updates' time, down to the game's own frame sync.
 
-  Note        Plays at the original's pace: +0.4% and +0.3% over 600 game
-              updates (quiet thirds +1.6% and +1.2%, busy thirds +0.2% and
-              -0.9%), the same as 1.0 (-0.01% against it), in JNext,
-              2026-11-07. Works on NextZXOS v2.10 from 1.1. Known issues: the
-              rock snipers are left as the game draws them, not as sprites
-              (Dean's design), so their colour clash is not removed; one short
-              stretch early in play (20 game updates, about a quarter of a
-              second) ran 12% behind the original in both runs, as 1.0 did.
-              Missing: no Enhanced colour set; the value-asking cheats (lives,
-              grenades) are not on the menu; hardware untested.
+  Note        Works on NextZXOS v2.10 from 1.1. Known issues: pace against the
+              original in JNext, with the player really moving, 6 runs of 714
+              to 800 game updates with the same input and the same enemy
+              choices: overall within 0.01%, quiet scenes +0.06 to +0.22%,
+              busy scenes -0.15 to 0.00%, slowest stretch of 20 updates +1.0%,
+              fastest -1.0% (1.1 on the same runs: overall +0.72 to +3.07%,
+              slowest stretch +35.7%; its earlier figure of +0.4% came from
+              keys the game does not read); only area 1 was measured. The rock
+              snipers are left as the game draws them, not as sprites (Dean's
+              design), so their colour clash is not removed. Missing: no
+              Enhanced colour set; the value-asking cheats (lives, grenades)
+              are not on the menu; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -59,49 +65,65 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
+              played by the owner in JNext 1.1.104, 2026-11-08: approved;
+              through the real loader on a NextZXOS 26.11 card copy
 
-  Replay      1.1 (NexClash main 102091f): selftest --game commando --verify
-              on Dean's snapshot: 1 recording IDENTICAL (3,279 frames, 4,332
-              plots), 16,128 position cases, negative control 6/6; from this
-              release's start state (a local verifier switch, output bytes
-              unchanged): 2 bot recordings IDENTICAL (24,002 frames, 22,176
-              plots), 32,256 position cases, negative control 14/14; the v2.10
-              fix checked in NexClash's Next model: no fix-up site holds
-              v2.10's bytes. 2 bot recordings from the start state, 24000
-              frames: IDENTICAL, 22176 plots, 3528833 sprite pixels. Dean's
-              trained-dump recording from its own snapshot: IDENTICAL. All
-              negative controls detected
+  Replay      1.2 (2026-11-08, NexClash branch nexttang/commando-pace, the
+              logic at 28 MHz down to the frame sync, R kept at every hook):
+              from this release's start state: 2 bot recordings IDENTICAL with
+              R compared (24,002 frames, 22,176 plots), 32,256 position cases,
+              negative control 14/14, speed controls 3/3; on Dean's snapshot:
+              selftest --verify --stamp PASSED (3,279 frames, 4,332 plots).
+              Older: 1.1 (NexClash main 102091f): selftest --game commando
+              --verify on Dean's snapshot: 1 recording IDENTICAL (3,279
+              frames, 4,332 plots), 16,128 position cases, negative control
+              6/6; from this release's start state (a local verifier switch,
+              output bytes unchanged): 2 bot recordings IDENTICAL (24,002
+              frames, 22,176 plots), 32,256 position cases, negative control
+              14/14; the v2.10 fix checked in NexClash's Next model: no fix-up
+              site holds v2.10's bytes. 2 bot recordings from the start state,
+              24000 frames: IDENTICAL, 22176 plots, 3528833 sprite pixels.
+              Dean's trained-dump recording from its own snapshot: IDENTICAL.
+              All negative controls detected
 
-  Emulator    1.1, 2026-11-07: JNext 1.1.104 headless through the Browser and
-              the real loader on a private copy of the v2.09 card: menu v1.1,
-              loading screen, title, play in area 1 to game over;
-              /tmp/NEXCLASH.NEX equal to apply. JNext 1.1.104 headless: plain
-              and sprites reach area 1, nobody played; with the loading
-              screen: JNext 1.1.104 headless through the real loader, MD5
-              exact, reached the screen, the game and play frames, viewed; no
-              person played it; JNext 1.1.104 headless through the real
-              loader, 2026-11-03: chosen in the Browser with every cheat on,
-              /tmp/NEXCLASH.NEX equal to apply
+  Emulator    1.2, 2026-11-08: JNext 1.1.104 headless through the Browser and
+              the real .NEXCLASH loader on a private copy of the NextZXOS
+              26.11 card: menu v1.2, title, play in area 1, frames viewed;
+              /tmp/NEXCLASH.NEX equal to apply (cded9ba3); 15-minute soak
+              against the plain build: no freeze, loop or crash, sheet viewed;
+              no person played it. Older: 1.1, 2026-11-07: JNext 1.1.104
+              headless through the Browser and the real loader on a private
+              copy of the v2.09 card: menu v1.1, loading screen, title, play
+              in area 1 to game over; /tmp/NEXCLASH.NEX equal to apply. JNext
+              1.1.104 headless: plain and sprites reach area 1, nobody played;
+              with the loading screen: JNext 1.1.104 headless through the real
+              loader, MD5 exact, reached the screen, the game and play frames,
+              viewed; no person played it; JNext 1.1.104 headless through the
+              real loader, 2026-11-03: chosen in the Browser with every cheat
+              on, /tmp/NEXCLASH.NEX equal to apply
 
-  Coverage    1.1 changes the hooks (the two 28 MHz stretches give back the
-              caller's speed) and the start-up stub (the v2.10 fix-ups); the
-              game's banks, loading screen and cheats are as in 1.0. loading
-              screen stub added in bank 13, 2026-11-03: the replay and
-              hardware lines are of the build without it, whose game memory
-              the stub restores at the original start; the stub is emulator-
-              tested only; cheats proved in a simulator on the original game:
-              Infinite lives: SkoolKit, original file, 2 random walks x 12000
-              frames: DEC (IY+102) became OR, ran 73 times, lives (64998)
-              stayed 5 (original fell to 0); Infinite grenades: SkoolKit,
-              original file, same walks: grenade store (0x6C7D) ran 10 times,
-              grenades (64999) stayed 6 (original fell to 3 and 4); Immunity:
-              SkoolKit, original file, same walks: the hit handler (0xDE97)
-              never ran though touch set the hit flag 199 and 150 times; lives
-              stayed 5 (original fell to 0); Immune to enemy touch: SkoolKit,
-              original file, 2 random walks x 12000 frames with Immunity on in
-              both (touch only comes once the player survives): enemy touch
-              set the hit flag 199 and 150 times without it, never with it
+  Coverage    1.2 changes the hooks and adds code at 0x6100 in bank 5;
+              pictures, game banks, loading screen and cheats as 1.1; pace
+              measured in area 1 only, by random keys. Older: 1.1 changes the
+              hooks (the two 28 MHz stretches give back the caller's speed)
+              and the start-up stub (the v2.10 fix-ups); the game's banks,
+              loading screen and cheats are as in 1.0. loading screen stub
+              added in bank 13, 2026-11-03: the replay and hardware lines are
+              of the build without it, whose game memory the stub restores at
+              the original start; the stub is emulator-tested only; cheats
+              proved in a simulator on the original game: Infinite lives:
+              SkoolKit, original file, 2 random walks x 12000 frames: DEC
+              (IY+102) became OR, ran 73 times, lives (64998) stayed 5
+              (original fell to 0); Infinite grenades: SkoolKit, original
+              file, same walks: grenade store (0x6C7D) ran 10 times, grenades
+              (64999) stayed 6 (original fell to 3 and 4); Immunity: SkoolKit,
+              original file, same walks: the hit handler (0xDE97) never ran
+              though touch set the hit flag 199 and 150 times; lives stayed 5
+              (original fell to 0); Immune to enemy touch: SkoolKit, original
+              file, 2 random walks x 12000 frames with Immunity on in both
+              (touch only comes once the player survives): enemy touch set the
+              hit flag 199 and 150 times without it, never with it
 
   Hardware    none
 
