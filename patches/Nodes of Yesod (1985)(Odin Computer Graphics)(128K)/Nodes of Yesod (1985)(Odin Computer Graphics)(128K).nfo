@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Nodes of Yesod
   Publisher   Odin Computer Graphics, 1985
-  Version     1.5
+  Version     1.6
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,23 +31,35 @@
               and painted interior pixels; no outside outline. Source:
               Enhanced colours: Jon Attree.
 
-  Pace        original (-1.28756% measured in v1.4 original comparison
-              inherited. Current v1.5 quiet regression: 301 player-update
-              records and timed AY writes match v1.4 exactly.)
+  Pace        original (+0.45% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same start
+              state; probe 40048; both games: 144 timers ticked per update, R
+              per site at 16 sites, the seconds byte at the object spawner's
+              reads held to the update count, Infinite Lives; game state, 208
+              addresses including all 16 object records, equal at every update
+              counted)
 
-  Changes     v1.5: final owner sprite pass, 456 exact-palette pixels across
-              12 mole and enemy-spaceman graphics. Only sprite patterns
-              changed; HUD, code, palettes, backdrops and timing retained.
+  Changes     1.5: final owner sprite pass, 456 exact-palette pixels across 12
+              mole and enemy-spaceman graphics. Only sprite patterns changed;
+              HUD, code, palettes, backdrops and timing retained. 1.6: the
+              game now holds the original's pace; 1.5 ran up to 3.8% fast in
+              busy scenes and up to 16% slow in short stretches. Art
+              unchanged.
 
   Note        1 keyboard; Z/X move; Q jump; A mole. Enhanced colours and
               Backdrops are independent and off by default. Backdrops select
-              surface aurora or distant cavern walls automatically. Known
-              issues: now and then the player breaks up into scattered sprite
-              pieces during the death animation, clearing on respawn (seen by
-              the owner, not yet reproduced or fixed); quiet play measured
-              about 1.3% faster than the original; the original's collision-
-              loop bug remains. Missing: the ending not checked; hardware
-              untested.
+              surface aurora or distant cavern walls automatically. Plays at
+              the original's pace in JNext, 2026-11-08, same input and game
+              state equal at every update, default, Enhanced and Backdrops, 4
+              runs of up to 1,500 updates: overall +0.1 to +0.5%, quiet -0.2
+              to +0.2%, busy 0.0 to +0.9% (1.5, same measure: overall -2.4 to
+              -1.5%, busy down to -3.4%). Measured on a test fixture in both
+              games. Known issues: slowest stretch of 20 updates +3.7% (one of
+              284; all others within 2.1%; 1.5: +15.7%); now and then the
+              player breaks up into sprite pieces during the death animation,
+              clearing on respawn (not yet reproduced or fixed); the
+              original's collision-loop bug remains. Missing: caverns not
+              measured; the ending not checked; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -70,18 +82,33 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05, default and Enhanced
-              with his final painting pass: approved
+              with his final painting pass: approved; 1.6 through the real
+              loader in JNext, default, Enhanced and Backdrops; 1.6 not yet
+              played by the owner; published at his request
 
-  Replay      Current: 2 targeted RZX files, 6194 frames. Seven changed
-              graphics covered by replay; five remaining poses covered by the
-              all-graphic unit matrix. Unchanged-engine baseline v1.4: 48
-              files/243719 frames. Original clipping exception and malformed
-              t1 exclusion remain.
+  Replay      1.6 (2026-11-08, pace windows; nexclash branch
+              nexttang/nodes_of_yesod-pace): 48 recordings, 243719 frames,
+              244490 copies, IDENTICAL against the original at every hook, R
+              included; unit tests pass; 2 new negatives (the copy's wait
+              gone, its target too short) detected on a line clock true to the
+              CPU speed, and b1 replayed IDENTICAL on that clock; 4 older
+              negatives (item paint, game over, teleport, clip window) are not
+              reached in the first recording, as with 1.5. Current: 2 targeted
+              RZX files, 6194 frames. Seven changed graphics covered by
+              replay; five remaining poses covered by the all-graphic unit
+              matrix. Unchanged-engine baseline v1.4: 48 files/243719 frames.
+              Original clipping exception and malformed t1 exclusion remain.
 
-  Emulator    Current JNext quiet regression: 301 player-update records and
-              timed AY data identical to v1.4. Four actual-loader combinations
-              rebuild byte-exact. Original quiet pace, 59 native room pairs
-              and HUD/bank checks are v1.4 baseline evidence.
+  Emulator    1.6 (2026-11-08): JNext 1.1.104 headless on a private copy of
+              the NextZXOS 26.11 card, real .NEXCLASH, default, Enhanced,
+              Backdrops and both: /tmp/NEXCLASH.NEX equal to nxc.py, menu
+              v1.6, play reached on surface and in caverns, frames viewed;
+              soak 15 emulated minutes default, 5 Enhanced: no freeze, loop or
+              crash, sheet viewed; no person played it. Current JNext quiet
+              regression: 301 player-update records and timed AY data
+              identical to v1.4. Four actual-loader combinations rebuild byte-
+              exact. Original quiet pace, 59 native room pairs and HUD/bank
+              checks are v1.4 baseline evidence.
 
   Coverage    Current Enhanced: all 136 graphics, 2992 positions, 7
               interrupted uploads, unknown graphic and 16 object indices.

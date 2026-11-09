@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jetpac
   Publisher   Ultimate, 1983
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,25 +30,35 @@
               conversion (Spectrum Magic's jetpac_.zip), painter not
               established.
 
-  Pace        original (-0.60% measured in JNext 1.1.104 headless on the
+  Pace        original (-0.41% measured in JNext 1.1.104 headless on the
               NextZXOS v2.09 card, against the plain build of the same file;
-              probe 0x73D3 (found automatically), keys keyed to updates; runs
-              end at the bot's game over; no state addresses, so lockstep not
-              checked)
+              probe 0x69C7 (the main loop's pass counter); Kempston replayed
+              at the read 0x733C; R at 0x6602 and 0x69D0, the frame tick and
+              the random byte at 0x69D8 fixed in both arms; 69 state addresses
+              equal at every update)
 
   Changes     1.1: writes the whole alt ROM image (Sinclair's ROM plus the
               hooks), so the ROM's own interrupt code can never run the hooks.
               1.2: the hooks hand back the CPU speed the game was running at,
               instead of always dropping to 3.5 MHz
+              1.3: the game holds the original's pace, where 1.2 ran about
+              2.2% slower everywhere: a part of each figure's own set-up now
+              runs at 28 MHz and pays for the sprite update's time.
 
-  Note        Coloured build (not Dean's Jetpac build). Pace measured close to
-              the original's: -0.6% to +1.7% over runs of 60 to 300 game
-              updates, Enhanced -0.3% and +1.4% (JNext, 2026-11-07). Known
-              issues: in one run the quietest third was 2.5% slower than the
-              original (Enhanced 2.6%); the runs could not be checked for
-              lockstep, so this may be the two runs drifting apart rather than
-              the build. Missing: two-player games not checked; hardware
-              untested.
+  Note        Coloured build (not Dean's Jetpac build). Plays at the
+              original's pace, measured with the same input and the same enemy
+              choices in 5 runs of 1,000 game updates in JNext: overall -0.41
+              to -0.16%, quiet scenes -0.51 to +0.32%, busy scenes -0.43 to
+              -0.33%, slowest stretch of 20 updates +1.8%, fastest -2.1%;
+              Enhanced overall -0.43 to -0.18%, slowest stretch +1.5%, fastest
+              -2.4% (1.2 on the same runs: overall +2.11 to +2.34%, slowest
+              stretch +4.0%; its earlier -0.6% had no state check). Known
+              issues: the same keys can give different aliens from the
+              unpatched conversion's, because this build reads Sinclair's ROM
+              where that conversion reads NextZXOS's; the odds are the same,
+              measured over 4,000 updates, and a real 48K Spectrum has
+              Sinclair's. Missing: two-player games not checked; only level 1
+              measured for pace; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -66,35 +76,49 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.2 approved by the owner in JNext, 2026-11-07
+              2026-11-03; 1.2 approved by the owner in JNext, 2026-11-07; 1.3
+              through the real loader in JNext; 1.3 not yet played by the
+              owner; published at his request
 
-  Replay      1.2 (NexClash main 102091f, selftest --game jetpac --verify,
-              rework v11): free run 6,000 frames IDENTICAL with the IM 1
-              handler compared at every interrupt, unit PASS, negative control
-              40/40; outputs equal to the record's. free run of 6000 frames
-              IDENTICAL, no recording (20,433 draws, 100 erases, 23,192 colour
-              paints, 5 clears, 2,193,166 sprite pixels); alt ROM image
-              modelled as the Next fills it, from NextZXOS's ROM3 then the
-              build's writes: whole image Sinclair's 48K ROM plus hooks, 0
-              bytes outside the hooks differ; IM 1 handler compared with the
-              original's at all 5,149 interrupts, IDENTICAL; unit tests 6,816
-              graphic cases, negative control 40/40; new negative: the
-              previous partial image (hooks only over ROM3) detected at 5,149
-              of 5,149 interrupts (hook code ran from the IM 1 handler) and by
-              5,367 image bytes
+  Replay      1.3 (NexClash branch nexttang/jetpac-pace 9fbcc61, selftest
+              --game jetpac --verify --stamp, rework v11): free run 6,000
+              frames IDENTICAL with R compared at every hook and every pace
+              site, the IM 1 handler compared at 5,149 interrupts, no game
+              access above 0x7FFF, unit 6,816 graphics and 12 caller-speed
+              cases PASS, negatives: pattern 40/40, rom3_left, window never
+              opened, window never closed, R off by one after a draw and after
+              an entry, all detected. Earlier: 1.2 (NexClash main 102091f,
+              selftest --game jetpac --verify, rework v11): free run 6,000
+              frames IDENTICAL with the IM 1 handler compared at every
+              interrupt, unit PASS, negative control 40/40; outputs equal to
+              the record's. free run of 6000 frames IDENTICAL, no recording
+              (20,433 draws, 100 erases, 23,192 colour paints, 5 clears,
+              2,193,166 sprite pixels); alt ROM image modelled as the Next
+              fills it, from NextZXOS's ROM3 then the build's writes: whole
+              image Sinclair's 48K ROM plus hooks, 0 bytes outside the hooks
+              differ; IM 1 handler compared with the original's at all 5,149
+              interrupts, IDENTICAL; unit tests 6,816 graphic cases, negative
+              control 40/40; new negative: the previous partial image (hooks
+              only over ROM3) detected at 5,149 of 5,149 interrupts (hook code
+              ran from the IM 1 handler) and by 5,367 image bytes
 
-  Emulator    1.2, 2026-11-07: JNext 1.1.104 headless through the Browser and
-              the real loader on a private copy of the v2.09 card, default and
-              Enhanced: menu v1.2, loading screen, play to game over;
-              /tmp/NEXCLASH.NEX equal to apply for both. JNext 1.1.104
-              headless, whole alt ROM build (2026-11-04): loading screen,
-              menu, play and game over back to the menu, default and Enhanced,
-              frames viewed; alt ROM image dumped in JNext equals the modelled
-              Sinclair-plus-hooks image; with NextZXOS's DivMMC 0x0038 trap
-              removed, IM 1 ran Sinclair's handler 1,609 times and no ROM3
-              handler; earlier: the owner played the painted build through
-              take-off, rocket and fuel appearing; real loader runs were of
-              the previous build
+  Emulator    1.3, 2026-11-08: JNext 1.1.104 headless, the real loader on a
+              private copy of the NextZXOS 26.11 card, default, Enhanced and
+              Infinite lives: menu v1.3, play, frames viewed,
+              /tmp/NEXCLASH.NEX equal to apply for each; 15-minute soak
+              against the plain build, no freeze, sheet viewed. Not played by
+              a person. Earlier: 1.2, 2026-11-07: JNext 1.1.104 headless
+              through the Browser and the real loader on a private copy of the
+              v2.09 card, default and Enhanced: menu v1.2, loading screen,
+              play to game over; /tmp/NEXCLASH.NEX equal to apply for both.
+              JNext 1.1.104 headless, whole alt ROM build (2026-11-04):
+              loading screen, menu, play and game over back to the menu,
+              default and Enhanced, frames viewed; alt ROM image dumped in
+              JNext equals the modelled Sinclair-plus-hooks image; with
+              NextZXOS's DivMMC 0x0038 trap removed, IM 1 ran Sinclair's
+              handler 1,609 times and no ROM3 handler; earlier: the owner
+              played the painted build through take-off, rocket and fuel
+              appearing; real loader runs were of the previous build
 
   Coverage    two players not exercised; whole alt ROM image from 2026-11-04:
               the previous build differs only in the alt ROM fill (stub) and

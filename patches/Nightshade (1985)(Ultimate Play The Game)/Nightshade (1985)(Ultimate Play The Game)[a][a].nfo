@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Nightshade
   Publisher   Ultimate Play The Game, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,16 +32,27 @@
               in their own colours. No white outlines or edges. Source:
               Enhanced colours: Jon Attree.
 
-  Pace        original (+0.44% measured in JNext 1.1.104 headless,
-              nexclash.pace, 10 trials a scene keyed to the player update
-              0xDA7A, against the unchanged game as a plain .nex)
+  Pace        original (+0.05% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same start
+              state; probe 0xDA7A, keys given after the update's last read
+              (0xE32B), R fixed at 4 sites in both games; game state, 90
+              addresses, equal at every update)
 
-  Note        Default and Enhanced colours both play at the original's pace.
-              The CPU speed in use is kept: the hooks never force 3.5 MHz.
-              Known issues: none found in testing. Missing: not reached in
-              testing: building interiors, the four weapons, the bosses and
-              the end (their Enhanced colours seen only on sheets); hardware
-              untested.
+  Changes     1.1: the game now holds the original's pace; 1.0 ran up to 8.7%
+              slow in short busy stretches.
+
+  Note        Default and Enhanced colours both play at the original's pace in
+              JNext, 2026-11-08, same input and game state equal at every
+              update, 4 runs each: default overall 0.0 to +0.1%, quiet -0.1 to
+              +0.2%, busy -0.1 to +0.1%; Enhanced overall 0.0 to +0.7%, quiet
+              -0.1 to +0.8%, busy +0.1 to +0.5% (1.0, same measure: overall up
+              to +1.9%, quiet up to +2.5%). The CPU speed in use is kept as
+              the base; the game's own code runs at 7 MHz for short spells to
+              win back time, and sound stays on the base clock. Known issues:
+              slowest stretch of 20 updates +1.4% default, +1.9% Enhanced
+              (1.0: +7.1%, +8.7%). Missing: not reached in testing: building
+              interiors, the four weapons, the bosses and the end (their
+              Enhanced colours seen only on sheets); hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -58,9 +69,19 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05, default and Enhanced:
-              approved
+              approved; 1.1 through the real loader in JNext, default and
+              Enhanced; 1.1 not yet played by the owner; published at his
+              request
 
-  Replay      IDENTICAL on 4 recordings (a1 9010 frames, a2 9028 from this
+  Replay      1.1 (2026-11-08, catch-up; nexclash branch nexttang/nightshade-
+              pace): IDENTICAL on 4 recordings, a1 9010, a2 9028, rec1 9010,
+              rec2 9028 frames, default and Enhanced, registers incl. R at
+              every hook site and after the blits; 21 of 21 negative controls
+              detected, 3 of them new (the sound routines not swapped, the
+              sound hook keeping the fast clock, R one off after it); a replay
+              with a debt forced at every figure hook runs catch-up, as the
+              model beam never builds one (6000 frames, default and Enhanced).
+              IDENTICAL on 4 recordings (a1 9010 frames, a2 9028 from this
               file; rec1 9010, rec2 9028 from the earlier derived menu state),
               default colours and Enhanced; registers including R at every
               hook site and after the blits, all RAM including the screen but
@@ -76,10 +97,15 @@
               exit, the Enhanced code image shift ignored, the hero part maps
               dropped, the switch before the blits and one pattern buffer
 
-  Emulator    JNext 1.1.104 headless: plain, sprites and Enhanced .nex reach
-              play; one play-area change per game update (75 for 75 blits,
-              default and Enhanced) and the sprite switch never while the beam
-              draws the play area (0 of 118 in both); Enhanced screens pixel-
+  Emulator    1.1 (2026-11-08): JNext 1.1.104 headless on a private copy of
+              the NextZXOS 26.11 card, real .NEXCLASH, default and Enhanced:
+              /tmp/NEXCLASH.NEX equal to nxc.py, menu v1.1, play reached,
+              frames viewed; soak 15 emulated minutes default, 5 Enhanced: no
+              freeze, loop or crash, sheet viewed; no person played it. JNext
+              1.1.104 headless: plain, sprites and Enhanced .nex reach play;
+              one play-area change per game update (75 for 75 blits, default
+              and Enhanced) and the sprite switch never while the beam draws
+              the play area (0 of 118 in both); Enhanced screens pixel-
               identical to the approved e1cfcc42 Enhanced at the same game
               updates (60 of 60, quiet, busy and room); nexclash.flicker 300
               frames clean in both sets; nexclash.soak 15 emulated minutes, no

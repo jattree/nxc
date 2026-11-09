@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Chase H.Q.
   Publisher   Ocean, 1989
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,13 +41,15 @@
               Needs a 2MB Next. On the menu: Speed, drawn at the Speed pace;
               Orig. pace, at the original pace. Source: Enhanced colours: Jon
               Attree.
-  Orig. pace  The same colours at the original pace, within 2% of the original
-              in every measured scene. Needs a 2MB Next. Source: Enhanced
-              colours: Jon Attree.
+  Orig. pace  The same colours following the original's time update by update,
+              within about 3% over whole runs; stretches of 20 updates can
+              reach +13% in the heaviest scenes. Needs a 2MB Next. Source:
+              Enhanced colours: Jon Attree.
 
-  Pace        slowdown removed (-10.5% measured in JNext 1.1.104 headless;
-              player update B063, three input trials per driving scene;
-              briefing and demo loop entries)
+  Pace        slowdown removed (-8.0% measured in JNext 1.1.104 headless;
+              probe 0x8444, 90 game addresses equal at every update against
+              the plain build; stage 1, 4 runs of 800 updates and, with the
+              archive POKEs, 2 of 3000)
 
   Changes     1.0: speed pass: road, scenery and screen copy drawn at 28 MHz,
               capped at the original quiet-scene pace
@@ -56,24 +58,27 @@
               Enhanced engine with its colours off and still fits a 1MB Next;
               fixes a crash at the tunnel mouth in Enhanced colours when a
               wall row has no width
+              1.2: Orig. pace follows the original's time on each update, not
+              one fixed time: quiet scenes were 3 to 5% slow and stretches up
+              to 15%; measured figures in the notes replace the old table.
+              Speed and Enhanced Speed are unchanged.
 
   Note        Keys: ENTER options, 5 redefine (tested: SPACE gear, Q
               accelerate, A brake, O left, P right, X quit, H pause, T turbo),
               4 keyboard, SPACE to start. Modes: Speed alone keeps the
-              original artwork and is faster on purpose, the frame rate
-              improvement asked for; Enhanced colours [Speed] adds the colours
-              at the Speed pace; Enhanced colours [Orig. pace] keeps the
-              original pace; Speed off is your own game. Time per update
-              against the original, Speed / Enhanced Speed / Enhanced Orig.
-              pace: quiet -10.5/-6.4/-1.0%; busy -11.1/-2.8/-0.7%; tunnel
-              -8.1/-4.0/+0.6%; city -15.6/-2.3/-1.1%; attract
-              -13.5/-0.9/-0.9%; briefing +1.7/-15.0/+0.1%. Known issues:
-              Enhanced colours needs a 2MB Next, and a 1MB Next shows it as
-              N/A; the original game's synchronous sound effects still stall
-              play for up to about 0.8 s; the Enhanced road motion is an
-              approximate in-between pose and frames can tear. Missing:
-              hardware untested; no full five-stage playthrough or final
-              ending checked; joystick options not checked.
+              original artwork and is faster on purpose; Enhanced colours
+              [Speed] adds the colours at the Speed pace; Enhanced colours
+              [Orig. pace] follows the original's time update by update; Speed
+              off is your own game. Known issues: time per update against the
+              original, JNext, stage 1, same input: Speed whole -8 to -19%;
+              Enhanced Speed -6 to -14%; Orig. pace whole -3.0 to +0.3%, quiet
+              -3.1 to +1.2%, busy -5.0 to -0.3%, but 20-update stretches reach
+              +13.4%: where the colours' drawing alone takes the original's
+              time it cannot be paid back. The original's synchronous sound
+              effects still stall play for up to about 0.8 s; the Enhanced
+              road motion is approximate and frames can tear. Enhanced needs a
+              2MB Next. Missing: hardware untested; no full five-stage
+              playthrough or ending checked; joystick not checked.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite credits
@@ -96,18 +101,30 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-06 (Speed, Enhanced at both
               paces): approved. Automated JNext checks and the real loader on
-              disposable card copies.
+              disposable card copies; 1.2 Orig. pace through the real loader
+              in JNext; 1.2 not yet played by the owner; published at his
+              request
 
-  Replay      Native lockstep in JNext against the original, not RZX. Enhanced
-              at each pace: 4 driving scenes x 3 input trials; Orig. pace also
-              6 autopilot tunnel routes; Speed: 4 driving scenes x 1 trial:
-              the 57 player-state bytes identical at every update, every AY
-              and beeper write identical by update, port and value. Briefing
-              and attract demo, every mode: registers including R, 384 game
-              bytes and sound identical at every loop end.
+  Replay      1.2 (2026-11-08): Orig. pace only, Speed and Enhanced Speed keep
+              their published bytes. 90 game addresses equal at every update
+              in 6 runs; six tunnel routes and stage 2, 4, 5, capture and
+              time-out checkpoints, state against the original's logs: 0
+              differences, endings and gaps as 1.1. R not compared at the
+              hooks: the game has no LD A,R. Native lockstep in JNext against
+              the original, not RZX. Enhanced at each pace: 4 driving scenes x
+              3 input trials; Orig. pace also 6 autopilot tunnel routes;
+              Speed: 4 driving scenes x 1 trial: the 57 player-state bytes
+              identical at every update, every AY and beeper write identical
+              by update, port and value. Briefing and attract demo, every
+              mode: registers including R, 384 game bytes and sound identical
+              at every loop end.
 
-  Emulator    JNext 1.1.104 headless; real-loader results are recorded in the
-              run report.
+  Emulator    1.2 (2026-11-08): JNext 1.1.104 headless on a private copy of
+              the NextZXOS 26.11 card, real .NEXCLASH: default, Enhanced
+              [Speed], Enhanced [Orig. pace]: /tmp/NEXCLASH.NEX equal to
+              nxc.py, menu and driving reached, frames viewed; 15-minute soak
+              of Orig. pace, no freeze; no person played it. JNext 1.1.104
+              headless; real-loader results are recorded in the run report.
 
   Coverage    Stages 1-5 from fixtures, tunnel routes, briefing, attract demo,
               time-out game over and return to menu. Not covered: a full

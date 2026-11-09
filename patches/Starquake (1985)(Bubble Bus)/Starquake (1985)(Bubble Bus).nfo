@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Starquake
   Publisher   Bubble Bus Software, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,16 +23,33 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Pace        original (-0.12% measured in JNext 1.1.104 headless on the
+              NextZXOS v2.09 card, against the plain build of the same file;
+              probe 0xC5A9, keys applied after the game's last read; the seed
+              at room entry 0xA489 fixed in both arms; 90 state addresses
+              equal at every update)
+
+  Changes     1.1: the game holds the original's pace: 1.0 lost single frames
+              in busy rooms and up to 44 frames in a lost life. Half of the
+              figures' plot now runs at 28 MHz, and the game's own frame sync
+              gives back what is over.
+
   Note        No outline on the figures: the owner chose that for this mostly
-              black game. The patch writes the whole alt ROM image (Sinclair's
-              ROM plus its hooks), which fixed a crash on the define-keys
-              screen. Known issues: the same keys can give different enemies
-              from the unpatched game's, because the game seeds its random
-              numbers from the frame counter and this build's start-up runs a
-              little longer. Missing: no Enhanced colour set (rated moderate);
-              pace not measured against the original; the cheats are unplayed
-              by a person; not reached in testing: high-score name entry, the
-              core assembly and the ending; hardware untested.
+              black game. The patch writes the whole alt ROM image, which
+              fixed a crash on the define-keys screen. Plays at the original's
+              pace, measured with the same input and enemy seeds in 6 runs of
+              590 to 1,000 game updates in JNext: overall -0.12 to +0.00%,
+              quiet scenes -0.06 to +0.03%, busy scenes -0.23 to +0.02%,
+              slowest stretch of 20 updates +0.5%; faster stretches down to
+              -4.9% are single updates where the original itself lags. A lost
+              life takes the original's 249 frames (1.0: up to 292). Known
+              issues: the same keys can give different enemies from the
+              unpatched game's, because the game seeds its random numbers from
+              the frame counter; beeper notes get 3 to 8% more edges a second
+              than the original's, counted, not listened to. Missing: no
+              Enhanced colour set (rated moderate); cheats unplayed by a
+              person; not reached in testing: high-score name entry, the core
+              assembly and the ending; hardware untested.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -51,9 +68,16 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-04
+              2026-11-04; 1.1 through the real loader in JNext; 1.1 not yet
+              played by the owner; published at his request
 
-  Replay      IDENTICAL on 9 recordings, 40884 frames (t1 2563 from the
+  Replay      1.1 (NexClash branch nexttang/starquake-pace b501ea9, selftest
+              --game starquake --verify --stamp): all 9 recordings IDENTICAL,
+              40,884 frames, as below; caller speeds 1, 2, 3 IDENTICAL on t1,
+              1,500 frames; 15 of 15 negatives detected, new: the plot stretch
+              never opened, never closed, at the wrong object; ROM paths pass.
+              R not compared: the game has no LD A,R or LD R,A. Earlier:
+              IDENTICAL on 9 recordings, 40884 frames (t1 2563 from the
               snapshot; b1-b3 8001/8001/8062 random play from an in-play state
               with infinite lives, energy and immunity poked; new from the
               snapshot: m1 4851 define keys, options 1-5, play with the new
@@ -73,19 +97,24 @@
               hooks) and the old white outline; census over all 196 images: no
               outline pixel, no see-through hole, nothing at the canvas edge
 
-  Emulator    JNext headless: the 30763c45 build crashes on the first key in
-              define keys and hangs at any menu redraw (its alt ROM kept
-              NextZXOS ROM3 code at 0x386E-, called by the IM 1 handler and
-              the UDG print; four red figures and BLOB left as sprites),
-              reproduced; this build defines keys from boot and after a game
-              over with no stray sprites, the quit prompt, play with the new
-              keys; plain, sprites and loading-screen .nex reach play; plain
-              and sprites reach the same room, score and BLOB place at frame
-              1650 with the same keys, enemies exactly as plain with the keys
-              one frame earlier or later (the game reseeds its random numbers
-              from FRAMES on entering a room, 0xA486, and this build's stub
-              runs a little longer); hook cost about 49K T per frame counted
-              at 3.5 MHz, run at 28 MHz; no white outline (owner, 2026-11-04)
+  Emulator    1.1, 2026-11-08: JNext 1.1.104 headless, the real loader on a
+              private copy of the NextZXOS 26.11 card, default and all four
+              cheats: menu v1.1, play, frames viewed, /tmp/NEXCLASH.NEX equal
+              to apply for each; 15-minute soak against the plain build, no
+              freeze, sheet viewed. Not played by a person. Earlier: JNext
+              headless: the 30763c45 build crashes on the first key in define
+              keys and hangs at any menu redraw (its alt ROM kept NextZXOS
+              ROM3 code at 0x386E-, called by the IM 1 handler and the UDG
+              print; four red figures and BLOB left as sprites), reproduced;
+              this build defines keys from boot and after a game over with no
+              stray sprites, the quit prompt, play with the new keys; plain,
+              sprites and loading-screen .nex reach play; plain and sprites
+              reach the same room, score and BLOB place at frame 1650 with the
+              same keys, enemies exactly as plain with the keys one frame
+              earlier or later (the game reseeds its random numbers from
+              FRAMES on entering a room, 0xA486, and this build's stub runs a
+              little longer); hook cost about 49K T per frame counted at 3.5
+              MHz, run at 28 MHz; no white outline (owner, 2026-11-04)
 
   Coverage    about 130 screens by walking and falling, a Cheops pyramid
               screen, deaths; the menu, define keys twice (once from the menu
