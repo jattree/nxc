@@ -13,6 +13,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import nxc
 
 W = 78
+NO_CLASH = 'play area has no colour clash'          # PRF1 display_model phrases for a default that removes no clash
+KEEPS_CLASH = 'default keeps the original picture'
+PLAIN_LABELS = (nxc.FIX_LABEL, 'Original colours', '128K build', 'NexClash build', 'Next build')   # fix line names that add nothing more
 
 HEAD = r"""
      _   _ __  __  ____
@@ -103,7 +106,20 @@ def nfo(d, base):
                                     '; '.join('%s needs a %s Next, and is not offered on a smaller one' % (e['name'].decode('ascii', 'replace'), '2MB' if e['top'] > nxc.NEXT_1MB else '1MB')
                                               for e in big)), o)
     rule(o, 'WHAT IT DOES')
-    if 'layer 2' in prf.get('display_model', '').lower():
+    model = prf.get('display_model', '').lower()
+    if NO_CLASH in model or KEEPS_CLASH in model:   # the default removes no clash: none to remove, or the original's own kept
+        o[2] = o[2].replace('colour clash removed with hardware sprites', 'the original game on Next hardware')
+        label = nxc.fix_label(d)
+        adds = 'the menu, its cheats and the Next start-up' if trainers else 'the menu and the Next start-up'
+        more = '' if label in PLAIN_LABELS else " The menu's %s line adds more; see the note." % asc(label)
+        if NO_CLASH in model:
+            text = "The game's play area has no colour clash, so none is removed: the default keeps the original look. "
+        else:
+            text = "The default keeps the original look, and the small colour clash the original has stays (see the note). "
+        text += 'The patch adds %s.%s Game logic is unchanged.' % (adds, more)
+        if colours: text += ' Enhanced colours, an option on the menu, are below.'
+        o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
+    elif 'layer 2' in model:
         o[2] = o[2].replace('with hardware sprites', 'on Next hardware')
         o.append('  Moving figures are drawn on the Next\'s own graphics layers, so they keep their')
         o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
