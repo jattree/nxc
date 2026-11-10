@@ -1,0 +1,86 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Bruce Lee
+  Publisher   U.S. Gold, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Bruce Lee (1985)(U.S. Gold).z80
+  MD5         6e088cc665d1cdbcd32effa061ad6e8e
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Approved figure and room colours. Optional, off by default.
+              Native editable sprite and scenery sheets. Source: Enhanced
+              colours: Armando Quaranta (Spec256).
+
+  Pace        original
+
+  Note        Original figures with colour clash removed by default; optional
+              approved Enhanced figures and all 20 room tiles. Original
+              loading screen. Fits a 1MB Next. Known issues: asynchronous
+              input and idle/interrupt refresh timing can change some random
+              trajectories despite exact hook-local R. Individual beeper
+              intervals differ by up to 2.572us in the measured scenes.
+              Missing: natural completion, later-room/two-player playthrough,
+              hardware and other-emulator testing.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  No walking sound
+   3  Faster movement
+   4  No enemies
+
+  Archive POK translated to this exact 48K release. Infinite lives, walking
+  sound off, faster movement, no enemies. All off by default.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Armando
+              Quaranta (Spec256)
+  Original    U.S. Gold, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Frozen selftest verification and exact rebuild; normal/NEXLOAD
+              boot and full hidden ROM; continuous original/sprite
+              composition, all figure frames, all 20 room layouts,
+              registers/R/RAM and five broken builds; native pace and
+              interrupt injection. Emulator evidence only.
+
+  Replay      Original continuous and death/game-over recordings; frozen
+              selftest passed, exact hook registers/R/RAM plus original-
+              composition and source-pixel checks.
+
+  Emulator    JNext 1.1.104; NextZXOS v2.10 (26.11); real-loader acceptance
+              recorded separately against this package SHA256.
+
+  Coverage    Original menus, rooms 0/1, five life-loss entries and natural
+              game over; isolated original layouts of all 20 rooms and 132
+              figure images. Natural completion and two-player play not
+              covered.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
