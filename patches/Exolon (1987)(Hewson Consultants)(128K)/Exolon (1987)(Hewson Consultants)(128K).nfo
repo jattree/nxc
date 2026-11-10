@@ -1,0 +1,88 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Exolon
+  Publisher   Hewson Consultants, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Exolon (1987)(Hewson Consultants)(128K).z80
+  MD5         87515df87645c4179a9ef90663774c7f
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Approved painted figures; pixel borders and original foreground
+              occlusion retained. Optional, off by default. Native editable
+              81-frame sheet. Source: Enhanced colours: Jao Paulo (Spec256).
+
+  Pace        original
+
+  Note        Exact 128K release with AY sound. Original figure colours by
+              default; optional approved Enhanced figure colours, off by
+              default. Original loading screen. Fits a 1MB Next. Known issues:
+              individual update and beeper pulse timing vary with video
+              contention; measured pace stays within 2%. Sound deadline uses a
+              working CTC channel 3; missing-clock fallback preserves
+              operation but has no timing acceptance. Missing: natural
+              completion, later-zone exhaustive playthrough, hardware and
+              other-emulator tests.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite ammo
+   3  Infinite grenades
+   4  Mines harmless
+   5  Immunity
+
+  Five archive options verified independently against this 128K release:
+  lives, ammo, grenades, mines harmless, immunity. All off by default.
+  Unverified conflicting enemy-control options excluded.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jao Paulo
+              (Spec256)
+  Original    Hewson Consultants, 1987, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Full original registers/R/RAM at boot and hook boundaries;
+              independent figure pixels, speed/IFF/clock phases, original
+              trainer behaviour and deliberately broken builds. Native actual-
+              player-update trials and timestamped AY/beeper comparison.
+              Emulator evidence only.
+
+  Replay      Continuous original 128K recordings; exact hook registers
+              including R and game RAM, independent source-pixel oracle; full
+              verification recorded separately.
+
+  Emulator    JNext 1.1.104; NextZXOS v2.10 (26.11), full hidden ROM; exact-
+              package actual-loader evidence recorded separately.
+
+  Coverage    Menu, gameplay in zones 0-3, deaths, game over and reset; all 81
+              stored frames and edge positions separately checked. Completion
+              and exhaustive later-zone play remain untested.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
