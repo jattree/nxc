@@ -1,0 +1,93 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Highway Encounter
+  Publisher   Vortex, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Highway Encounter (1985)(Vortex).z80
+  MD5         ecfe7da10ba9aa395ae54c44301be1af
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The default keeps the original look, and the small colour clash the original
+  has stays (see the note). The patch adds the menu, its cheats and the Next
+  start-up. The menu's Presentation line adds more; see the note. Game logic
+  is unchanged. Enhanced colours, an option on the menu, are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Approved figures and scenery colours. Optional, off by default.
+              Native editable figure sheet; no new outline. Source: Enhanced
+              colours: MatGubbins (Spec256).
+
+  Pace        original
+
+  Note        Original monochrome presentation by default, with original-pace
+              drawing windows. Optional approved Enhanced colours preserve the
+              original mask/OR depth and clipping. Original loading screen.
+              Fits a 1MB Next. Known issues: individual updates vary slightly
+              with raster phase; measured quiet/busy pace stays within 0.7%.
+              Beeper pulse spacing differs by up to 1.715us in tested scenes.
+              CPU-only fallback on older cores or hardware-IM2 configurations
+              adds up to 46ms at room changes; original-pace acceptance
+              applies to the normal DMA path. Missing: natural completion and
+              comprehensive collision playthrough, hardware and other-emulator
+              testing.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite time
+   2  Immunity
+   3  Objects: shots only
+
+  Archive POK checked against this exact 48K release. Infinite time; immunity
+  in both collision directions; objects only destroyed by shots. Conflicting
+  plot-code variants excluded. All off by default.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours:
+              MatGubbins (Spec256)
+  Original    Vortex, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Exact archive entry and original/NEXLOAD boot, full hidden ROM;
+              independent source-pixel and hook registers/R/RAM checks, all 57
+              figures and four shifts, deliberately broken builds and native
+              player-update/sound comparisons. Emulator evidence only.
+
+  Replay      Original continuous routes and all-zone demo; independent colour
+              model and hook registers/R/RAM. Full verification recorded
+              separately with source and output hashes.
+
+  Emulator    JNext 1.1.104; NextZXOS v2.10 (26.11); actual-loader acceptance
+              recorded separately against this package SHA256.
+
+  Coverage    Opening menus and gameplay; all 57 figure records and four
+              shifts. Demo covers 30 zones. Unreached final-ship copy paths
+              and collision/timer trainer behaviour have controlled original-
+              code tests.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
