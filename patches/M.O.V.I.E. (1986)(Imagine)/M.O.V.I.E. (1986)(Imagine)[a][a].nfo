@@ -1,0 +1,101 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Movie
+  Publisher   Imagine, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        M.O.V.I.E. (1986)(Imagine)[a][a].z80
+  MD5         facf9b90032759b7012abd91602b4b45
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Presentation line adds more; see the note. Game logic
+  is unchanged. Enhanced colours, an option on the menu, are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Painted 1930s noir colours: the hero, the other characters,
+              furniture, walls and floors, and the icon panel with metal
+              frames, ivory symbols and a wood-gripped pistol; the moving
+              selector keeps its original yellow. Source: Enhanced colours:
+              Jon Attree.
+
+  Pace        original
+
+  Changes     1.0: Optional Enhanced colours follow the original masked
+              drawing on Layer 2: native clipping, shared edges and screen
+              copies; the icon panel is painted once at start-up and only over
+              the original set bits. Original game logic, delays and sound
+              untouched. Full hidden 48K ROM; highest bank 47.
+
+  Note        48K release with its beeper sound and the original loading
+              screen. Default keeps the original monochrome look; no colour-
+              clash-removal claim. Enhanced, off by default: painted 1930s
+              noir colours for the figures, rooms and the icon panel; the
+              moving selector keeps its original yellow. Disable DMA is a CPU-
+              copy fallback. Fits a 1MB Next. Known issues: the female
+              character's Enhanced sprite still needs work. In JNext, Enhanced
+              is up to 1.75 percent slower than the original in sampled
+              windows, within the 2 percent target. Missing: natural play to
+              the end; hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Enemies don't move
+   3  Enemies don't shoot
+   4  Skip final film check
+   5  Start with film reel
+
+  Archive Movie POK (MD5 7955ff07). Shooting and final-film entries translated
+  to verified sites; the archive's broad return and film edits were unsafe.
+  The film options are helpers, not instant completion.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
+  Original    Imagine, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Recorded-input checks of registers with R, game memory and
+              pixels against an independent painted model, deliberate faults,
+              interrupt and speed injection, and native pace trials. Real-
+              loader runs on disposable NextZXOS 26.11 card copies.
+
+  Replay      movie_reference.rzx; movie_source_start.rzx;
+              movie_end_reset.rzx: 61472 frames, 143626 complete native plots;
+              registers including R, game RAM and pixels identical to an
+              independent painted model; four deliberately broken builds
+              caught per recording. Selftest verified and stamped with the
+              noir-hud-v1 art.
+
+  Emulator    JNext 1.1.104; NextZXOS v2.10 (26.11). Normal and NEXLOAD boot
+              and full hidden ROM checked. Disposable-card real-loader
+              evidence supplied separately.
+
+  Coverage    Menus, play, speech, initialisation and reset; all eight drawing
+              paths. Reference recording ends at 16%, not completion.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
