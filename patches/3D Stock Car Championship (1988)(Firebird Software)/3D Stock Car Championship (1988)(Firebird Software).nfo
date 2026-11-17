@@ -1,0 +1,92 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       3D Stock Car Championship
+  Publisher   Ace Software, 1988
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        3D Stock Car Championship (1988)(Firebird Software).z80
+  MD5         56f151581bbcada775bb9e180bf4df9d
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Backgrounds
+              needs a 2MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Backgrounds (needs a 2MB Next),
+              chosen on the menu, off by default.
+  Enhanced    Backgrounds: a painted picture for each of the 25 circuits and
+              for the menu, 320 x 256. The game's own stands and trees are
+              covered, its fences and timers kept. Needs a 2MB Next. Off by
+              default. Source: Painted cars, circuits and menu: Jon Attree.
+
+  Pace        original
+
+  Note        The four cars are Next sprites over the game's own cars, which
+              still decide every collision. Game logic is unchanged. The base
+              keeps the game's own car shapes and colours and fits a 1MB Next.
+              Enhanced colours paints the cars, on any Next. Backgrounds adds
+              a painted picture for each of the 25 circuits and the menu, and
+              needs a 2MB Next. Engines adds an engine note for every car and
+              crash and skid noise on the Next's sound chips; the game's own
+              beeper sound stays. Known issues: a short pause while a
+              circuit's picture is unpacked; Engines does not follow the
+              game's SOUND OFF setting; on the Next's own loader Backgrounds
+              cannot be chosen together with Enhanced colours or Engines yet.
+
+-- MENU ----------------------------------------------------------------------
+   1  One minute qualifying
+   2  Easy computer cars
+   3  Hard computer cars
+
+  Written for this patch and tested against this exact release: qualifying of
+  one minute; computer cars slower or faster through the game's own skill
+  setting. All off by default.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Painted cars, circuits and
+              menu: Jon Attree
+  Original    Ace Software, 1988, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification on the build with every
+              option on and on the base build, the others by unit tests;
+              simulated boot of every build; every byte of ROM the game runs
+              as recorded. Emulator: OverSpec. No real hardware yet.
+
+  Replay      IDENTICAL on 1 scripted recording, 10,003 frames: 9,002 car
+              draws, registers, memory and the interrupt state against the
+              original at every hook; 3,232 unit cases; negative control
+              detected
+
+  Emulator    OverSpec: every option on, all 25 circuits to FINAL POSITIONS;
+              the patch menu
+
+  Coverage    One race on circuit 1 recorded. Circuits 2 to 25, the text
+              screens, one to three cars and hidden cars by unit tests on the
+              hooks. No human recording yet.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
