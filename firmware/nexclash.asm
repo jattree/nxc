@@ -125,6 +125,7 @@ SET_END         equ WORK + BITMAP + BANK_SIZE ; a chunk is decoded no further th
 ACC             equ TABLE_END - BITMAP      ; so this, in the same pages, is free for the bits taken so far
 BASE_SPRITE     equ 1                       ; the sprite build: the one base a set here may have
 CREDIT_NAME     equ 32                      ; of a name, as "Colours: " leaves 32
+COLOURS_LABEL_MAX equ 16                    ; INF1's colours_label: as long as "Enhanced colours", which it replaces
 FIX_LABEL_MAX   equ 25                      ; INF1's fix_label: a toggle's name's length, so [ON] keeps its column
 TRAINERS_SHOWN  equ 8
 TRAINER_SIZE    equ 7                       ; on, name's length, count, position
@@ -169,7 +170,7 @@ SMALLBUF_END_HI equ $3F
 SMALLBUF_SIZE   equ $0100
 TEXT_MAX        equ 252
 stack_top       equ $4000
-stack_floor     equ $3F66                   ; 154 of stack (64 the most measured)
+stack_floor     equ $3F77                   ; 137 of stack (64 the most measured)
 rc4_s           equ $3D00                   ; aligned
 statbuf         equ smallbuf                ; read at once, and nothing else is there
 rc4_base        equ $AA00                   ; in the I/O page
@@ -380,6 +381,7 @@ var_at          =   $3F00
         VAR     set_len1, 4                 ; before the menu: a set's first file's length
         VAR     text_at, 4                  ; and where its text starts in the patch
         VAR     fix_label, FIX_LABEL_MAX + 1 ; up to the menu: INF1's name for the main line; 0: "Colour clash fix"
+        VAR     colours_label, COLOURS_LABEL_MAX + 1 ; and for the colours line; 0: "Enhanced colours"
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -2130,11 +2132,18 @@ first_out1:
 first_inf1:
         xor     a                           ; below the stack, so not cleared with the rest
         ld      (fix_label),a
+        ld      (colours_label),a
         call    read_text
         ld      de,key_fix_label
         call    text_find
+        jr      c,.cl
         ld      de,fix_label
         ld      a,FIX_LABEL_MAX
+        call    copy_text
+.cl:    ld      de,key_colours_label
+        call    text_find
+        ld      de,colours_label
+        ld      a,COLOURS_LABEL_MAX
         ret     c
         jp      copy_text
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
@@ -2924,6 +2933,7 @@ key_title:      db "title=",0
 key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
 key_fix_label:  db "fix_label=",0
+key_colours_label: db "colours_label=",0
 key_colours_by: db "colours_by=",0
 key_version:    db "version=",0
 ext_z80:        db ".z80",0
@@ -6937,9 +6947,13 @@ mp_main:
         inc     de
         ld      a,(cur_kind)
         or      a
-        ld      hl,str_enhanced
-        jr      z,.kl
         ld      hl,str_language
+        jr      nz,.kl
+        ld      hl,colours_label            ; INF1's name for the colours line, if it has one
+        ld      a,(hl)
+        or      a
+        jr      nz,.kl
+        ld      hl,str_enhanced
 .kl:    call    mp_copyz
         call    mp_big_off
         jr      nz,.kq
