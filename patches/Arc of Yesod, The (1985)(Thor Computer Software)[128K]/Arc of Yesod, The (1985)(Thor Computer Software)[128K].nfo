@@ -1,0 +1,62 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       The Arc of Yesod
+  Publisher   Thor Computer Software, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Arc of Yesod, The (1985)(Thor Computer Software)[128K].z80
+  MD5         f58236395e737aaa0fac1f8476711ad8
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite time
+   3  Infinite energy
+   4  Drop from any height
+   5  No reversed controls
+   6  No bouncing
+   7  No crystal stealing
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Thor Computer Software, 1985, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+
+  Replay      Verify IDENTICAL on 11 recordings, 30,837 frames (R compared):
+              the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms,
+              autosaves stripped) and 10 scripted (8 from the archive snapshot
+              through the hatch; a teleporter and the out-of-time screen from
+              poked states); unit PASS (1,254 positions, 114 graphics); 30 of
+              30 broken builds detected (NexClash record arc_of_yesod,
+              verified 2026-11-17; this build is byte-identical to it)
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
