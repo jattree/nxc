@@ -1,0 +1,85 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Heartland
+  Publisher   Odin Computer Graphics, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Heartland (1986)(Odin Computer Graphics).z80
+  MD5         07bfa8f74d60a53ab64e5b092ffd6cca
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite energy
+   2  Infinite time
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Odin Computer Graphics, 1986, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+
+  Replay      Verify : heart_h1.rzx 12178 frames, 2485 steps, 2478 copies, 6
+              screen clears, 5452 plots, 4210 paints, 118 random bytes, most
+              figures 5, most sprites 26, 1400628 sprite pixels, 562 cells
+              with the paint lifted -> IDENTICAL; Verify : heartR_1.rzx 4020
+              frames, 548 steps, 544 copies, 3 screen clears, 1300 plots, 977
+              paints, 36 random bytes, most figures 4, most sprites 16, 358307
+              sprite pixels, 349 cells with the paint lifted -> IDENTICAL;
+              Verify : heartR_2.rzx 1809 frames, 401 steps, 398 copies, 2
+              screen clears, 928 plots, 798 paints, 25 random bytes, most
+              figures 4, most sprites 16, 270262 sprite pixels, 284 cells with
+              the paint lifted -> IDENTICAL; Verify : heartR_3.rzx 1837
+              frames, 400 steps, 399 copies, 2 screen clears, 1001 plots, 798
+              paints, 14 random bytes, most figures 4, most sprites 16, 291782
+              sprite pixels, 383 cells with the paint lifted -> IDENTICAL;
+              Verify : heartR_4.rzx 1556 frames, 324 steps, 323 copies, 2
+              screen clears, 814 plots, 646 paints, 14 random bytes, most
+              figures 4, most sprites 16, 216912 sprite pixels, 208 cells with
+              the paint lifted -> IDENTICAL; Verify : heartR_5.rzx 1887
+              frames, 404 steps, 401 copies, 2 screen clears, 1007 plots, 802
+              paints, 25 random bytes, most figures 4, most sprites 16, 281902
+              sprite pixels, 240 cells with the paint lifted -> IDENTICAL;
+              Verify : heartR_6.rzx 2352 frames, 487 steps, 483 copies, 2
+              screen clears, 1221 plots, 927 paints, 35 random bytes, most
+              figures 4, most sprites 16, 338317 sprite pixels, 308 cells with
+              the paint lifted -> IDENTICAL; Unit : attribute copy with no
+              paint 2, attribute copy, way 0 2, attribute copy, way 1 2,
+              attribute copy, way 2 2, attribute copy, way 3 2, attribute
+              copy, way 4 2, copy after the figures left 2, copy of 144 lines
+              2, copy with no figures 2, figure across the buffer's end 1,
+              foreground list of 16 pieces 2, interrupt inside the hook at
+              A56F 13, interrupt inside the hook at A615 13, interrupt inside
+              the hook at A790 13, interrupt inside the hook at A7D4 13,
+              interrupt inside the hook at A837 13, interrupt inside the hook
+              at A88D 13, interrupt inside the hook at BBF4 12, random byte at
+              256 addresses 1, random byte from a cell with the paint lifted
+              2, random byte from a cell written since 2, seven paints noted
+              1, twelve figures noted at A7D4 1, twelve figures noted at A837
+              1 -> PASS; Result : PASSED; Checks : COMPLETE: rom_paths pass
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
