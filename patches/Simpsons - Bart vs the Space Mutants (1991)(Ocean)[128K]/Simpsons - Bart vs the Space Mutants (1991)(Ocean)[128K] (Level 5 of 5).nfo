@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The Simpsons: Bart vs. the Space Mutants, level 5
   Publisher   Ocean, 1991
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,7 +41,12 @@
               scenery's colours.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Infinite lives
+
+  Infinite lives: this level's own code takes one from the lives count with
+  SUB 1; the cheat makes it SUB 0. The address is this level's (an archive
+  .pok gives level 1's). Checked by reading the code and by the one byte the
+  cheat changes in the build; not played.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
