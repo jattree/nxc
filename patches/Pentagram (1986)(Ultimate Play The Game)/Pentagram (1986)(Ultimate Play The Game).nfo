@@ -1,0 +1,88 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Pentagram
+  Publisher   Ultimate Play The Game, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Pentagram (1986)(Ultimate Play The Game).z80
+  MD5         75b969b9da612b72c7780e11a862dbdd
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Next compatibility line adds more; see the note. Game
+  logic is unchanged. Enhanced colours, an option on the menu, are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Owner-painted wizard, enemies, runes, objects, room scenery and
+              HUD parts. Existing lines and original draw order retained; no
+              exterior outline. Source: Enhanced colours by Jon Attree.
+
+  Pace        slowdown removed
+
+  Note        Original monochrome picture by default. Enhanced is optional and
+              off by default. Both modes fit a 1MB Next. Known issues:
+              individual update intervals retain some raster/publication
+              jitter; tested scene averages are not slower. A complete natural
+              game completion is not verified. Missing: physical Next testing.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Mega jump
+   3  Start with 9 lives
+
+  Archive POK behaviour verified against this exact 48K release. Immunity
+  relabelled Infinite Lives because it prevents the life decrement only.
+  Starting lives translated to the initialization immediate.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours by Jon
+              Attree
+  Original    Ultimate Play The Game, 1986, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Full 18,000-frame original-input replay in both modes; exact
+              registers/R, working RAM and original bitmap. Enhanced 26,448
+              ordered plots and 1,970 full publication pictures; 512 hook ABI
+              cases and 144 whole-effect cases. Matched native player-update
+              timing, exact recolour roundtrip and boot tests. No physical
+              hardware claim.
+
+  Replay      18000 original input frames per mode. Default 6,476 and Enhanced
+              10,279 completed outer hooks; exact registers including R, full
+              48K except exact patch/checked return/dead stack. Dead-stack
+              read-before-write audit passes. Original bitmap has no
+              exception.
+
+  Emulator    Native matched states, quiet/busy/cold measurements and
+              original-clock beeper comparisons. Ordinary and NEXLOAD boot
+              register/R/RAM checks pass.
+
+  Coverage    Recorded menu, rooms, deaths, game over and restart. Initial-
+              room capacity census and targeted boundary/cache/overflow
+              fixtures; not a complete natural playthrough.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
