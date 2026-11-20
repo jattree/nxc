@@ -37,6 +37,9 @@
               rights to the game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against the seven recordings
+              listed under Replay; unit cases; simulated boot. Not on real
+              hardware.
 
   Replay      Verify : heart_h1.rzx 12178 frames, 2485 steps, 2478 copies, 6
               screen clears, 5452 plots, 4210 paints, 118 random bytes, most

@@ -25,6 +25,9 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
+  Enhanced    The painted colours of the 36 graphics Arc shares with Nodes of
+              Yesod. Arc's own figures are not painted yet. Off by default. A
+              painted set, colourist not named.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -45,6 +48,9 @@
               rights to the game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against the eleven recordings
+              listed under Replay, one of them played by hand; simulated boot.
+              Not on real hardware.
 
   Replay      Verify IDENTICAL on 11 recordings, 30,837 frames (R compared):
               the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms,

@@ -52,6 +52,11 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification of the main game's hooks on
+              three recordings; the hand-over from the front end and the level
+              blocks from memory by unit cases and a recording's real tape
+              load; simulated boot of both builds; run in OverSpec from the
+              title into level 1, one and two players. Not on real hardware.
 
   Replay      NexClash differential verification of the main game's hooks on
               the rzxarchive's recordings of level blocks 1, 2 and 10 (61,548
