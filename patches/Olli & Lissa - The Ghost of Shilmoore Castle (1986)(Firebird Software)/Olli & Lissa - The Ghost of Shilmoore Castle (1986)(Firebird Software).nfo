@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Olli & Lissa: The Ghost of Shilmoore Castle
   Publisher   Firebird, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -50,7 +50,11 @@
               Enter starts; the game's own redefine screen sets the keys.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Infinite energy
+
+  Infinite energy: the energy routine at 0x8CDC returns at once (RET for its
+  first byte). Found in an archive .pok for this game and checked against this
+  dump by reading the routine; not played.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
