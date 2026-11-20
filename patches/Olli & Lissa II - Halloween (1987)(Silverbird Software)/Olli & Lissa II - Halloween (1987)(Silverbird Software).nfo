@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Olli & Lissa II: Halloween
   Publisher   Silverbird Software, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -52,7 +52,12 @@
               Proven on a whole 39-minute recording of the game being played.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Time stands still
+
+  Time stands still: the routine that steps the game's clock (0x95D5, 16 steps
+  to the end of the game) returns at once. Found by tracing a whole played
+  recording: the clock is what ends the game, and its 16 steps are that
+  routine's only calls. Checked by reading the routine; not played.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
