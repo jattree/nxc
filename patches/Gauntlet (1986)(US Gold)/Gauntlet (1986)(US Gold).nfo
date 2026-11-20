@@ -1,0 +1,72 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Gauntlet
+  Publisher   U.S. Gold, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch
+  (all of these files together):
+
+  File        Gauntlet (1986)(US Gold)(Side A).tzx
+  MD5         51cc150a2cf4db091f61764d1156110e
+  File        Gauntlet (1986)(US Gold)(Side B).tzx
+  MD5         2c64dd178f2dab735f002f066cdba2ca
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures are drawn on the Next's own graphics layers, so they keep their
+  own colours and no longer take on the scenery's (colour clash). Game logic is
+  unchanged.
+
+  Pace        original
+
+  Note        The whole game from both sides of the tape with no loading: it
+              starts at the title, and the main game and all 31 level blocks
+              come from memory. Every 8 x 8 cell of the play window is shown
+              as a painted tile on the Next's tile layer and the status panel
+              is painted on Layer 2; the game underneath is unchanged. All
+              four heroes are painted. Steady speed runs the game at 28 MHz
+              with an update every 3 frames, off by default. Known issues: the
+              heroes' shots and a few cells where things overlap are drawn at
+              pixel positions and keep their Spectrum colours; the high score
+              and name entry text keeps its Spectrum colours; no real hardware
+              yet.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    U.S. Gold, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+
+  Replay      NexClash differential verification of the main game's hooks on
+              the rzxarchive's recordings of level blocks 1, 2 and 10 (61,548
+              frames, 11,502 updates): every register and all game memory
+              after each hook, the tile layer against the painted map after
+              every update -> IDENTICAL. Level block 1 from memory equal to a
+              recording's real tape load. The hand-over from the front end to
+              the main game: unit case, and one broken build detected.
+
+  Emulator    OverSpec: from the title through the heroes' and controls
+              screens into level 1, one and two players, scripted keys
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
