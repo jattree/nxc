@@ -1,0 +1,78 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Olli & Lissa: The Ghost of Shilmoore Castle
+  Publisher   Firebird, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch
+  (one of these files):
+
+  File        Olli & Lissa - The Ghost of Shilmoore Castle (1986)(Firebird
+              Software).tzx
+  MD5         741249bc06ef95e2359e9bf878117394
+
+  File        Olli & Lissa - The Ghost of Shilmoore Castle (1986)(Firebird
+              Software)[a].tzx
+  MD5         0bdd2f6ca2237e727e93a90903f9b25b
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    All 68 moving figures painted: Olli green, Lissa pink, Sir
+              Humphrey and the ghosts white, the creatures in their own
+              colours. A first pass. Off by default. A painted set, colourist
+              not named.
+
+  Pace        original
+
+  Note        Every moving figure (Olli, Lissa, Sir Humphrey, the castle's
+              creatures) is a hardware sprite laid on its own pixels, so it no
+              longer takes the colours of the room it crosses; the game
+              underneath is unchanged. Default: the figures in white with a
+              black edge. Enhanced paints them. The pick-ups and the title's
+              pictures do not move and stay as the game draws them. Keys:
+              Enter starts; the game's own redefine screen sets the keys.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Firebird, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against two whole recordings,
+              both builds; simulated boot; run in OverSpec from its menu,
+              default and Enhanced. Not on real hardware.
+
+  Replay      IDENTICAL on two whole recordings, both builds: 147,152 frames,
+              154,081 figures, 180 wipes; 9 of 9 broken builds detected
+
+  Emulator    OverSpec: from the patch menu, default and Enhanced, through
+              lost lives to game over and the title, scripted keys
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
