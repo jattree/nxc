@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Solomon's Key
   Publisher   U.S. Gold, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,6 +41,9 @@
               kept as the original's; the original's pace kept from the game's
               own pass padding; the tape's loading screen; the Spec256
               conversion's colours as the Enhanced set
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: a key on the loading screen, then hold 1 on the title
               until the room builds (the tune reads its keys between notes).

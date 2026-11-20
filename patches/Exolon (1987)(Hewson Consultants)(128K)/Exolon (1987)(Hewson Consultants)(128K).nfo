@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Exolon
   Publisher   Hewson Consultants, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,6 +30,10 @@
               81-frame sheet. Source: Enhanced colours: Jao Paulo (Spec256).
 
   Pace        original
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Exact 128K release with AY sound. Original figure colours by
               default; optional approved Enhanced figure colours, off by

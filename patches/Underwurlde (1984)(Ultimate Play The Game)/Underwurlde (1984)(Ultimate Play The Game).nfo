@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Underwurlde
   Publisher   Ultimate, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -47,6 +47,9 @@
               original's; original pace; the game's own interrupt routine at
               its own clock; the approved Enhanced colours unchanged; the
               tape's loading screen; five checked trainers
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's selection screen 1 keyboard, 2 Kempston, 3
               cursor or 4 Interface II, then 0 to start; on the keyboard Q, W,

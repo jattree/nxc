@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Movie
   Publisher   Imagine, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -40,6 +40,9 @@
               copies; the icon panel is painted once at start-up and only over
               the original set bits. Original game logic, delays and sound
               untouched. Full hidden 48K ROM; highest bank 47.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        48K release with its beeper sound and the original loading
               screen. Default keeps the original monochrome look; no colour-

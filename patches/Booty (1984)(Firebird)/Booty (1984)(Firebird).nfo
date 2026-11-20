@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Booty
   Publisher   Firebird, 1984
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               ROM (NextZXOS 26.11 safe); no game byte changed in the default,
               no hook; Enhanced colours, a menu option, off by default, from
               the Spec256 set; the tape's loading screen; eight tested cheats
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: menu 1 keyboard, 2 Interface 2, 3 cursor, 4 Kempston, 5
               define keys, 0 start. Keyboard: 5 left, 8 right, 7 up, 6 down, A

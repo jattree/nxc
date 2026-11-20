@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Magicland Dizzy
   Publisher   Code Masters, 1990
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -28,6 +28,9 @@
   Changes     1.0: Dean Woodyatt's Magicland Dizzy build moved to the 128K
               release (AY music), his plot hook at 28 MHz, whole alt ROM
               image, printer buffer put back after loading, loading screen
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The 128K release, so the AY music plays. Dean Woodyatt's
               Magicland Dizzy build: Dizzy is four hardware sprites, so he no

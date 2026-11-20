@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Pyjamarama
   Publisher   Mikro-Gen, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,11 +33,14 @@
 
   Pace        original
 
-  Changes     v1.1 owner art revision 1: flat orange coins from the owner PNG.
+  Changes     1.1: Owner art revision 1. flat orange coins from the owner PNG.
               All 200 graphics may use hardware sprites below the HUD,
               including collectables. 28 MHz hooks restore incoming CPU speed
               and R. Full Sinclair hidden ROM image; loading screen and
               verified trainers.
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        O/P left/right; M jump/use. Any key past title, ENTER to play.
               Enhanced is off by default. Known issues: about 1.2 to 1.7

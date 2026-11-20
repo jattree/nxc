@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Bubbler
   Publisher   Ultimate, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -42,6 +42,9 @@
               2 view; the original loading screen; Sinclair's 48K ROM as the
               whole alt ROM (NextZXOS 26.11 safe); the game's speed restored
               after every hook; four cheats from the archive.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu A for one player or B for two, choose
               keyboard, Kempston, cursor or Interface II for each player, then

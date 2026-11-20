@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Incredible Shrinking Fireman
   Publisher   Mastertronic
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,6 +31,9 @@
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
               1.2: the hooks hand back the CPU speed the game was running at,
               instead of always dropping to 3.5 MHz
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Works on NextZXOS v2.10 from 1.1. Plays at the original's pace:
               +0.0%, +0.3% and +0.4% over 600 game updates (quiet thirds up to

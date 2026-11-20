@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Head Over Heels
   Publisher   Ocean, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,17 @@
               look. Source: Enhanced colours: Anthony Lycett (Spec256).
 
   Pace        original
+
+  Changes     1.0: Optional Enhanced colours follow the original masked
+              drawing for rooms, figures, doors, floor tiles and static HUD
+              art. Dynamic text retains its original appearance. Original
+              drawing writes and game logic retained. Shared interrupt reads,
+              caller-speed restoration, R preservation and original-pace
+              guard; full hidden ROM for NextZXOS v2.10 (26.11). Fits a 1MB
+              Next.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: the game's own menu sets keys or joystick; Head and Heels
               swap, join and use items as in the original. The 128K release

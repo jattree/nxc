@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Nightshade
   Publisher   Ultimate Play The Game, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -40,6 +40,9 @@
 
   Changes     1.1: the game now holds the original's pace; 1.0 ran up to 8.7%
               slow in short busy stretches.
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Default and Enhanced colours both play at the original's pace in
               JNext, 2026-11-08, same input and game state equal at every

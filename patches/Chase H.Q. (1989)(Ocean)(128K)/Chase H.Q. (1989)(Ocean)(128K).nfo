@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Chase H.Q.
   Publisher   Ocean, 1989
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -64,6 +64,9 @@
               Speed and Enhanced Speed are unchanged.
               1.3: two interrupt-safe reads of the CPU speed in Enhanced's
               sound and pace checks; play unchanged
+              1.4: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: ENTER options, 5 redefine (tested: SPACE gear, Q
               accelerate, A brake, O left, P right, X quit, H pause, T turbo),

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Commando
   Publisher   Elite Systems
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -34,6 +34,9 @@
               1.2: the game holds the original's pace in busy scenes, where
               1.1 lost whole frames: its logic now pays in advance for the
               sprite updates' time, down to the game's own frame sync.
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Works on NextZXOS v2.10 from 1.1. Known issues: pace against the
               original in JNext, with the player really moving, 6 runs of 714

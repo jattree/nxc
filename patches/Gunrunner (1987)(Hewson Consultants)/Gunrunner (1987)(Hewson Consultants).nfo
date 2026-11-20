@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gunrunner
   Publisher   Hewson, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,6 +41,9 @@
               ROM, no game byte changed in the default; Enhanced: the play
               window in the Spec256 colours on a double-buffered Layer 2, off
               by default; six tested cheats
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: press a key at the picture, then 1 keyboard (M right, N
               left, S up, X down, A fire, Symbol Shift poison, P pause), 2

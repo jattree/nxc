@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Lunar Jetman
   Publisher   Ultimate, 1983
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -44,6 +44,9 @@
               sprite images are shared between figures and uploaded only when
               no pattern holds them; the game's random numbers (taken from R)
               as the original's
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The patch writes the whole alt ROM image (Sinclair's ROM plus
               its hooks), so the ROM's own interrupt code can never run the

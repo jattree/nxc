@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Bruce Lee
   Publisher   U.S. Gold, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -30,6 +30,10 @@
               colours: Armando Quaranta (Spec256).
 
   Pace        original
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Original figures with colour clash removed by default; optional
               approved Enhanced figures and all 20 room tiles. Original

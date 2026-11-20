@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Herbert's Dummy Run
   Publisher   Mikro-Gen, 1985
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,9 @@
   Changes     1.0: the clash fix, every moving figure a sprite. 1.1-1.2: an
               optional Enhanced colour set for the figures and scenery. 1.3:
               hand-painted touches by Jon Attree to Herbert and the balls.
+              1.4: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Controls: Q and W move, Caps Shift jumps. Herbert's drawing code
               is the same family as Everyone's a Wally and Three Weeks in

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ruff and Reddy
   Publisher   Hi-Tec, 1990
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -45,6 +45,9 @@
               the copy run whole at 28 MHz in pace windows; a loading screen
               from the same game's tape; Sinclair's 48K ROM as the whole alt
               ROM (NextZXOS 26.11 safe); four cheats from the archive, tested
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 1 keyboard (Q up, A down, O left, P
               right, SPACE fire), 2 Kempston, 3 Interface 2. In play key 1

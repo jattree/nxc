@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Nodes of Yesod
   Publisher   Odin Computer Graphics, 1985
-  Version     1.6
+  Version     1.7
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -45,6 +45,9 @@
               game now holds the original's pace; 1.5 ran up to 3.8% fast in
               busy scenes and up to 16% slow in short stretches. Art
               unchanged.
+              1.7: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        1 keyboard; Z/X move; Q jump; A mole. Enhanced colours and
               Backdrops are independent and off by default. Backdrops select

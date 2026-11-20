@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jetpac
   Publisher   Ultimate, 1983
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -44,6 +44,9 @@
               1.3: the game holds the original's pace, where 1.2 ran about
               2.2% slower everywhere: a part of each figure's own set-up now
               runs at 28 MHz and pays for the sprite update's time.
+              1.4: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Coloured build (not Dean's Jetpac build). Plays at the
               original's pace, measured with the same input and the same enemy

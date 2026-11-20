@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gunfright
   Publisher   Ultimate, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -56,6 +56,9 @@
               and off by default: the town, its figures and the twenty duel
               opponents drawn in colour on the Next's Layer 2 at the
               original's pace. The default build is unchanged from 1.0.
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 3 starts; on the keyboard X and C move
               left and right, A up, 1 down and Q fires. The original game's

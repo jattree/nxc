@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Green Beret
   Publisher   Imagine, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,6 +33,9 @@
   Changes     1.0: figures as Next sprites (white body, black dark pixels, a 1
               pixel white edge around each outline); Sinclair's 48K ROM as the
               whole alt ROM; the game's speed restored after every hook
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: 1 on the game's menu for the keyboard, then your six keys
               (up, down, left, right, stab, shoot), Y, then stab to start. The

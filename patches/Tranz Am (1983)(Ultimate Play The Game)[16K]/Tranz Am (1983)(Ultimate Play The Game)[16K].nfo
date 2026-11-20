@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Tranz Am
   Publisher   Ultimate Play The Game, 1983
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -39,6 +39,10 @@
               named.
 
   Pace        original
+
+  Changes     1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The cars and the roadside items are hardware sprites in their
               own colours, laid on the pixels the game still draws, so the car

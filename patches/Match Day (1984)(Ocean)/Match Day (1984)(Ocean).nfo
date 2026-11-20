@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Match Day
   Publisher   Ocean, 1984
-  Version     2.1
+  Version     2.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -37,6 +37,9 @@
               2.0: whole alt ROM image, start-up tail at 0xBE00 (the trophy
               screen clean)
               2.1: original pace; hooks restore the game's speed
+              2.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Dean Woodyatt's Match Day engine with the whole alt ROM image
               and the start-up tail moved off the trophy screen's data: the

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cybernoid - The Fighting Machine
   Publisher   Hewson Consultants, 1988
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,9 @@
   Changes     1.1: the 128K release with AY music; the original's pace kept by
               a limiter; works on NextZXOS v2.10; verified 128K cheats; the
               approved Enhanced colours unchanged
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        128K release with AY sound. Original colours with clash removed
               by default; approved Enhanced colours optional and off by

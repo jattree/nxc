@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Renegade
   Publisher   Imagine, 1987
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,9 @@
               skips enemy moves about as often as the original instead of far
               more: the sprite updates' time is paid back from the game's own
               logic at once, and interrupts stay on while sprites load.
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Known issues: pace against the original in JNext, 4 runs of 600
               game updates with the same input and the same enemy choices,

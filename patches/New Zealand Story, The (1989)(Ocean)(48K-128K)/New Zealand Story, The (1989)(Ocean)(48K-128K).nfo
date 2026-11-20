@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The New Zealand Story
   Publisher   Ocean, 1989
-  Version     1.4
+  Version     1.5
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -48,6 +48,9 @@
               original's pace (each update up to 81 ms, as before, but no
               longer held there); busy scenes keep their speed-up; a rare
               fault that left the game running too fast is gone.
+              1.5: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The whole game in colour: scenery on the Next's tilemap from the
               game's own map, every figure, fruit and item a painted sprite.

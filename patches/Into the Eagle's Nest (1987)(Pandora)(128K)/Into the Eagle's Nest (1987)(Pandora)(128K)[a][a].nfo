@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Into the Eagle's Nest
   Publisher   Pandora, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               Spec256 set, off by default: tiles and text on Layer 2, moved by
               its hardware offsets, the panel as sprites; three cheats from
               the archive, tested
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the menu 1 to 4 pick controls (2 Kempston is set), 6
               sound, 7 messages, 8 level, any other key plays, then pick a

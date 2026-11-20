@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Midnight Resistance
   Publisher   Ocean, 1990
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -28,6 +28,9 @@
               (System/Next 26.11). 1.2: the game now holds the original's
               pace: quiet scenes were faster than the original and some busy
               scenes slower.
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Known issues: pace against the original in JNext, 6 runs of 600
               updates with the same input: overall -0.81 to +0.35%, quiet

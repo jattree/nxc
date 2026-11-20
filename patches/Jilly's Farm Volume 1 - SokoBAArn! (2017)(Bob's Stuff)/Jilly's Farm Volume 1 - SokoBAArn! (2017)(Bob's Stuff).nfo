@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jilly's Farm Volume 1 - SokoBAArn!
   Publisher   Bob's Stuff, 2017
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               ROM (NextZXOS 26.11 safe); no game byte changed, no hook in the
               default; the tape's own loading screen; Enhanced, the Spec256
               colours faithfully, mapped by graphic from V1.00, off by default
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: menu 0 start, 1 keyboard, 2 rotational, 3 define keys, 4
               level code, 5 level editor. Z, K, M, X move the sheep, L undo, Q

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The Arc of Yesod
   Publisher   Thor Computer Software, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -28,6 +28,10 @@
   Enhanced    The painted colours of the 36 graphics Arc shares with Nodes of
               Yesod. Arc's own figures are not painted yet. Off by default. A
               painted set, colourist not named.
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

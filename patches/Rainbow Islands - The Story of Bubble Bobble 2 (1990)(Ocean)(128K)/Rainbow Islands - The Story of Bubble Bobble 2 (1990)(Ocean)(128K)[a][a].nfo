@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Rainbow Islands
   Publisher   Ocean, 1990
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -27,6 +27,9 @@
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11).
               1.2: the redraw after a life is lost takes the original's time;
               1.1 took about 1.3 s longer each time.
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Dean Woodyatt's build with a sky palette fix: the dim-blue
               squares round objects against the bright sky are brightened on

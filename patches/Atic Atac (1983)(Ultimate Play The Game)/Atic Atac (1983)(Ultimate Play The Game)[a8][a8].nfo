@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Atic Atac
   Publisher   Ultimate
-  Version     1.6
+  Version     1.7
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -45,6 +45,9 @@
               faster (limiter). 1.5: works on NextZXOS v2.10 (System/Next
               26.11). 1.6: the game now holds the original's pace; 1.5 lost 5
               to 10 frames at each room change and when monsters appeared.
+              1.7: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        With QAOP + Space on, Space fires, so only Caps Shift pauses.
               Plays at the original's pace in JNext, 2026-11-08, same input

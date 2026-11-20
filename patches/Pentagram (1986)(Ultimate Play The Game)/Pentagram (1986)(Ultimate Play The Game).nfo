@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Pentagram
   Publisher   Ultimate Play The Game, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,6 +32,16 @@
               exterior outline. Source: Enhanced colours by Jon Attree.
 
   Pace        slowdown removed
+
+  Changes     1.0: Original loading screen, complete hidden Sinclair ROM and
+              NextZXOS v2.10 (26.11) startup. Enhanced paints original drawn
+              parts in exact mask/order, including the approved edits, with
+              cached hardware figures. Quiet pace is preserved; busy-scene
+              slowdown is reduced. Whole beeper effects keep their original
+              clock. Three optional verified trainers.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Original monochrome picture by default. Enhanced is optional and
               off by default. Both modes fit a 1MB Next. Known issues:

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       That Sinking Feeling
   Publisher   Sunteam, 2017
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -45,6 +45,9 @@
               the tape's loading screen; Sinclair's 48K ROM as the whole alt
               ROM (NextZXOS 26.11 safe); Enhanced colours, a menu option, off
               by default, from the Spec256 set; one tested cheat
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: any key starts, Q rise, O left, P right (redefinable by
               the game's table: none offered). The original look with the

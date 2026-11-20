@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Highway Encounter
   Publisher   Vortex, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -35,6 +35,10 @@
               colours: MatGubbins (Spec256).
 
   Pace        original
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Original monochrome presentation by default, with original-pace
               drawing windows. Optional approved Enhanced colours preserve the

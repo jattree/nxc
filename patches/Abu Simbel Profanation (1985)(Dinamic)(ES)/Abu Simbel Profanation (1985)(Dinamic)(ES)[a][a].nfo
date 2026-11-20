@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Abu Simbel Profanation
   Publisher   Dinamic, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               game's speed restored after every hook; R kept as the
               original's; the Spec256 Enhanced colours approved on 2026-11-03,
               unchanged; the English text set; three tested cheats
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the menu hold 3 for the keys or 2 for a Kempston
               joystick (the tune reads its keys between notes; there is no

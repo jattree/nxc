@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Lode Runner
   Publisher   Software Projects, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -41,6 +41,9 @@
               Backdrop, an option with it; the tape's loading screen; R left
               as the original's at every hook; the level editor keeps its
               start positions and guards, which 1.0 lost on leaving the editor
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: menu 1 keyboard, 0 start, any key begins a level; I left,
               P right, Q up, A down, N and M dig; menu 5 redefines. The 128K

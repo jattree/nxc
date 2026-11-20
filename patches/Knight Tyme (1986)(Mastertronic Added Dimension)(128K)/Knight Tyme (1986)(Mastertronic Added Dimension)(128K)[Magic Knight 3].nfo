@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Knight Tyme
   Publisher   Mastertronic Added Dimension, 1986
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,6 +33,9 @@
               1.3: the Knight's pictures are made about three times faster, so
               the start of play and his colour changes no longer slow the
               game; the same pictures, pixel for pixel.
+              1.4: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Known issues: the star map reads data from the Next's ROM rather
               than the 128K machine's; whether it looks different is not

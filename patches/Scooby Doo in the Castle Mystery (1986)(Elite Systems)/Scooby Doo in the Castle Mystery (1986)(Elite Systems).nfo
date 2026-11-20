@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Scooby Doo in the Castle Mystery
   Publisher   Elite, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -42,6 +42,9 @@
               ROM, no game byte changed and no hook in the default; the tape's
               loading screen; Enhanced: the play window in the Spec256 colours
               on a double-buffered Layer 2, off by default; five tested cheats
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: ENTER starts, J then K Kempston (or I, C), K keyboard, P
               practice; X right, Z left, O up, K down, P punch, U pause, Y

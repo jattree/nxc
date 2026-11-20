@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cyclone
   Publisher   Vortex, 1985
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,6 +32,9 @@
               1.2: plays at the original's pace (1.1 ran about 16 percent
               slow); the helicopter and aircraft no longer lag a frame behind
               the scenery
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Works on NextZXOS v2.10 from 1.1. From 1.2 it plays at the
               original's pace: three measured runs came to +0.2%, +0.1% and

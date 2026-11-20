@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Flying Shark
   Publisher   Firebird, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,6 +31,9 @@
               Layer 2, from the game's own plot parameters; the play area's
               blit at 28 MHz below the picture in its original time; the plot
               pass, with its beeper, at the original clock
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: any key on the loading screen, then on the title 1 or 2
               players, fire to start. Keyboard P fire, L up, Symbol Shift

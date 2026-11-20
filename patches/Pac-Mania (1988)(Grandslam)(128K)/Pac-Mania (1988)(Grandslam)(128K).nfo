@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Pac-Mania
   Publisher   Grandslam, 1988
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -40,6 +40,9 @@
               a sprite, R and CPU speed restored by every hook, whole Sinclair
               ROM image for NextZXOS v2.10, five tested cheats, the approved
               Enhanced colours as an option
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The 128K release with AY music. The game starts at once: its
               loading screen shows while the .nex loads, and no key is needed

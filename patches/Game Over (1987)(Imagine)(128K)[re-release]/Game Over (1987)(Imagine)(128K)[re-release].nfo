@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Game Over
   Publisher   Imagine / Dinamic, 1987
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -53,6 +53,8 @@
               1MB Next. World 2's pace in the default look: a plot's window
               now comes from what it draws, so scene changes and quiet scenes
               keep the original's time
+              1.2: DivMMC automap switched off at the start: a crash fix for
+              current Next cores
 
   Note        Keys: on the game's menu 1 keyboard (it asks for each key), 2
               joystick, 3 play, 4 the other world; world 2 asks for the access

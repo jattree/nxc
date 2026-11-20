@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       3D Stock Car Championship
   Publisher   Ace Software, 1988
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -34,6 +34,10 @@
               default. Source: Painted cars, circuits and menu: Jon Attree.
 
   Pace        original
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        The four cars are Next sprites over the game's own cars, which
               still decide every collision. Game logic is unchanged. The base

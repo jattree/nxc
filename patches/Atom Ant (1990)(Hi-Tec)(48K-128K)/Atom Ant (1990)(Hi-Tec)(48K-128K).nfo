@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Atom Ant
   Publisher   Hi-Tec, 1990
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               look; the tape's own loading screen; three cheats from the
               archive, tested; Enhanced colours from the Spec256 set on a
               double-buffered Layer 2, off by default
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 1 keyboard (Q up, A down, O left, P
               right, SPACE fire), 2 Kempston, 3 Interface 2. In play F pauses,

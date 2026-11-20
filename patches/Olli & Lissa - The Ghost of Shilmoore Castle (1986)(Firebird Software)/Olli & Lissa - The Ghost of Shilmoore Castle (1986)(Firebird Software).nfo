@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Olli & Lissa: The Ghost of Shilmoore Castle
   Publisher   Firebird, 1986
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -40,6 +40,10 @@
               not named.
 
   Pace        original
+
+  Changes     1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Every moving figure (Olli, Lissa, Sir Humphrey, the castle's
               creatures) is a hardware sprite laid on its own pixels, so it no

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Army Moves
   Publisher   Imagine / Dinamic, 1987
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -53,6 +53,9 @@
               part 1's sky gradient, clouds and part 2's dark jungle as a
               backdrop picture that comes on with Enhanced and has its own
               Backdrop off line; both fit a 1MB Next
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 1 keys (redefine), 2 joystick, 3 play,
               4 part 2, M music on or off; part 2 asks for the access code the

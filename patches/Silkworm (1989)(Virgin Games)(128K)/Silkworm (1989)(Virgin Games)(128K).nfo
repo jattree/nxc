@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Silkworm
   Publisher   Virgin Games, 1989
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -42,6 +42,9 @@
               Enhanced colours from the Spec256 set, off by default: figures,
               stars and ground on Layer 2, the title's logo, the jeep's lives
               as sprites; three cheats from the archive, tested
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the title 1 to 4 pick the helicopter's controls (3
               keyboard, 4 Kempston), 5 to 8 the jeep's (7 keyboard, 8

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Three Weeks in Paradise
   Publisher   Mikro-Gen, 1986
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -37,6 +37,9 @@
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11); the hooks hand
               back the CPU speed the game was running at; the pace code is now
               NexClash's shared library (pace as 1.0)
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Scenery that Wally walks behind covers him as whole objects
               (plants, palms), with the right-edge palms in front. Plays at

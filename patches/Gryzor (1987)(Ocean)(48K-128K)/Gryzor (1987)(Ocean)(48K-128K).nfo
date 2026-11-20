@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gryzor
   Publisher   Ocean, 1987
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,9 @@
               prepared sprite patterns
               1.1: rebuilt on NexClash's shared pace code; plays at the
               original's pace as 1.0 did
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: hold 0 on the menu to start (the menu checks the keyboard
               every few frames); cursor keys 5 left, 8 right, 7 jump, 6 down,

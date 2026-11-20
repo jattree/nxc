@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Ghosts 'n Goblins
   Publisher   Elite, 1986
-  Version     1.7
+  Version     1.8
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -51,6 +51,9 @@
               game's two-frame steps; a zombie's pot no longer shows below
               ground as it emerges; latest owner sprite painting in Enhanced.
               Game logic, sound and delays unchanged.
+              1.8: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        0 starts/fires; 5 left, 8 right, 7 up, 6 down, SPACE jump. J
               joystick, R redefine. Enhanced off by default. Original pace and

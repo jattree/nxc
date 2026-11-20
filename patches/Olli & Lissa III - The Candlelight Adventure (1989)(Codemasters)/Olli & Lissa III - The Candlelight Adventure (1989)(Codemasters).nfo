@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Olli & Lissa III: The Candlelight Adventure
   Publisher   Codemasters, 1989
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -47,6 +47,10 @@
               painted set, colourist not named.
 
   Pace        original
+
+  Changes     1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Olli and the creatures are hardware sprites laid on their own
               pixels, so they no longer take the colours of the room they

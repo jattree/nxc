@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Beyond the Ice Palace
   Publisher   Elite Systems, 1988
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -24,6 +24,15 @@
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
   Pace        original
+
+  Changes     1.0: Two original plotter families become hardware sprites with
+              their original masks and colours. Scenery colours restored
+              without changing collision buffers. Incoming CPU speed, MMU and
+              R restored. No added outlines. Archive trainers translated from
+              their mislabelled 48K addresses to this 128K release.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Original colours with the colour clash removed: the figures are
               Next sprites drawn from the game's own masks and pictures, and

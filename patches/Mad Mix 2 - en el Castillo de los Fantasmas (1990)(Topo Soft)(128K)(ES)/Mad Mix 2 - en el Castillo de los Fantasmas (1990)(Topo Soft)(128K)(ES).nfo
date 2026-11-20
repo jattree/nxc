@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Mad Mix 2 - en el Castillo de los Fantasmas
   Publisher   Topo Soft, 1990
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -46,6 +46,9 @@
               a double-buffered Layer 2, flipped in the top border, with the
               original still running and on the ULA underneath; each original
               routine's exact time kept
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: T fire and start, R up, C down, D left, F right, P pause
               (any key resumes), V music on or off. Options: Kempston

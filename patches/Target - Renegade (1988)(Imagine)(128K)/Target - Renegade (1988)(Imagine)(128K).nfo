@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Target: Renegade
   Publisher   Imagine, 1988
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               game plays at the original's pace; the bar bouncers' see-through
               gaps filled in Enhanced. 1.2: works on NextZXOS v2.10
               (System/Next 26.11).
+              1.3: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Needs a 1MB Next: the faster hooks keep built sprite images in
               spare RAM. Known issues: Enhanced is a first pass: the level 2

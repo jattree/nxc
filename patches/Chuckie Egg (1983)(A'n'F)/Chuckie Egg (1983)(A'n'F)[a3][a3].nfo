@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Chuckie Egg
   Publisher   A'n'F, 1983
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,6 +31,9 @@
               painter not established.
 
   Changes     1.1: works on NextZXOS v2.10 (System/Next 26.11)
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Works on NextZXOS v2.10 from 1.1. Known issues: the game reads a
               few ROM bytes as data and gets the Next ROM's values, not the

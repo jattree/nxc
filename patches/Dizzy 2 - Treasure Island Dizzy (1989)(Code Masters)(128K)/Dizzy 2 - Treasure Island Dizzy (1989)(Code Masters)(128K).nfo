@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Treasure Island Dizzy
   Publisher   Code Masters, 1989
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               ROM as the alt ROM for NextZXOS 26.11; the caller's CPU speed
               restored and R kept as the original's; room and bubble drawing
               faster, with sound at its original clock.
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: Z and X walk, Space jumps; the game's controls menu has
               the rest. The 128K release with its AY music. Default: the

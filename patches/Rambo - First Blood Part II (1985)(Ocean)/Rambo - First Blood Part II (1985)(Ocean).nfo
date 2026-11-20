@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Rambo: First Blood II
   Publisher   Ocean, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,6 +31,9 @@
 
   Changes     1.1: the hooks hand back the CPU speed the game was running at,
               instead of always dropping to 3.5 MHz
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Known issues: when you board the helicopter, its rotor tips are
               drawn where they belong, where the original wraps them onto the

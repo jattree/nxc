@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cauldron
   Publisher   Palace Software, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -38,6 +38,9 @@
               cache), the caller's speed kept; no one-frame figure vanish
               (sprite switches deferred and timed to the beam); pace held to
               the original's with a limiter on the plot hook
+              1.2: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Dean Woodyatt's Cauldron engine with one change: a bat (and
               every figure the game paints in its own colour) keeps that

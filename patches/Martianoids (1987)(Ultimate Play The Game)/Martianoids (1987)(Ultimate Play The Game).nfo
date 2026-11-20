@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Martianoids
   Publisher   Ultimate, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -43,6 +43,9 @@
               the original loading screen; Sinclair's 48K ROM as the whole alt
               ROM (NextZXOS 26.11 safe); the game's speed restored after every
               hook; three cheats from the archive, corrected.
+              1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
               Interface II, then 0 to start. The default is the original game,
