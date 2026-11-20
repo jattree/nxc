@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Tranz Am
   Publisher   Ultimate Play The Game, 1983
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -30,19 +30,35 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    All 28 pictures painted with 13 fixed colours: trees, cactus,
+              signs, the pump and the cup in their own colours; the cars keep
+              the game's body colour (red for yours) with painted wheels and
+              trim. A first pass. Off by default. A painted set, colourist not
+              named.
+
   Pace        original
 
   Note        The cars and the roadside items are hardware sprites in their
               own colours, laid on the pixels the game still draws, so the car
               keeps its colour as it crosses a tree, a rock or a cup and the
-              item keeps its own. The clash this removes is small in this
-              game. Proven on machine-played games and on every graphic
-              through the game's own draw routine; night and the cups are not
-              proven in play. Pace: kept by design, the same method as Jet Pac
-              1.3; not measured for this game.
+              item keeps its own. Enhanced paints them. Proven on machine-
+              played games and on every graphic through the game's own draw
+              routine; night and the cups are not proven in play. Pace: kept
+              by design, the same method as Jet Pac 1.3; not measured for this
+              game.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Infinite lives
+   2  Infinite fuel
+   3  Infinite temperature
+   4  Immune to cars
+   5  Immune to obstacles
+
+  From an archive .pok for this game, each checked against this dump by
+  reading the code it changes. Infinite lives also tested in machine play: the
+  lives count never falls. The others are not played.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
@@ -53,16 +69,17 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against two machine-played
-              recordings and unit cases over every graphic; simulated boot;
-              run from its menu in OverSpec. Not on real hardware.
+              recordings and unit cases over every graphic, both builds;
+              simulated boot; run from its menu in OverSpec. Not on real
+              hardware.
 
-  Replay      two machine-played recordings (40164 frames, 14 games): every
-              register with R and all memory at every hook, 26818 figures and
-              2796472 sprite pixels identical; 3264 unit cases over all 34
-              types
+  Replay      two machine-played recordings (40164 frames, 14 games), both
+              builds: every register with R and all memory at every hook,
+              26818 figures and 2796472 sprite pixels identical; 3264 unit
+              cases over all 34 types
 
-  Emulator    OverSpec: from the patch menu, the loading screen, the game's
-              menu and play
+  Emulator    OverSpec: from the patch menu with a trainer and Enhanced on,
+              the loading screen, the game's menu and play
 
   Nothing here claims a result on real hardware unless the line above says so.
 
