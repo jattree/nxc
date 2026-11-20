@@ -1,0 +1,74 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       The Simpsons: Bart vs. the Space Mutants, level 1
+  Publisher   Ocean, 1991
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Simpsons - Bart vs the Space Mutants (1991)(Ocean)[128K].tap
+  MD5         8e08c32c3265f6c4a65cf7e5f72b9913
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The figures painted in the cartoon's colours (221 shapes of this
+              level; a first pass). Off by default. A painted set, colourist
+              not named.
+
+  Pace        original
+
+  Note        Level 1 of the tape's five, started from the tape's own load of
+              it with no loading. Every moving figure is a hardware sprite
+              laid on its own pixels; the game underneath is unchanged.
+              Enhanced paints the figures in the cartoon's colours. At the end
+              of the level the game asks for the tape: start the next level's
+              patch instead. Known issues: a few shapes no recording drew stay
+              unpainted; figures cut off by the top of the play area keep the
+              scenery's colours.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ocean, 1991, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against the level's whole
+              recording, both builds; simulated boot; run in OverSpec from its
+              menu into play with Enhanced on. Not on real hardware.
+
+  Replay      NexClash differential verification on the rzxarchive's whole
+              recording of level 1 (14,511 frames), both builds: every
+              register with R and all game memory after every draw pass and
+              screen flip, the sprites against a model of the game's drawing
+              and against the visible screen each frame, the painted pixels
+              against the painted map -> IDENTICAL; unit cases PASS; every
+              broken build detected.
+
+  Emulator    OverSpec: from the patch menu with Enhanced on, past the level
+              intro into play, scripted keys
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
