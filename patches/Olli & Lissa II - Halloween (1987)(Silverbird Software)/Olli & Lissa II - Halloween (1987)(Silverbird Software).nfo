@@ -1,0 +1,81 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Olli & Lissa II: Halloween
+  Publisher   Silverbird Software, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch
+  (one of these files):
+
+  File        Olli & Lissa II - Halloween (1987)(Silverbird Software).tzx
+  MD5         476b60c17a8636eaebf7e3b67915a5e2
+
+  File        Olli & Lissa II - Halloween (1987)(Silverbird Software).tap
+  MD5         7634dcc048e134a720d39ce2300bffee
+
+  File        Olli & Lissa II - Halloween (1987)(Silverbird Software)[a].tzx
+  MD5         89042d2710732159f07cd151f44aac24
+
+  File        Olli & Lissa II - Halloween (1987)(Silverbird Software)[h].tzx
+  MD5         6facb17276132641ad7dce8a1e52bc18
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    All 70 figures painted: Olli green in a blue hat and robe, the
+              creatures in their own colours. A first pass. Off by default. A
+              painted set, colourist not named.
+
+  Pace        original
+
+  Note        Olli and the creatures are hardware sprites laid on their own
+              pixels, so they no longer take the colours of the room they
+              cross; the game underneath is unchanged. Default: the figures in
+              white, Olli with a black edge. Enhanced paints them. The pick-
+              ups and the panel do not move and stay as the game draws them.
+              Proven on a whole 39-minute recording of the game being played.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Silverbird Software, 1987, by its original authors. All rights
+              to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a whole 39-minute
+              recording, both builds; simulated boot; run from its menu in
+              OverSpec. Not on real hardware.
+
+  Replay      116586 frames of a played recording, both builds: every register
+              with R and all game memory after each hook, 193737 figures and
+              44974516 sprite pixels identical, pace within 0.004%
+
+  Emulator    OverSpec: from the patch menu, Enhanced on, the title and play
+              with scripted keys
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
