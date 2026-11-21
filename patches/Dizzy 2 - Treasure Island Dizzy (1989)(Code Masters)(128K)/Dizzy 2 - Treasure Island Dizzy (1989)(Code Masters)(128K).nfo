@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Treasure Island Dizzy
   Publisher   Code Masters, 1989
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -46,6 +46,9 @@
               1.2: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.3: All 128 hardware sprites are hidden at the start, not just
+              Dizzy's four, so sprites left by a game played before no longer
+              show over the rooms
 
   Note        Keys: Z and X walk, Space jumps; the game's controls menu has
               the rest. The 128K release with its AY music. Default: the

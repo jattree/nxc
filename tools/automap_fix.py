@@ -80,35 +80,65 @@ def with_chunks(nex, chunks, header=None):
     return bytes(out)
 
 
-def fix(f, game):
-    """The patch f (bytes) for game (bytes, or an nxc.FileSet) with automap off at every start. -> (new patch, report)."""
+def rewrite(f, game, transform, place, done, what):
+    """The patch f for game with every .nex it builds passed through transform(nex) -> nex, which may change the header
+    and one BNK1 bank. place(old) -> (that bank, the offsets in it the change writes); done(old) -> True when old is
+    already transform's (it must then be transform(old) itself). The header and that bank are written again under the
+    patch's own key and every stored CRC worked out again from transform of what the old patch builds for that choice,
+    each old CRC checked first; all other blocks are kept byte for byte. A set chunk or a trainer POKE over the
+    changed offsets is refused: it would undo the change after the checksum. Each set alone, each two sets that can
+    go together, a big option with each set of its table and its carrier must have the change in the same place
+    (and be done when the base is); three or more sets together are not built: prove those choices by applying the
+    old and new patches (as the release check does). -> (new patch, report)."""
     opened = nxc.check_key(f, game)
     st, bl, crc, size = opened[:4]
     old = nxc.apply(f, game=game)
     if zlib.crc32(old) != crc or len(old) != size:
         raise nxc.Wrong('the patch does not rebuild its own OUT1')
-    entry = old[139]
+    bank, window = place(old)
     sets_old = {}
     for t, d in bl:
         if t in (nxc.SET_TAG, nxc.BIG_TAG):
             e = nxc.parse_set(d, big=(t == nxc.BIG_TAG))
             sets_old[e['stream']] = (e, nxc.read_set(st, e))
-    window = range(AT, AT + len(code(0)))
-    for e, (_, chunks) in sets_old.values():          # a chunk or a POKE there would undo the code after the checksum
+    for e, (_, chunks) in sets_old.values():
         for b, chunk in chunks:
-            if b == entry and any(o in window for o in nxc.chunk_offsets(chunk)):
-                raise nxc.Wrong('set %s writes into the automap code\'s window' % e['name'].decode('ascii', 'replace'))
+            if b == bank and any(o in window for o in nxc.chunk_offsets(chunk)):
+                raise nxc.Wrong('set %s writes into the %s\'s bytes' % (e['name'].decode('ascii', 'replace'), what))
     for b, o, _ in nxc.chosen_pokes(f, list(range(1, len(nxc.trainers(f)) + 1))):
-        if b == entry and o in window:
-            raise nxc.Wrong('a trainer POKEs into the automap code\'s window')
-    if (old[14] | old[15] << 8) == HERE:
-        if automap_off(old) != old:                    # raises when the start is there but the code is not
-            raise nxc.Wrong('the start is 0x%04X but the build is not automap_off\'s' % HERE)
+        if b == bank and o in window:
+            raise nxc.Wrong('a trainer POKEs into the %s\'s bytes' % what)
+    variants = []                                      # each set alone, and each two sets that can go together
+    small = [(e, ch) for e, (_, ch) in sets_old.values() if not e.get('big')]
+    for e, (_, chunks) in sets_old.values():
+        variants.append((e['name'], with_chunks(old, chunks) if not e.get('big') else
+                         with_chunks(old, chunks, nxc.extended_header(old[:512], e))))
+    for i, (e1, c1) in enumerate(small):
+        for e2, c2 in small[i + 1:]:
+            other = dict(c2)                           # disjoint, as apply() requires of two sets chosen together
+            if not any(b in other and any(x & y for x, y in zip(ch[:nxc.BITMAP], other[b][:nxc.BITMAP])) for b, ch in c1):
+                variants.append((e1['name'] + b' + ' + e2['name'], with_chunks(with_chunks(old, c1), c2)))
+    for e, (_, chunks) in sets_old.values():           # a big option with each set its table names
+        if e.get('big'):
+            painted = with_chunks(old, chunks, nxc.extended_header(old[:512], e))
+            variants.append((e['name'] + b' carrier', with_chunks(old, [(b, c) for b, c in chunks if b in e['added']],
+                                                                  nxc.extended_header(old[:512], e))))
+            for other in e['table']:
+                o, (_, oc) = sets_old[other]
+                variants.append((e['name'] + b' + ' + o['name'], with_chunks(painted, [(b, c) for b, c in oc if old[18 + b]])))
+    for name, v in variants:                           # the change in the same place in each, and a valid one
+        if place(v) != (bank, window):
+            raise nxc.Wrong('set %s moves the %s' % (name.decode('ascii', 'replace'), what))
+        if transform(v) != v and done(old):
+            raise nxc.Wrong('set %s is not done like the base' % name.decode('ascii', 'replace'))
+    if done(old):
+        if transform(old) != old:
+            raise nxc.Wrong('the build looks done but is not the %s\'s' % what)
         return f, 'already done'
-    new = automap_off(old)
-    if not any(t == b'BNK1' and d[0] == entry for t, d in bl):
-        raise nxc.Wrong('the entry bank %d comes from the game, not a BNK1: not handled' % entry)
-    e_off = offsets(new)[entry]
+    new = transform(old)
+    if not any(t == b'BNK1' and d[0] == bank for t, d in bl):
+        raise nxc.Wrong('bank %d comes from the game, not a BNK1: not handled' % bank)
+    e_off = offsets(new)[bank]
     data = new[e_off:e_off + nxc.BANK].rstrip(b'\0')
     report = []
     out = []
@@ -117,8 +147,8 @@ def fix(f, game):
             d = st.block(b'NEX1')(nxc.zx0(new[:512]))
         elif t == b'OUT1':
             d = st.block(b'OUT1')(struct.pack('<II', zlib.crc32(new), len(new)))
-        elif t == b'BNK1' and d[0] == entry:
-            d = struct.pack('<BH', entry, len(data)) + st.block(b'BNK1', entry)(nxc.zx0(data))
+        elif t == b'BNK1' and d[0] == bank:
+            d = struct.pack('<BH', bank, len(data)) + st.block(b'BNK1', bank)(nxc.zx0(data))
         elif t == nxc.SET_TAG:
             e = nxc.parse_set(d)
             set_crc, chunks = sets_old[e['stream']][1]
@@ -126,7 +156,7 @@ def fix(f, game):
             if zlib.crc32(painted) != set_crc:
                 raise nxc.Wrong('set %s does not rebuild its own CRC' % e['name'].decode('ascii', 'replace'))
             head = len(d) - len(e['data'])
-            d = d[:head] + nxc.set_use(st, e['stream'], nxc.SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(automap_off(painted)))) \
+            d = d[:head] + nxc.set_use(st, e['stream'], nxc.SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(transform(painted)))) \
                 + d[head + nxc.SET_CRC:]
             report.append('set %s' % e['name'].decode('ascii', 'replace'))
         elif t == nxc.BIG_TAG:
@@ -140,20 +170,25 @@ def fix(f, game):
                 both = with_chunks(painted, [(b, c) for b, c in sets_old[other][1][1] if old[18 + b]])
                 if zlib.crc32(both) != e['crcs'][other]:
                     raise nxc.Wrong('option %s with set %d does not rebuild its CRC' % (e['name'].decode('ascii', 'replace'), other))
-                table.append(zlib.crc32(automap_off(both)))
+                table.append(zlib.crc32(transform(both)))
             if zlib.crc32(painted) != set_crc or zlib.crc32(carrier) != e['carrier']:
                 raise nxc.Wrong('option %s does not rebuild its own CRCs' % e['name'].decode('ascii', 'replace'))
             m = len(e['table'])
             head = len(d) - len(e['data'])
             use = lambda i: nxc.set_use(st, e['stream'], i)
-            d = (d[:head] + use(nxc.SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(automap_off(painted))))
-                 + use(nxc.BIG_CARRIER_INDEX)(struct.pack('<I', zlib.crc32(automap_off(carrier))))
+            d = (d[:head] + use(nxc.SET_CRC_INDEX)(struct.pack('<I', zlib.crc32(transform(painted))))
+                 + use(nxc.BIG_CARRIER_INDEX)(struct.pack('<I', zlib.crc32(transform(carrier))))
                  + use(nxc.BIG_TABLE_INDEX)(struct.pack('<%dI' % m, *table)) + d[head + nxc.SET_CRC * (2 + m):])
             report.append('option %s' % e['name'].decode('ascii', 'replace'))
         out.append([t, d])
-    g = nxc.seal(f[:nxc.CHECK_AT], out, st)
-    return g, 'start 0x%04X -> 0x%04X in bank %d; CRCs: base%s' % (old[14] | old[15] << 8, HERE, entry,
-                                                                 ''.join(', ' + r for r in report))
+    return nxc.seal(f[:nxc.CHECK_AT], out, st), 'bank %d; CRCs: base%s' % (bank, ''.join(', ' + r for r in report))
+
+
+def fix(f, game):
+    """The patch f (bytes) for game (bytes, or an nxc.FileSet) with automap off at every start. -> (new patch, report)."""
+    g, report = rewrite(f, game, automap_off, lambda old: (old[139], range(AT, AT + len(code(0)))),
+                        lambda old: (old[14] | old[15] << 8) == HERE, 'automap code')
+    return g, report if report == 'already done' else 'start -> 0x%04X, %s' % (HERE, report)
 
 
 def main(argv=None):

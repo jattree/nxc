@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Magicland Dizzy
   Publisher   Code Masters, 1990
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -31,6 +31,9 @@
               1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: All 128 hardware sprites are hidden at the start, not just
+              Dizzy's four, so sprites left by a game played before no longer
+              show over the rooms
 
   Note        The 128K release, so the AY music plays. Dean Woodyatt's
               Magicland Dizzy build: Dizzy is four hardware sprites, so he no

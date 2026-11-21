@@ -97,7 +97,7 @@ class AutomapFix(unittest.TestCase):
         self.assertEqual(report, "already done")
 
     def test_a_set_over_the_window_is_refused(self) -> None:
-        with self.assertRaisesRegex(nxc.Wrong, "window"):
+        with self.assertRaisesRegex(nxc.Wrong, "automap code.s bytes"):
             A.fix(self.clash, self.game)
 
     def test_a_trainer_poking_the_window_is_refused(self) -> None:
