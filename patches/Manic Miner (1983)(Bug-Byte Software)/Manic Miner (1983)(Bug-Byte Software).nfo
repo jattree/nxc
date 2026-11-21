@@ -1,0 +1,70 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Manic Miner
+  Publisher   Bug-Byte, 1983
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Manic Miner (1983)(Bug-Byte Software).tzx
+  MD5         e0e83ec300013f0c326407e1d1c14cc2
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: O and P left and right, SPACE jumps, ENTER starts from the
+              title. Willy, the guardians, Eugene, the Skylabs, Kong, the
+              items and the portal are hardware sprites, so Willy is no longer
+              half the colour of whatever cell he stands in. The caverns and
+              the panel stay as the game draws them; the game-over boot and
+              the swordfish ending keep their clash. The Bug-Byte release,
+              from its tape.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite oxygen
+   3  No collision
+   4  Fall from any height
+   5  No vertical guardians
+   6  No horizontal guardians
+
+  From an archive .pok, each checked against this release's code: the lives
+  DEC, the air-out jump, the dying flag's store, the fall counter and the two
+  guardian routines. Its lines for other releases are left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Bug-Byte, 1983, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against four recordings;
+              simulated boot; run from its menu in OverSpec; Tang FPGA board:
+              loads and plays.
+
+  Replay      IDENTICAL on four recordings (37,345 frames): every blit,
+              guardian, item and portal hook and the whole game in lockstep
+              against the original; 6 broken builds detected
+
+  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+              on and plays
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
