@@ -1,0 +1,85 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Finders Keepers
+  Publisher   Mastertronic, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Finders Keepers (1985)(Mastertronic)[Magic Knight 1].z80
+  MD5         0244e9b61aa18d6a9f1e77d102da1ea9
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: 8 on the menu to play; M right, N left, SPACE to jump, X
+              and the other keys the game lists for its commands. The Magic
+              Knight and the creatures are Next sprites over their own pixels,
+              in their own colours, so they no longer colour the scenery they
+              pass; the rooms, the panel and the few figures the game draws in
+              whole coloured cells (the spinning axe on cyan, the blacked-out
+              dragons) stay as the game draws them.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite strength
+
+  Checked against this release's code: 34169 is the first byte of the routine
+  that takes strength when a creature touches the Knight; a RET there skips it
+  (in a free run, strength stays at 72). Not played.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Mastertronic, 1985, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against four machine-played
+              recordings; run from its menu in OverSpec; Tang FPGA board:
+              loads and plays. Not played by a person.
+
+  Replay      IDENTICAL on 4 machine-played recordings, 52,127 frames (three
+              exploring runs from the start, and one segment for each of the
+              castle's 22 rooms and the ending, entered by the game's own
+              start-of-life code with the room number poked): at every hook
+              original and patched code from the same state to a common resume
+              point (every register but R, all memory but the attribute cells
+              the original's painter colours), every figure's XOR pixels
+              against its sprite at every main loop pass (16.3 million sprite
+              pixels), the painter skipped for every sprite figure and run as
+              the original for the rest; 6,912 unit cases (every colour and
+              mask kind, frame and edge position) pass; 8 of 8 negative
+              controls detected
+
+  Emulator    OverSpec, from the patch menu: Infinite strength on, the game's
+              menu, the King's Palace and the Castle Teleport Room reached
+              with the creatures as sprites
+
+  Coverage    Machine-played recordings only: rooms 0-21 and the ending by
+              poked room number, three exploring runs (2 to 4 rooms each by
+              walking), creatures, strength loss, the teleport, command
+              windows; not reached by play: trading, the full quest and the
+              escape
+
+  Hardware    Tang Nano 20K FPGA build of the Next, with DivMMC automap on and
+              124 sprites left visible by a previous program: loads, plays
+              through three rooms, no crash
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
