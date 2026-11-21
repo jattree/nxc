@@ -1,0 +1,65 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Robin of the Wood
+  Publisher   Odin, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Robin of the Wood (1985)(Odin Computer Graphics)[128K].z80
+  MD5         d2fa7f2eeb8ccb75c30edbacb432a8b5
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Robin, the outlaws, the guards and the creatures are hardware
+              sprites, so they no longer take the colours of the forest they
+              walk through; the scenery and the panel stay as the game draws
+              them. The 128K release, with its music. Proven on three recorded
+              journeys; an Enhanced colour set comes later. About 2% slower
+              than the original in busy scenes.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite energy
+
+  Infinite energy from the archive .pok's 128K line, its second POKE moved to
+  bank 0 where the game reads it; proved in replay: energy stayed at 15
+  through a 6,188-frame life cycle (13 decrements without it). The archive's
+  flowers and money cheat writes one address twice and is left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Odin, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against three recordings;
+              simulated boot; run from its menu in OverSpec; Tang FPGA board:
+              loads and plays.
+
+  Replay      IDENTICAL on three recordings (a journey, a life cycle with
+              deaths and restarts, and the Bishop's cave): every hook event
+              against the original, with negative controls
+
+  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+              on and plays
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
