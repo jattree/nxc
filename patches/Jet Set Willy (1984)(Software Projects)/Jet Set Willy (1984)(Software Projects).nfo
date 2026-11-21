@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jet Set Willy
   Publisher   Software Projects, 1984
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,12 +23,16 @@
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
 
+  Changes     1.1: The Attic bug fixed (Software Projects' own POKE 59901,82),
+              so the game can be completed.
+
   Note        Keys: Q and W (and the top row) left and right, SPACE jumps,
               ENTER starts. Starts at the title with no colour code to type.
-              Willy, the guardians and the arrows are hardware sprites, so
-              Willy is no longer the colour of whatever cell he walks through;
-              the rooms, ropes and the panel stay as the game draws them.
-              Proven on machine-played recordings through many rooms.
+              The Attic bug is fixed (the arrow there no longer wrecks other
+              rooms), so the game can be finished. Willy, the guardians and
+              the arrows are hardware sprites, so Willy is no longer the
+              colour of whatever cell he walks through; the rooms, ropes and
+              the panel stay as the game draws them.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -52,9 +56,11 @@
               simulated boot; run from its menu in OverSpec; Tang FPGA board:
               loads and plays.
 
-  Replay      IDENTICAL on machine-played recordings through many rooms: every
-              plot against the original, the patch sites and hook state
-              checked intact, negative controls detected
+  Replay      IDENTICAL on machine-played recordings through many rooms up to
+              The Attic, where the fixed arrow differs by design (the fix is
+              checked present on every pass): every plot against the original,
+              the patch sites and hook state checked intact, negative controls
+              detected
 
   Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
               on and plays
