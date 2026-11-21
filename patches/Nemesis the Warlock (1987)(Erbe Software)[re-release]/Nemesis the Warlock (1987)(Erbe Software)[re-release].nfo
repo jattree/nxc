@@ -1,0 +1,72 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Nemesis the Warlock
+  Publisher   Martech, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch
+  (one of these files):
+
+  File        Nemesis the Warlock (1987)(Erbe Software)[re-release].tap
+  MD5         92c3a90ca49b758552374587720e700e
+
+  File        Nemesis the Warlock (1987)(Erbe Software)[a][re-release].tzx
+  MD5         ac873695b06488f3dc573d20798e1132
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: on the menu 1, 2 or 3 picks a control set, 4 defines keys,
+              5 starts. Nemesis, the creatures and the shots are hardware
+              sprites, so they no longer take the colours of the scenery they
+              cross; the scenery and the panel stay as the game draws them.
+              The Erbe re-release, from its tape. Proven on a long recorded
+              game; later levels and the define-keys screen are not in it.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite energy
+   2  Infinite bullets
+   3  Infinite acid
+   4  No torquemada's influence
+
+  From an archive .pok for this re-release, each checked against its code: the
+  energy subtraction, the bullet count's decrement, the acid flag and
+  Torquemada's two counters. Not played.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Martech, 1987, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a 134,980-frame
+              recording; simulated boot; run from its menu in OverSpec; played
+              on a Next in a first round (2026-11-03); Tang FPGA board: loads
+              and plays.
+
+  Replay      IDENTICAL on a 134,980-frame recording of play: every plot and
+              restore against the original's; unit cases with a negative
+              control
+
+  Hardware    A Next, first round (basic play, 2026-11-03); Tang Nano 20K FPGA
+              build: loads with DivMMC automap on and plays
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
