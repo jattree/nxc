@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Bomb Jack
   Publisher   Elite, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,15 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Figures in the arcade's colours: Jack blue and red with a white
+              face, white mummies, grey birds with red, red bombs with a
+              yellow glint, orange to yellow platforms. Only sprite colours
+              change. A painted set, colourist not named.
+
+  Changes     1.1: Enhanced colours, after the arcade, as a menu choice.
 
   Note        Jack, the enemies, the balls, coins and stars are hardware
               sprites, and the bombs and platforms are drawn over their ULA
@@ -54,7 +63,8 @@
 
   Replay      IDENTICAL on sixteen recordings (52,185 frames): every plot,
               erase, bomb, tile and score hook against the original, with 18
-              broken builds detected
+              broken builds detected. Enhanced differs from the default in the
+              sprite patterns only (bank 11).
 
   Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
               on and plays
