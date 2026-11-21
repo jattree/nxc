@@ -1,0 +1,86 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Crystal Kingdom Dizzy
+  Publisher   Codemasters, 1992
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Dizzy VII - Crystal Kingdom Dizzy (1992)(Codemasters)[128K].z80
+  MD5         0cb1cb260b2f17305ef41c30af0e1f8f
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: 1 on the options, 1 to start; Z left, X right, SPACE to
+              jump, ENTER for the inventory. Dizzy and everything that moves
+              are white Next sprites over their own pixels, so they no longer
+              take the colour of the scenery they pass; the rooms, the panel
+              and the windows stay as the game draws them. Where an item the
+              game copies straight onto the screen meets Dizzy, Dizzy stays in
+              front (the original drew the item over him). Known issue: the
+              sprite updates add about 2 ms to each game update, so play is up
+              to about 5% slower than the original (estimated from the hook
+              cost, not measured).
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite energy
+
+  Checked against this release's code: the DEC (HL) that takes a heart (60808)
+  and the one that takes a life (57267) become NOPs. In a free run the hearts
+  stay at 3 with the cheat (2 without); no life was lost in testing, so
+  Infinite lives is checked from the code only. Not played.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Codemasters, 1992, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against four machine-played
+              recordings; run from its menu in OverSpec with both cheats on;
+              Tang FPGA board: loads and plays. Not played by a person.
+
+  Replay      IDENTICAL on 4 machine-played recordings, 36,183 frames (walks
+              through Tree Roots, Daisy's House, the Garden and the rooms the
+              walks reached, with the inventory): at every hook original and
+              patched code from the same state to a common resume point (every
+              register but R, all memory), every masked object draw predicted
+              from its data and checked against the game's own screen writes
+              (38,886 draws), each object's sprites against that drawing at
+              every restore pass (4.7 million sprite pixels), and no screen
+              write under a shown sprite except the counted case of a plain-
+              copy item over Dizzy; 840 unit cases (every draw routine, plain
+              and mirrored, at every height and edge position) pass; 8 of 8
+              negative controls detected
+
+  Emulator    OverSpec, from the patch menu: Infinite lives and Infinite
+              energy on, Tree Roots and Daisy's House reached
+
+  Coverage    Machine-played walks only: the opening rooms and the inventory;
+              most of the game, puzzles, deaths and the ending not reached
+
+  Hardware    Tang Nano 20K FPGA build of the Next, with DivMMC automap on and
+              124 sprites left visible by a previous program: loads, plays
+              through Tree Roots, the Back Yard and Daisy's House, no crash
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
