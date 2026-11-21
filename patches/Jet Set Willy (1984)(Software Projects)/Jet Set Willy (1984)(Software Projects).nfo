@@ -1,0 +1,67 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Jet Set Willy
+  Publisher   Software Projects, 1984
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Jet Set Willy (1984)(Software Projects).z80
+  MD5         a4963e747af1145fe0f2710da592abc6
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: Q and W (and the top row) left and right, SPACE jumps,
+              ENTER starts. Starts at the title with no colour code to type.
+              Willy, the guardians and the arrows are hardware sprites, so
+              Willy is no longer the colour of whatever cell he walks through;
+              the rooms, ropes and the panel stay as the game draws them.
+              Proven on machine-played recordings through many rooms.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Walk through monsters
+   3  No death from falling
+   4  Remove maria
+
+  From an archive .pok, each checked against this release's code: the lives
+  DEC, the two collision exits in the figure drawing, the fall flag's store
+  and Maria's test. Not played.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Software Projects, 1984, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against recorded play;
+              simulated boot; run from its menu in OverSpec; Tang FPGA board:
+              loads and plays.
+
+  Replay      IDENTICAL on machine-played recordings through many rooms: every
+              plot against the original, the patch sites and hook state
+              checked intact, negative controls detected
+
+  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+              on and plays
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
