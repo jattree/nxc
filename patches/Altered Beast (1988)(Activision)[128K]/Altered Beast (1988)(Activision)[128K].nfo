@@ -1,0 +1,72 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Altered Beast
+  Publisher   Activision, 1988
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Altered Beast (1988)(Activision)[128K].z80
+  MD5         9df49e056fdf38a2f6da21fc4dfbf34f
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: SPACE starts; 6 left, 7 right, 8 duck, 9 jump, 0 punch;
+              ENTER on the menu adds a second player. Every figure, graves and
+              the boss included, is hardware sprites, so the centurions and
+              the beasts no longer take the colours of the scenery they cross;
+              the scenery, the panel and the titles stay as the game draws
+              them. Also fixes a crash on the Next: the game's interrupt
+              handlers ran twice a frame there. The first level only, as in
+              this file: the later levels load from tape, and game over and
+              the level's end wait for that tape as the original does.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite credits
+   2  Infinite lives
+   3  Infinite energy
+
+  From an archive .pok, its level-1 lines, each checked against the code (the
+  DEC of the credits, lives and energy counts); infinite lives and energy were
+  also on in a recording of the whole level. The other levels' lines are for
+  code this file does not hold.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Activision, 1988, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against four recordings;
+              simulated boot; the interrupt fix checked to leave the handlers'
+              state unchanged; run from its menu in OverSpec; Tang FPGA board:
+              loads and plays.
+
+  Replay      IDENTICAL on four recordings (32,291 frames: all of level 1,
+              power-ups, the beast, the boss and its death, game over, two
+              players)
+
+  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+              on and plays; without the interrupt fix it crashed within 8
+              seconds
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
