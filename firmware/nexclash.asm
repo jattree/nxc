@@ -226,7 +226,7 @@ name:   ld      hl,cur_fi
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A27
+vars            equ $3A21
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -306,6 +306,9 @@ game_kind       equ target_kinds
         VAR     scr_chunks, 1
         VAR     scr_mask, 1
         VAR     scr_now, 1
+        VAR     scr_show, 1                 ; INF1's build_screen: the game file's own screen from ENTER
+        VAR     scr_at, 4                   ; where it is in the game file
+        VAR     scr_dots, 1                 ; and a dot for each bank so far
         VAR     cur_kind, 1
         VAR     ram_bank, 1                 ; OPT1's highest 16K bank
         VAR     page_goal, 1
@@ -2144,8 +2147,37 @@ first_inf1:
         call    text_find
         ld      de,colours_label
         ld      a,COLOURS_LABEL_MAX
+        call    nc,copy_text
+        ld      de,key_build_screen
+        call    text_find
         ret     c
-        jp      copy_text
+        ld      de,0                        ; its value: decimal, below 65536
+.dig:   ld      a,b
+        or      c
+        jr      z,.got
+        ld      a,(hl)
+        sub     '0'
+        cp      10
+        jr      nc,.got
+        push    hl
+        ld      h,d
+        ld      l,e
+        add     hl,hl
+        add     hl,hl
+        add     hl,de
+        add     hl,hl
+        ld      e,a
+        ld      d,0
+        add     hl,de
+        ex      de,hl
+        pop     hl
+        inc     hl
+        dec     bc
+        jr      .dig
+.got:   ld      (scr_at),de
+        ld      a,1
+        ld      (scr_show),a
+        ret
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
 first_tgt1:
         xor     a
@@ -2934,6 +2966,7 @@ key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
 key_fix_label:  db "fix_label=",0
 key_colours_label: db "colours_label=",0
+key_build_screen: db "build_screen=",0
 key_colours_by: db "colours_by=",0
 key_version:    db "version=",0
 ext_z80:        db ".z80",0
@@ -3024,6 +3057,7 @@ original_with_trainers:
 
 ; NexClash: the checks, the header, the site table, then each bank.
 nexclash_chosen:
+        call    scr_first
         call    work_begin
         call    unlock
         call    load_bank_index
@@ -3091,6 +3125,7 @@ nexclash_chosen:
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
+        call    scr_bank
         call    apply_pokes
         ld      hl,WORK
         ld      bc,BANK_SIZE
@@ -3145,6 +3180,54 @@ check_result:
         ret
 .wrong: ld      hl,msg_bad_result
         jp      fail_hl
+
+; INF1's build_screen: a screen the player's own game file holds as it is, 6912 bytes at the
+; offset given, such as a tape's SCREEN$ block. It is read straight to the display at ENTER,
+; before the game is checked, with Patching on its last line; each bank made adds a dot.
+; BASIC's CLS before .nexload then clears to black.
+scr_first:
+        ld      a,(scr_show)
+        or      a
+        ret     z
+        xor     a
+        out     ($fe),a
+        ld      a,7                         ; ATTR_P and BORDCR: white on black
+        ld      ($5c8d),a
+        ld      ($5c48),a
+        ld      a,(gh)
+        ld      hl,scr_at
+        call    seek_file
+        ld      hl,$4000
+        ld      bc,6912
+        ld      a,(gh)                      ; what there is of it: a short file is for unlock to refuse
+        rst     $08
+        db      F_READ
+        call    after_os
+        jr      scr_bank.say
+scr_bank:
+        ld      a,(scr_show)
+        or      a
+        ret     z
+        ld      hl,scr_dots
+        ld      a,(hl)
+        cp      24
+        jr      nc,.say
+        inc     (hl)
+.say:   ld      a,NR_MMU5                   ; the menu's page where the menu ran it, for its text
+        ld      bc,NR_SELECT
+        out     (c),a
+        inc     b
+        in      a,(c)
+        push    af
+        ld      a,(all_pages)
+        ld      e,a
+        ld      a,NR_MMU5
+        call    nr_write
+        call    scr_say
+        pop     af
+        ld      e,a
+        ld      a,NR_MMU5
+        jp      nr_write
 
 ; The Bth bank in .nex order into cur_bank, and A. Keeps BC.
 order_bank:
@@ -7647,6 +7730,24 @@ menu_busy:
 .say:   ld      b,23
         jp      puts_max
 s_patching:     db "Patching...            ",0
+; build_screen: Patching and a dot for each bank so far, on the last line of the game's screen.
+scr_say:
+        ld      a,23
+        ld      c,0
+        call    at
+        ld      a,$47
+        ld      (MV_ATTR),a
+        ld      hl,s_patching
+        ld      b,8
+        call    puts_max
+        ld      a,(scr_dots)
+        or      a
+        ret     z
+        ld      b,a
+.dot:   ld      a,'.'
+        call    putc
+        djnz    .dot
+        ret
 s_loading:      db "Loading...             ",0
 
 mp_bigv:        ds      BIG_VARS + 15               ; the walk's SET3 state, then B_CUR and B_MAP

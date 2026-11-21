@@ -13,6 +13,8 @@ nothing beyond that. It has not run on an official Next board.**
 
 The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothing else on the card. It reads sets as `SET2`; a patch made with `SET1` plays with no enhanced line, and has to be made again. It reads a `SET3`, an option that needs more memory and adds banks of its own (spec, "SET3"): it asks NextZXOS for the total of ZX memory (`IDE_BANK` through `M_P3DOS`, H = 0, L = 0, the answer in E) before the menu and at ENTER, shows the line as `[N/A]` with the help `Needs a 2MB Next` when there is too little, and otherwise builds it, its added banks from zeros. It refuses a `SET3` with another set or toggle as needing a newer loader, and SPACE writes the bare `.nex` when a patch has one. That code runs from the menu's page mapped at 0x6000 (`big_call`), as the command's 8K is full; `check_screen` and `all_banks_available` moved there too, to make room. Tested on the Z80 harness (`tests/test_nexclash_ram.py`) and in JNext 1.1.104 with NextZXOS v2.09 and 26.11 card copies, where 1MB is NextZXOS's answer set to 96 by a script, as JNext's memory is a fixed 2MB. Not run on a Next.
 
+With INF1's `build_screen` (spec, "INF1"), ENTER with the main line on reads a screen the game file itself holds, 6,912 bytes at the offset given, straight to the display before anything is checked, with `Patching` on the last line and a dot for each bank made. Tested on the Z80 harness (`tests/test_nexclash_build_screen.py`); on a Next (Dean's, 2026-11-22) one tape patch showed its loading screen from ENTER and started. Not in JNext.
+
 ## Building
 
 ```
