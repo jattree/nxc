@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Stormbringer
   Publisher   Mastertronic Added Dimension, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,6 +23,16 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The Magic Knight in silver-grey armour, painted as in
+              Spellbound's Enhanced set (the same pictures); the characters
+              and objects keep the game's own colours. A painted set,
+              colourist not named.
+
+  Changes     1.1: adds an Enhanced colour set: the Magic Knight in silver-
+              grey armour, carried over from Spellbound's Enhanced set
 
   Note        Keys: Z and SPACE on the menu (PLAY GAME is the last line); N
               left, M right, A up, SPACE opens the command window. The Magic
@@ -51,11 +61,17 @@
               simulated boot; run from its menu in OverSpec; Tang FPGA board:
               loads and plays.
 
-  Replay      IDENTICAL on four machine-played recordings (62,450 frames: 63
-              rooms, command windows, the lightning that ends the game),
-              negative controls detected
+  Replay      1.1 Enhanced (2026-11-21): IDENTICAL on the same four
+              recordings, 62,450 frames, with 13,499 checks that no unpainted
+              figure shows the changed palette entry; the default build is
+              unchanged. 1.0: IDENTICAL on four machine-played recordings
+              (62,450 frames: 63 rooms, command windows, the lightning that
+              ends the game), negative controls detected
 
-  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+  Hardware    1.1 Enhanced (2026-11-21): Tang Nano 20K FPGA build of the Next,
+              with DivMMC automap on and 124 sprites left visible by a
+              previous program: loads, the Knight in grey armour, plays. 1.0:
+              Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
               on and plays
 
   Nothing here claims a result on real hardware unless the line above says so.
