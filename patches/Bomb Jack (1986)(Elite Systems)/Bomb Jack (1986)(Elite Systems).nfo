@@ -1,0 +1,67 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Bomb Jack
+  Publisher   Elite, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Bomb Jack (1986)(Elite Systems).z80
+  MD5         08e760e82721540898b57b8a1f277659
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Jack, the enemies, the balls, coins and stars are hardware
+              sprites, and the bombs and platforms are drawn over their ULA
+              copies, so a figure no longer takes the colours of the
+              background it crosses. The scenery and the scores stay as the
+              game draws them. Sinclair's whole ROM under the game, so it
+              starts from its BASIC line on NextZXOS. Proven on sixteen
+              recordings.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  No enemies
+
+  From an archive .pok, each checked against this release's code: the lives
+  DEC, the collision test's return and the enemy routine's entry. The two
+  lives-count lines ask for a value and are left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Elite, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against sixteen recordings;
+              simulated boot on Sinclair's ROM and on a foreign ROM; run from
+              its menu in OverSpec; Tang FPGA board: loads and plays.
+
+  Replay      IDENTICAL on sixteen recordings (52,185 frames): every plot,
+              erase, bomb, tile and score hook against the original, with 18
+              broken builds detected
+
+  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
+              on and plays
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
