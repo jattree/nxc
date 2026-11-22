@@ -2061,7 +2061,7 @@ def check_field(key, value):
     if key == 'fix_label': check_fix_label(value)
     elif key == 'colours_label': check_fix_label(value, 'colours label', COLOURS_LABEL_MAX)
     elif key == 'version': check_version(value)
-    elif key == 'build_screen' and not (value.isdigit() and len(value) <= 5 and int(value) < 65536): raise Wrong('build_screen is the offset in the game file of a 6912-byte screen, 0 to 65535')
+    elif key == 'build_screen' and value != 'nex' and not (value.isdigit() and len(value) <= 5 and int(value) < 65536): raise Wrong('build_screen is the offset in the game file of a 6912-byte screen, 0 to 65535, or nex (the patch holds a ULA loading screen)')
     elif key == 'game_language_name': check_language_name(value)
     elif key == 'nex_md5' and not re.fullmatch(r'[0-9a-f]{32}', value): raise Wrong('nex_md5 is 32 lower-case hexadecimal digits')
     elif key == 'game_language' and not re.fullmatch(r'[a-z]{2,3}', value): raise Wrong('game_language is an ISO 639 code, such as en')
@@ -2075,6 +2075,14 @@ def check_field(key, value):
     elif key == 'pace_measured' and not pace_entries(value):
         raise Wrong('pace_measured is entries of SCENE: PENALTY, such as "the first room: +0.15%%", separated by %r' % PACE_SEP)
 
+def check_ula_screen(bl):
+    """Wrong unless the patch's loading screen is a ULA screen alone: one SCR1, index 0, of 1 to 6912 bytes, which
+    build_screen=nex has the loader show at ENTER."""
+    pieces = [d for t, d in bl if t == b'SCR1']
+    if len(pieces) != 1 or pieces[0][0] != 0 or not 0 < struct.unpack_from('<H', pieces[0], 1)[0] <= 6912:
+        raise Wrong('build_screen=nex needs a loading screen that is a ULA screen alone (byte 10 of the .nex header is 2)')
+
+
 def set_field(f, game, key, value):
     """The patch with one field of INF1 or PRF1 set, or removed if value is '': the same nonce and encrypted blocks, with a
     new check value, as credit and version do. INF1 keeps the menu's lines (MENU_KEYS) first, and refuses a change that
@@ -2082,6 +2090,7 @@ def set_field(f, game, key, value):
     block_tag, key = field_place(f, key)
     check_field(key, value)
     st, bl = check_key(f, game)[:2]
+    if key == 'build_screen' and value == 'nex': check_ula_screen(bl)
     new = b'%s=%s\n' % (key.encode(), value.encode()) if value else b''
     out = [[t, d] for t, d in bl]
     if block_tag == b'PRF1' and not any(t == b'PRF1' for t, _ in out):

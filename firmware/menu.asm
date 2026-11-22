@@ -87,7 +87,11 @@ menu_run:
         endif
 .draw:  call    menu_draw
 .wait:  call    menu_release
-.poll:  call    menu_key
+.poll:
+        ifdef MENU_IDLE
+        call    MENU_IDLE               ; the includer's work while no key is down; keeps IX
+        endif
+        call    menu_key
         or      a
         jr      z,.poll
         cp      13

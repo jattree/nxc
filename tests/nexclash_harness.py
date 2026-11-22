@@ -171,6 +171,7 @@ class Machine:
         self.allocated: list[int] = []
         self.ever_allocated: list[int] = []
         self.peak_pages = 0
+        self.key_page = None
         self.layer = (0, 0)
         self.width = 8
         self.integer_vars: dict[int, int] = {}
@@ -385,7 +386,10 @@ class Machine:
                 self.allocated.append(page)
                 if not self.overlay_read and self.menu_page is None:
                     self.menu_page = page          # the menu's own, before the menu: not counted in peak_pages
-                self.peak_pages = max(self.peak_pages, len(self.allocated) - (self.menu_page in self.allocated))
+                elif not self.overlay_read:
+                    self.key_page = page           # the key's during the menu (pre_alloc), freed at its end: nor this
+                self.peak_pages = max(self.peak_pages, len(self.allocated) - (self.menu_page in self.allocated)
+                                      - (self.key_page in self.allocated))
                 m.e = page
                 return True
             if reason == 3:

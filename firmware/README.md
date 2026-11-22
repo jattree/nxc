@@ -15,6 +15,8 @@ The file is longer than 8K, in one piece, which NextZXOS allows. It needs nothin
 
 With INF1's `build_screen` (spec, "INF1"), ENTER with the main line on reads a screen the game file itself holds, 6,912 bytes at the offset given, straight to the display before anything is checked, with `Patching` on the last line and a dot for each bank made. Tested on the Z80 harness (`tests/test_nexclash_build_screen.py`); on a Next (Dean's, 2026-11-22) one tape patch showed its loading screen from ENTER and started. Not in JNext.
 
+While the menu waits for a key, the command makes the key and the keyed check that the clash fix needs (spec, "INF1", "The key during the menu"): a piece of at most 1K of the game or the patch each time round the menu's key loop, about 2 ms at 28 MHz, in a page of its own taken with the menu's, mapped at 0x8000 only while it works with the stack in the 8K, and freed when the menu ends; ENTER does what is left, and unlock then takes the state as it was left. With `build_screen=nex` the patch's own ULA loading screen (`SCR1`) is decoded to the display at ENTER, once the check has passed. Tested on the Z80 harness: the R-Type patch (577K, its `.z80` 112K) showed its loading screen with `Patching` and wrote the same `.nex` byte for byte, the key 2.9 s after an immediate ENTER and none of it after the menu. Not run in JNext or on a Next.
+
 ## Building
 
 ```
