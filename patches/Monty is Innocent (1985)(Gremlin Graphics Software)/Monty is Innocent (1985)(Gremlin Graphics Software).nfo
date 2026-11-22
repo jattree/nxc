@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Monty is Innocent
   Publisher   Gremlin Graphics, 1985
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -28,6 +28,8 @@
               game or spoil its drawing
               1.2: a guard the gun catches now disappears at once; before, its
               sprite stayed on the screen until the next room
+              1.3: Keeps the CPU speed you chose (F8): the sprite updates used
+              to drop the Next back to 3.5 MHz
 
   Note        Keys: on the game's menu 1 to 3 choose the controls. Sam Stoat,
               Monty and the guards are hardware sprites over the pixels the

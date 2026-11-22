@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Finders Keepers
   Publisher   Mastertronic, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -26,6 +26,8 @@
   Changes     1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Keeps the CPU speed you chose (F8): the sprite updates used
+              to drop the Next back to 3.5 MHz
 
   Note        Keys: 8 on the menu to play; M right, N left, SPACE to jump, X
               and the other keys the game lists for its commands. The Magic

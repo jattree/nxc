@@ -6,7 +6,7 @@
 
 -- GAME ----------------------------------------------------------------------
   Title       Monty on the Run
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -21,6 +21,9 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: Keeps the CPU speed you chose (F8): the sprite updates used
+              to drop the Next back to 3.5 MHz
 
   Note        Keys: on the game's menu 1 chooses the Monty Freedom Kit, 3
               plays. Monty and the four creatures in each room are hardware
