@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cisco Heat
   Publisher   Image Works, 1991
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,8 +25,10 @@
 
   Pace        original
 
-  Changes     1.0: first NXC patch, from nexclash cisco_heat v1.2 with no
-              loading-screen hold
+  Changes     1.1: keeps the CPU speed you choose (the start set 3.5 MHz) and
+              starts with the Next's DivMMC automap switched off (nexclash
+              main, 2026-11-23). 1.0: first NXC patch, from nexclash
+              cisco_heat v1.2 with no loading-screen hold
 
   Note        Keys as the original. Smooth engine: the game's own update at
               the original pace, with up to 50 in-between pictures a second
@@ -62,22 +64,25 @@
   Tested      Bare v1.2 played by the owner on a Spectrum Next, 2026-11-22;
               this patch through the real loader not yet played
 
-  Replay      1.0 (2026-11-22, nexclash cisco_heat v1.2 with no loading-screen
-              hold): the real update, run at 28 MHz, against the original
-              0x8AFE from the same state, and the in-between frames (smooth on
-              against off, every byte they write put back): 159 cases from six
-              recordings (stages 1-5 and the end sequence), real update and
-              in-between frames IDENTICAL in 159 of 159, 754 in-between
-              frames, none late; 43 captured states with the car on, every
-              10th update, IDENTICAL. Toggles (each display only): 25 pictures
-              a second, stage 3, 37 of 37 IDENTICAL, 131 in-between frames;
-              Original car colours (the car's cells red as the game makes
-              them, no sprites), stage 1, 33 of 33 IDENTICAL, 149 in-between
-              frames; Original picture rate is the update with the in-between
-              frames off, the build every real-update case above runs. Car
-              sprites: the game's car routine on a clear buffer, the sprites
-              inside their clip window show exactly the pixels the game makes
-              red, 111 frames, mirrored images included.
+  Replay      1.1 (2026-11-23, nexclash main e55537e: v1.2 plus the caller's
+              CPU speed kept at the start; same results as 1.0 on the same
+              recordings, selftest --verify PASSED) and 1.0 (2026-11-22,
+              nexclash cisco_heat v1.2 with no loading-screen hold): the real
+              update, run at 28 MHz, against the original 0x8AFE from the same
+              state, and the in-between frames (smooth on against off, every
+              byte they write put back): 159 cases from six recordings (stages
+              1-5 and the end sequence), real update and in-between frames
+              IDENTICAL in 159 of 159, 754 in-between frames, none late; 43
+              captured states with the car on, every 10th update, IDENTICAL.
+              Toggles (each display only): 25 pictures a second, stage 3, 37
+              of 37 IDENTICAL, 131 in-between frames; Original car colours
+              (the car's cells red as the game makes them, no sprites), stage
+              1, 33 of 33 IDENTICAL, 149 in-between frames; Original picture
+              rate is the update with the in-between frames off, the build
+              every real-update case above runs. Car sprites: the game's car
+              routine on a clear buffer, the sprites inside their clip window
+              show exactly the pixels the game makes red, 111 frames, mirrored
+              images included.
 
   Emulator    JNext 1.2.0 headless, the bare build without the hold's loader
               screen (v1.2): game state in lockstep with the original for 300
