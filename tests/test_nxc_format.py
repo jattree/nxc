@@ -671,10 +671,10 @@ class SeveralDumps(Case):
         m = self.machine({"patch.nxc": forged, "game.z80": self.game})
         m.set_phases(["absorb_game", "create_out", "done"])
         hits = []
-        m.callbacks["absorb_game"] = lambda: hits.append(1)
+        m.callbacks["absorb_game"] = lambda: hits.append(1)        # none when the menu made the key (pre_slice)
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
-        self.assertEqual(len(hits), 1, "the game was read again for another entry")
+        self.assertLessEqual(len(hits), 1, "the game was read again for another entry")
         self.assertEqual(m.opened.count("game.z80"), 1)
 
     def test_names_are_tried_in_turn_and_the_wrong_length_is_passed_over(self) -> None:
@@ -779,16 +779,14 @@ class SeveralDumps(Case):
         full = entries(nxc.TARGETS_MAX)
         self.assertEqual(nxc.apply(full, game=self.game), self.base)
         m = self.machine({"patch.nxc": full, "game.z80": self.game})
-        m.set_phases(["absorb_game", "check_file", "done"])
         failed, message = m.run('"patch.nxc"')
         self.assertFalse(failed, message)
         self.assertEqual(bytes(m.written[NEX]), self.base)
         one = self.machine({"patch.nxc": self.patch, "game.z80": self.game})
-        one.set_phases(["absorb_game", "check_file", "done"])
         one.run('"patch.nxc"')
-        extra = (m.phase_ticks["absorb_game"] - one.phase_ticks["absorb_game"]) / 28e6
+        extra = (m.ticks - one.ticks) / 28e6                  # the key is made during the menu (pre_slice): the whole run
         print(f"\nEntries: {nxc.TARGETS_MAX} of one length, the right one last: {len(full) - len(self.patch)} more bytes of patch; "
-              f"absorb and try {m.phase_ticks['absorb_game'] / 28e6:.3f} s against {one.phase_ticks['absorb_game'] / 28e6:.3f} s for one entry, "
+              f"the whole run {m.ticks / 28e6:.3f} s against {one.ticks / 28e6:.3f} s for one entry, "
               f"so {extra * 1000 / (nxc.TARGETS_MAX - 1):.1f} ms an entry at 28 MHz, no file I/O", flush=True)
         self.assertEqual(m.peak_pages, one.peak_pages)
         self.refused_by_both(entries(nxc.TARGETS_MAX + 1))
@@ -1176,7 +1174,7 @@ class Memory(Case):
         said = "Needs more RAM: turn fix off"
         m, failed, message = self.go(needs_more, total_pages=96)
         self.assert_refused(m, failed, message, said)
-        self.assertEqual(m.ever_allocated, [m.menu_page])       # the menu's page alone
+        self.assertEqual(m.ever_allocated, [m.menu_page, m.key_page])   # the menu's page and the key's alone
         # A 2MB machine plays it. The bank that just fits a 1MB machine plays on one.
         m, failed, message = self.go(needs_more, total_pages=224)
         self.assertFalse(failed, message)
@@ -1360,6 +1358,44 @@ class LoadingScreen(Case):
                 self.assertEqual(m.clean(), [])
                 self.assertEqual(bytes(m.written[NEX]), nex)
                 self.assertEqual(sum(t == b"SCR1" for t, _ in nxc.blocks(patch)[1]), (len(screen) + 16383) // 16384)
+
+    def test_build_screen_nex_shows_the_patch_own_screen_once_checked(self) -> None:
+        # The key is made during the menu (or at ENTER), the ULA screen decoded to the display, unlock not run again.
+        patch, nex, screen = self.with_screen(0x02)
+        shown = nxc.set_field(patch, self.game, "build_screen", "nex")
+        m = self.machine({"patch.nxc": shown, "game.z80": self.game})
+        m.set_phases(["absorb_game", "unlock", "create_out", "done"])
+        at, hits = {}, []
+        m.callbacks["unlock"] = lambda: at.setdefault("unlock", bytes(m.m.memory[0x4000:0x5B00]))
+        m.callbacks["absorb_game"] = lambda: hits.append(1)
+        m.m.unmark_addr(0x5C8D, m.m.WRITE_MARK)     # ATTR_P and BORDCR: BASIC's CLS then clears to black
+        m.m.unmark_addr(0x5C48, m.m.WRITE_MARK)
+        failed, message = m.run('"patch.nxc"')
+        self.assertFalse(failed, message)
+        self.assertEqual(bytes(m.written[NEX]), nex)
+        self.assertEqual(hits, [], "the game was read again after the menu")
+        last = {0x10E0 + c + 256 * k for c in range(32) for k in range(8)} | set(range(0x1AE0, 0x1B00))
+        differ = {i for i in range(6912) if at["unlock"][i] != screen[i]}
+        self.assertTrue(differ and differ <= last, "the screen, but for Patching on its last line")
+        self.assertEqual([p for p in m.clean() if "page 10" not in p], [])
+
+    def test_build_screen_nex_only_for_a_ula_screen_alone(self) -> None:
+        for flags in (0x01, 0x03, 0x04, 0x00):
+            patch = self.with_screen(flags)[0]
+            with self.subTest(hex(flags)), self.assertRaisesRegex(nxc.Wrong, "ULA screen alone"):
+                nxc.set_field(patch, self.game, "build_screen", "nex")
+
+    def test_without_build_screen_the_key_is_still_made_during_the_menu(self) -> None:
+        patch, nex, screen = self.with_screen(0x02)
+        m = self.machine({"patch.nxc": patch, "game.z80": self.game})
+        m.set_phases(["absorb_game", "create_out", "done"])
+        hits = []
+        m.callbacks["absorb_game"] = lambda: hits.append(1)
+        failed, message = m.run('"patch.nxc"')
+        self.assertFalse(failed, message)
+        self.assertEqual(bytes(m.written[NEX]), nex)
+        self.assertEqual(hits, [])
+        self.assertEqual(m.clean(), [])
 
     def test_with_a_set_and_a_trainer(self) -> None:
         patch, nex, screen = self.with_screen(0x01)

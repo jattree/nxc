@@ -226,7 +226,7 @@ name:   ld      hl,cur_fi
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A27
+vars            equ $3A1F
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -306,6 +306,11 @@ game_kind       equ target_kinds
         VAR     scr_chunks, 1
         VAR     scr_mask, 1
         VAR     scr_now, 1
+        VAR     scr_show, 1                 ; INF1's build_screen: the game file's own screen from ENTER
+        VAR     scr_at, 4                   ; where it is in the game file
+        VAR     scr_dots, 1                 ; and its dots so far, 24 when the last bank is made
+        VAR     scr_acc, 1                  ; 24 for each bank made, less the header's bank count per dot
+        VAR     pre_done, 1                 ; the key was made during the menu: its target's index + 1
         VAR     cur_kind, 1
         VAR     ram_bank, 1                 ; OPT1's highest 16K bank
         VAR     page_goal, 1
@@ -382,6 +387,9 @@ var_at          =   $3F00
         VAR     text_at, 4                  ; and where its text starts in the patch
         VAR     fix_label, FIX_LABEL_MAX + 1 ; up to the menu: INF1's name for the main line; 0: "Colour clash fix"
         VAR     colours_label, COLOURS_LABEL_MAX + 1 ; and for the colours line; 0: "Enhanced colours"
+        VAR     pre_step, 1                 ; the key during the menu (pre_alloc sets it): how far
+        VAR     pre_page, 1                 ; its page
+        VAR     pre_caller, 2               ; the caller's stack, while on the 8K's (pre_call)
         assert  var_at <= stack_floor, "the variables run into the stack"
 
 ; ================================================================= resident
@@ -2144,8 +2152,46 @@ first_inf1:
         call    text_find
         ld      de,colours_label
         ld      a,COLOURS_LABEL_MAX
+        call    nc,copy_text
+        ld      de,key_build_screen
+        call    text_find
         ret     c
-        jp      copy_text
+        ld      a,b                         ; nex: the patch's own loading screen (pre_screen)
+        or      c
+        jr      z,.num
+        ld      a,(hl)
+        cp      'n'
+        jr      nz,.num
+        ld      a,2
+        ld      (scr_show),a
+        ret
+.num:   ld      de,0                        ; its value: decimal, below 65536
+.dig:   ld      a,b
+        or      c
+        jr      z,.got
+        ld      a,(hl)
+        sub     '0'
+        cp      10
+        jr      nc,.got
+        push    hl
+        ld      h,d
+        ld      l,e
+        add     hl,hl
+        add     hl,hl
+        add     hl,de
+        add     hl,hl
+        ld      e,a
+        ld      d,0
+        add     hl,de
+        ex      de,hl
+        pop     hl
+        inc     hl
+        dec     bc
+        jr      .dig
+.got:   ld      (scr_at),de
+        ld      a,1
+        ld      (scr_show),a
+        ret
 ; A target entry. Its index says its place; its file must be a bare name, for any kind.
 first_tgt1:
         xor     a
@@ -2723,6 +2769,7 @@ ram_answer:
         ld      (all_pages),a
         ld      a,1
         ld      (page_count),a
+        call    pre_alloc                   ; and one for the key, made during the menu
         call    mode_on
         di
         ld      a,1
@@ -2740,7 +2787,8 @@ ram_answer:
         call    load_part
         call    MP_AT
         push    af
-        call    nc,menu_busy                ; not after BREAK
+        call    nc,pre_enter                ; the rest of the key, and any screen from the patch
+        call    nc,menu_busy                ; not after BREAK, nor over that screen
         rst     $08
         db      M_GETHANDLE
         ld      hl,file_overlay_at
@@ -2755,6 +2803,7 @@ ram_answer:
         jp      c,fail_hl
         call    check_ram
         call    toggles_to_slots
+        call    pre_keep
         ret                                 ; the menu stays up, saying so, until finish puts the display back
 
 file_menu_at:   dd FILE_MENU_AT
@@ -2934,6 +2983,7 @@ key_publisher:  db "publisher=",0
 key_patch_by:   db "patch_by=",0
 key_fix_label:  db "fix_label=",0
 key_colours_label: db "colours_label=",0
+key_build_screen: db "build_screen=",0
 key_colours_by: db "colours_by=",0
 key_version:    db "version=",0
 ext_z80:        db ".z80",0
@@ -2957,6 +3007,725 @@ msg_no_patch:   db "Cannot open the .nx", 'c' | $80
 magic_nxc1:     db "NXC1"
 opt_size:       dd 3
 msg_ram_small:  db "Needs more RAM: turn fix of", 'f' | $80
+
+; ---------------------------------------------------------------- the key, during the menu
+; While the menu waits for a key (menu.asm's MENU_IDLE), the game and the patch are absorbed a
+; small piece at a time, exactly as unlock and check_file do after it: the game's key state, the
+; target whose wrap it opens, the master key's state, and the keyed check over the whole patch.
+; A piece is one read of at most 1K, about 2 ms at 28 MHz, so the keys answer as before. At ENTER or SPACE whatever is left is done at once, and only then, with the check made,
+; is anything decompressed: INF1's build_screen=nex, the patch's own loading screen, goes straight
+; to the display. At the end of the menu the master key's state becomes unlock's (pre_done), so
+; neither the game nor the patch is read again for it. Anything that does not go as expected
+; leaves it all to unlock, which then refuses what it should. Not for a game that is a set of
+; tapes. Its states and buffer are in a page of their own, taken with the menu's and freed at its
+; end, mapped at 0x8000 only while a piece is done, on the stack in the 8K (pre_call), as the
+; caller's stack may be anywhere below 0xC000; no allocation, and it is all left to unlock.
+PRE_WORK        equ $8000                       ; the state being made
+PRE_BASE        equ $8100                       ; a key state kept: the game's, then the master key's
+PRE_BUF         equ $8200                       ; what was read
+PRE_CHUNK       equ $0400                       ; at most, at a time
+PRE_BUF_END     equ PRE_BUF + PRE_CHUNK
+PS_START        equ 0
+PS_GAME         equ 1
+PS_FIND         equ 2
+PS_CHECK        equ 3
+PS_DONE         equ 4                           ; the key is made and the patch checked
+PS_OFF          equ 5                           ; not done here: unlock does it all
+
+; The rest of its variables, in the page after the buffer:
+pre_part        equ PRE_BUF_END                 ; the check: 0 up to the field, 1 after it
+pre_fh          equ pre_part + 1
+pre_pos         equ pre_fh + 1                  ; 4
+pre_left        equ pre_pos + 4                 ; 4
+pre_wi          equ pre_left + 4                ; PRE_WORK's i and j, in this order
+pre_wj          equ pre_wi + 1
+pre_bi          equ pre_wj + 1                  ; PRE_BASE's
+pre_bj          equ pre_bi + 1
+pre_idx         equ pre_bj + 1
+pre_sp          equ pre_idx + 1                 ; 2
+pre_tgt         equ pre_sp + 2                  ; TARGET_FIXED: the target whose wrap opened
+pre_zero:       dd 0
+file_header_p:  dd FILE_HEADER
+check_at_p:     dd 22
+three_p:        dd 3
+pre_chk1:       db "CHK1"
+pre_wrap:       db "NXC1-KEY"
+
+; From the menu's wait for a key: one piece, if there is one to do. Keeps IX.
+pre_idle:
+        ld      a,(pre_step)
+        cp      PS_DONE
+        ret     nc
+        push    ix
+        ld      hl,pre_slice
+        call    pre_call
+        pop     ix
+        ret
+
+; The routine at HL with the page mapped at 0x8000 and the stack in the 8K; then the caller's
+; again. AF comes back from the routine.
+pre_call:
+        ld      (pre_caller),sp
+        ld      sp,stack_top
+        push    hl
+        ld      a,(pre_page)
+        ld      e,a
+        ld      a,NR_MMU4
+        call    nr_write
+        pop     hl
+        call    .go
+        push    af
+        ld      a,(mmu4)
+        ld      e,a
+        ld      a,NR_MMU4
+        call    nr_write
+        pop     af
+        ld      sp,(pre_caller)
+        ret
+.go:    jp      (hl)
+
+; With the menu's page: one more for this. None to be had: unlock does it all.
+pre_alloc:
+        ld      hl,BANK_ALLOC
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ld      a,PS_OFF
+        jr      nc,.none
+        ld      a,e
+        ld      (pre_page),a
+        ld      (all_pages+1),a
+        ld      a,2
+        ld      (page_count),a
+        xor     a
+.none:  ld      (pre_step),a
+        ret
+
+pre_slice:
+        ld      a,(pre_step)
+        or      a
+        jr      z,.start
+        dec     a
+        jp      z,.game
+        dec     a
+        jp      z,.find
+        call    pre_chunk                   ; PS_CHECK
+        jr      c,.off
+        ret     nz
+        ld      hl,pre_part
+        ld      a,(hl)
+        or      a
+        jr      nz,.checked
+        inc     (hl)                        ; on past the field to the end
+        ld      hl,file_header_p
+        ld      de,pre_pos
+        call    copy4
+        ld      hl,psize
+        ld      de,pre_left
+        call    copy4
+        ld      hl,pre_left
+        ld      de,file_header_p
+        jp      sub32
+.checked:
+        call    pre_drop
+        ld      hl,check_at_p
+        call    seek_patch
+        ld      hl,PRE_BUF
+        ld      bc,16
+        call    read_patch
+        ld      hl,PRE_BUF
+        ld      bc,16
+        call    pre_xor
+        ld      hl,PRE_BUF
+        ld      b,16
+.cmp:   ld      a,(hl)
+        or      a
+        jr      nz,.off
+        inc     hl
+        djnz    .cmp
+        ld      a,PS_DONE
+        jr      .step
+.off:   ld      a,PS_OFF
+.step:  ld      (pre_step),a
+        ret
+
+.start: ld      a,(set_n)                   ; one game file, open
+        ld      hl,gh
+        or      a
+        jr      nz,.off
+        or      (hl)
+        jr      z,.off
+        ld      (pre_fh),a
+        call    pre_new
+        call    pre_nonce
+        ld      hl,pre_zero
+        ld      de,pre_pos
+        call    copy4
+        ld      hl,gsize
+        ld      de,pre_left
+        call    copy4
+        ld      a,PS_GAME
+        jr      .step
+
+.game:  call    pre_chunk
+        jr      c,.off
+        ret     nz
+        call    pre_nonce
+        call    pre_save                    ; the game's key state
+        call    pre_rewind
+        call    walk_begin
+        ld      a,PS_FIND
+        jr      .step
+
+.find:  call    walk_next                   ; a block at a time
+        jr      z,.off                      ; no target opens: unlock says so
+        ld      de,magic_tgt1
+        call    tag_is
+        ret     nz
+        ld      hl,pre_tgt
+        ld      bc,TARGET_FIXED
+        call    read_patch
+        ld      a,(pre_tgt+1)
+        call    kind_readable
+        ret     nz
+        ld      hl,pre_tgt+2
+        ld      de,gsize
+        call    same_tag
+        ret     nz
+        ld      de,magic_tgt1
+        ld      a,(pre_tgt)
+        ld      c,a
+        call    pre_stream
+        ld      hl,pre_tgt+6
+        ld      bc,24
+        call    pre_xor
+        ld      hl,pre_tgt+6
+        ld      de,pre_wrap
+        ld      b,8
+.wrap:  ld      a,(de)
+        cp      (hl)
+        ret     nz
+        inc     hl
+        inc     de
+        djnz    .wrap
+        call    pre_new                     ; the master key's state, as make_master
+        ld      b,KEY_ROUNDS
+.round: push    bc
+        call    pre_nonce
+        ld      hl,pre_tgt+6+8
+        ld      bc,16
+        call    pre_absorb
+        call    pre_nonce
+        pop     bc
+        djnz    .round
+        call    pre_save
+        ld      de,pre_chk1                 ; the check: CHK1 0, then the patch up to its field
+        ld      c,0
+        call    pre_use
+        ld      a,(ph)
+        ld      (pre_fh),a
+        ld      hl,pre_zero
+        ld      de,pre_pos
+        call    copy4
+        ld      hl,check_at_p
+        ld      de,pre_left
+        call    copy4
+        xor     a
+        ld      (pre_part),a
+        ld      a,PS_CHECK
+        jp      .step
+
+; Up to PRE_CHUNK bytes more of pre_fh, absorbed. Z: there were none left. Carry: it could not be read.
+pre_chunk:
+        ld      hl,pre_left
+        call    is_zero32
+        jr      nz,.more
+        xor     a
+        ret
+.more:  ld      a,(pre_fh)
+        ld      hl,pre_pos
+        call    seek_file
+        call    pre_size
+        push    bc
+        ld      hl,PRE_BUF
+        ld      a,(pre_fh)
+        rst     $08
+        db      F_READ
+        pop     de
+        call    after_os                    ; keeps the carry
+        ret     c
+        ld      a,b
+        cp      d
+        scf
+        ret     nz
+        ld      a,c
+        cp      e
+        scf
+        ret     nz
+        push    bc
+        ld      hl,PRE_BUF
+        call    pre_absorb
+        pop     bc
+        call    pre_less
+        ld      hl,pre_pos
+        ld      de,work32
+        call    add32
+        or      1                           ; NZ, no carry
+        ret
+
+; BC = PRE_CHUNK, or what is left if less (not 0).
+pre_size:
+        ld      bc,PRE_CHUNK
+        ld      hl,(pre_left+2)
+        ld      a,h
+        or      l
+        ret     nz
+        ld      hl,(pre_left)
+        sbc     hl,bc                       ; no carry from OR
+        ret     nc
+        ld      bc,(pre_left)
+        ret
+
+; BC less of pre_left; work32 = BC.
+pre_less:
+        ld      (work32),bc
+        ld      hl,0
+        ld      (work32+2),hl
+        ld      hl,pre_left
+        ld      de,work32
+        jp      sub32
+
+; The game back at its start, where the clash fix off reads it from.
+pre_rewind:
+        ld      a,(gh)
+        or      a
+        ret     z
+        ld      hl,pre_zero
+        jp      seek_file
+
+pre_nonce:
+        ld      hl,nonce
+        ld      bc,16
+        jr      pre_absorb
+
+; PRE_WORK: s[n] = n.
+pre_new:
+        ld      hl,PRE_WORK
+        xor     a
+.fill:  ld      (hl),a
+        inc     l
+        inc     a
+        jr      nz,.fill
+        ld      (pre_wi),a
+        ld      (pre_wj),a
+        ret
+
+; PRE_WORK kept in PRE_BASE.
+pre_save:
+        ld      hl,PRE_WORK
+        ld      de,PRE_BASE
+        ld      bc,256
+        ldir
+        ld      hl,(pre_wi)
+        ld      (pre_bi),hl
+        ret
+
+; A use of PRE_BASE in PRE_WORK: tag DE, index C. pre_stream drops its first 256 too.
+pre_stream:
+        call    pre_use
+pre_drop:
+        ld      hl,PRE_BUF
+        ld      bc,256
+        jr      pre_xor
+pre_use:
+        push    de
+        ld      a,c
+        ld      (pre_idx),a
+        ld      hl,PRE_BASE
+        ld      de,PRE_WORK
+        ld      bc,256
+        ldir
+        ld      hl,(pre_bi)
+        ld      (pre_wi),hl
+        pop     hl
+        ld      bc,4
+        call    pre_absorb
+        ld      hl,pre_idx
+        ld      bc,1
+; Absorb BC bytes at HL into PRE_WORK, as rc4_absorb.
+pre_absorb:
+        ld      a,b
+        or      c
+        ret     z
+        push    hl
+        pop     ix
+        ld      a,(pre_wi)
+        ld      e,a
+        ld      d,high PRE_WORK
+        ld      a,(pre_wj)
+        ld      l,a
+        ld      h,d
+.byte:  inc     e
+        ld      a,(de)
+        add     a,l
+        add     a,(ix+0)
+        ld      l,a
+        inc     ix
+        ld      a,(de)
+        ex      af,af'
+        ld      a,(hl)
+        ld      (de),a
+        ex      af,af'
+        ld      (hl),a
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.byte
+        ld      a,e
+        ld      (pre_wi),a
+        ld      a,l
+        ld      (pre_wj),a
+        ret
+
+; BC bytes at HL through PRE_WORK's stream, as rc4_xor.
+pre_xor:
+        ld      a,b
+        or      c
+        ret     z
+        push    hl
+        pop     ix
+        ld      a,(pre_wi)
+        ld      e,a
+        ld      d,high PRE_WORK
+        ld      a,(pre_wj)
+        ld      l,a
+        ld      h,d
+.byte:  inc     e
+        ld      a,(de)
+        add     a,l
+        ld      l,a
+        push    bc
+        ld      a,(de)
+        ld      c,a
+        ld      b,(hl)
+        ld      (hl),c
+        ld      a,b
+        ld      (de),a
+        add     a,c
+        ld      c,a
+        ld      b,d
+        ld      a,(bc)
+        xor     (ix+0)
+        ld      (ix+0),a
+        inc     ix
+        pop     bc
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.byte
+        ld      a,e
+        ld      (pre_wi),a
+        ld      a,l
+        ld      (pre_wj),a
+        ret
+
+; After ENTER or SPACE, the menu's page still mapped: with the clash fix on, the rest of the key,
+; then build_screen=nex. Carry: the screen is up, so the menu's Patching... is not wanted.
+pre_enter:
+        ld      a,(pre_step)
+        cp      PS_OFF
+        jr      z,pre_enter_off
+        ld      hl,pre_enter_body
+        jp      pre_call
+pre_enter_off:
+        ld      a,(scr_show)                ; no screen from the patch: no dots either
+        cp      2
+        jr      nz,.no
+        xor     a
+        ld      (scr_show),a
+.no:    or      a
+        ret
+pre_enter_body:
+        ld      a,(ver_original)
+        or      a
+        jr      nz,.none
+.rest:  ld      a,(pre_step)
+        cp      PS_DONE
+        jr      nc,.made
+        call    pre_slice
+        jr      .rest
+.made:  jr      nz,.none                    ; PS_OFF
+        ld      a,(scr_show)
+        cp      2
+        jr      nz,.none
+        call    pre_screen
+        jr      c,.keep
+.none:  ld      a,(scr_show)                ; no screen from the patch: no dots either
+        cp      2
+        jr      nz,.no
+        xor     a
+        ld      (scr_show),a
+.no:    or      a
+.keep:  push    af
+        call    pre_rewind
+        pop     af
+        ret
+
+; SCR1's one piece, a ULA screen of at most 6912 bytes, decoded to the display: build_screen=nex.
+; Carry: it is up, with Patching on its last line.
+pre_screen:
+        call    walk_begin
+.find:  call    walk_next
+        jp      z,.no
+        ld      de,magic_scr1_p
+        call    tag_is
+        jr      nz,.find
+        ld      hl,tagbuf
+        ld      bc,3
+        call    read_patch
+        ld      a,(tagbuf)
+        or      a
+        jr      nz,.find
+        ld      hl,(tagbuf+1)
+        ld      a,h
+        or      l
+        jr      z,.no
+        ld      de,6913
+        sbc     hl,de                       ; no carry from OR
+        jr      nc,.no                      ; more than a ULA screen
+        ld      hl,blk_pos                  ; its data, past the 3 clear bytes
+        ld      de,pre_pos
+        call    copy4
+        ld      hl,blk_len
+        ld      de,pre_left
+        call    copy4
+        ld      hl,pre_pos
+        ld      de,three_p
+        call    add32
+        ld      hl,pre_left
+        ld      de,three_p
+        call    sub32
+        ld      a,(ph)
+        ld      (pre_fh),a
+        ld      hl,pre_pos
+        call    seek_file
+        ld      de,magic_scr1_p
+        ld      c,0
+        call    pre_stream
+        xor     a                           ; the border black, BASIC's colours white on black
+        out     ($fe),a
+        ld      a,7
+        ld      ($5c8d),a
+        ld      ($5c48),a
+        ld      hl,$5800                    ; the menu's colours off first, so none of it shows
+        ld      de,$5801
+        ld      bc,767
+        ld      (hl),0
+        ldir
+        ld      (pre_sp),sp
+        ld      de,$4000
+        call    pre_zx0
+        ex      de,hl                       ; what the stream left: zeros, as the piece's trailing ones
+.zero:  ld      a,h
+        cp      $5b
+        jr      nc,.say
+        ld      (hl),0
+        inc     hl
+        jr      .zero
+.say:   call    scr_say
+        scf
+        ret
+.no:    or      a
+        ret
+pre_fail:                                   ; a stream that does not fit the screen: not shown
+        di
+        ld      sp,(pre_sp)
+        ld      hl,$4000
+        ld      de,$4001
+        ld      bc,6911
+        ld      (hl),0
+        ldir
+        or      a
+        ret
+
+; A = the next byte of the stream, through PRE_WORK; HL its place. BC and DE are kept. A short
+; last read is put at the buffer's end, so that the stream ends where the file does.
+pre_get:
+        ld      a,h
+        cp      high PRE_BUF_END
+        jr      nz,.have
+        push    bc
+        push    de
+        ld      hl,pre_left
+        call    is_zero32
+        jr      z,pre_fail
+        ld      a,(pre_fh)
+        ld      hl,pre_pos
+        call    seek_file
+        call    pre_size
+        ld      hl,PRE_BUF_END
+        or      a
+        sbc     hl,bc
+        push    hl
+        push    bc
+        ld      a,(pre_fh)
+        rst     $08
+        db      F_READ
+        pop     de
+        call    after_os
+        jr      c,pre_fail
+        ld      a,b
+        cp      d
+        jr      nz,pre_fail
+        ld      a,c
+        cp      e
+        jr      nz,pre_fail
+        pop     hl
+        push    hl
+        push    bc
+        call    pre_xor
+        pop     bc
+        call    pre_less
+        ld      hl,pre_pos
+        ld      de,work32
+        call    add32
+        pop     hl
+        pop     de
+        pop     bc
+.have:  ld      a,(hl)
+        inc     hl
+        ret
+
+; ZX0, standard format version 2, as zx0_decode, from pre_get to DE, never off the screen.
+pre_zx0:
+        ld      hl,$ffff
+        ld      (zx_last),hl
+        ld      hl,PRE_BUF_END              ; empty: the first byte reads
+        ld      bc,0
+        ld      a,$80
+.literals:
+        call    .elias
+        call    .room
+        push    af
+.lit:   call    pre_get
+        ld      (de),a
+        inc     de
+        dec     bc
+        ld      a,b
+        or      c
+        jr      nz,.lit
+        pop     af
+        add     a,a
+        jr      c,.new_offset
+        ld      bc,0
+        call    .elias
+.copy:  call    .room
+        push    af
+        push    hl
+        ld      hl,-$4000                   ; produced + (negative offset) must carry
+        add     hl,de
+        push    de
+        ld      de,(zx_last)
+        add     hl,de
+        pop     de
+        jp      nc,pre_fail
+        ld      hl,(zx_last)
+        add     hl,de
+        ldir
+        pop     hl
+        pop     af
+        add     a,a
+        ld      bc,0
+        jr      nc,.literals
+.new_offset:
+        ld      c,$fe
+.msb:   add     a,a
+        jr      nz,.msb1
+        call    pre_get
+        scf
+        rla
+.msb1:  jr      c,.msb_end
+        add     a,a
+        rl      c
+        jr      .msb
+.msb_end:
+        inc     c
+        ret     z                           ; the end marker
+        ld      b,c
+        push    af
+        call    pre_get
+        ld      c,a
+        pop     af
+        rr      b
+        rr      c
+        ld      (zx_last),bc
+        ld      bc,1
+        call    nc,.back
+        inc     bc
+        jr      .copy
+.elias: inc     c
+.loop:  add     a,a
+        jr      nz,.skip
+        call    pre_get
+        scf
+        rla
+.skip:  ret     c
+.back:  add     a,a
+        rl      c
+        rl      b
+        jr      nc,.loop
+        jp      pre_fail
+; BC more bytes at DE must stay on the screen, and BC not be 0.
+.room:  push    af
+        ld      a,b
+        or      c
+        jp      z,pre_fail
+        push    hl
+        ld      hl,-$5b00
+        add     hl,de
+        add     hl,bc
+        jr      nc,.fits
+        ld      a,h                         ; exactly to its end is all right
+        or      l
+        jp      nz,pre_fail
+.fits:  pop     hl
+        pop     af
+        ret
+
+; At the end of the menu, its scratch no longer needed: a key made here becomes unlock's. The
+; page is given back.
+pre_keep:
+        ld      a,(pre_step)
+        cp      PS_DONE
+        ld      hl,.copy
+        call    z,pre_call
+        ld      a,(page_count)
+        cp      2
+        ret     nz
+        dec     a
+        ld      (page_count),a
+        ld      a,(pre_page)
+        ld      e,a
+        ld      d,0
+        ld      hl,BANK_FREE
+        exx
+        ld      de,IDE_BANK
+        ld      c,7
+        rst     $08
+        db      M_P3DOS
+        ret
+.copy:  ld      hl,PRE_BASE
+        ld      de,rc4_s
+        ld      bc,256
+        ldir
+        ld      hl,(pre_bi)
+        ld      (s_i),hl                    ; s_j follows s_i
+        ld      a,(pre_tgt)
+        inc     a
+        ld      (pre_done),a
+        ret
 
 first_end:
         assert  first_end <= vars, "the first part runs into the variables"
@@ -3024,6 +3793,7 @@ original_with_trainers:
 
 ; NexClash: the checks, the header, the site table, then each bank.
 nexclash_chosen:
+        call    scr_first
         call    work_begin
         call    unlock
         call    load_bank_index
@@ -3091,6 +3861,7 @@ nexclash_chosen:
         ld      hl,WORK
         ld      bc,BANK_SIZE
         call    crc_update
+        call    scr_bank
         call    apply_pokes
         ld      hl,WORK
         ld      bc,BANK_SIZE
@@ -3145,6 +3916,60 @@ check_result:
         ret
 .wrong: ld      hl,msg_bad_result
         jp      fail_hl
+
+; INF1's build_screen: a screen the player's own game file holds as it is, 6912 bytes at the
+; offset given, such as a tape's SCREEN$ block. It is read straight to the display at ENTER,
+; before the game is checked, with Patching on its last line; each bank made adds a dot.
+; BASIC's CLS before .nexload then clears to black.
+scr_first:
+        ld      a,(scr_show)                ; 1 only: 2 (nex) is put up at the end of the menu
+        dec     a
+        ret     nz
+        xor     a
+        out     ($fe),a
+        ld      a,7                         ; ATTR_P and BORDCR: white on black
+        ld      ($5c8d),a
+        ld      ($5c48),a
+        ld      a,(gh)
+        ld      hl,scr_at
+        call    seek_file
+        ld      hl,$4000
+        ld      bc,6912
+        ld      a,(gh)                      ; what there is of it: a short file is for unlock to refuse
+        rst     $08
+        db      F_READ
+        call    after_os
+        jr      scr_bank.say
+scr_bank:
+        ld      a,(scr_show)
+        or      a
+        ret     z
+        ld      a,(HDR+9)                   ; the .nex's banks: the 24 dots spread over them
+        ld      c,a
+        ld      hl,scr_dots
+        ld      a,(scr_acc)
+        add     a,24
+.dot:   cp      c
+        jr      c,.acc
+        sub     c
+        inc     (hl)
+        jr      .dot
+.acc:   ld      (scr_acc),a
+.say:   ld      a,NR_MMU5                   ; the menu's page where the menu ran it, for its text
+        ld      bc,NR_SELECT
+        out     (c),a
+        inc     b
+        in      a,(c)
+        push    af
+        ld      a,(all_pages)
+        ld      e,a
+        ld      a,NR_MMU5
+        call    nr_write
+        call    scr_say
+        pop     af
+        ld      e,a
+        ld      a,NR_MMU5
+        jp      nr_write
 
 ; The Bth bank in .nex order into cur_bank, and A. Keeps BC.
 order_bank:
@@ -3444,9 +4269,11 @@ work_begin:
         ldir
         jp      crc_make
 .none:  ld      a,(page_goal)               ; 6, 9, 12 or 15 pages: the message for that many
-        add     a,low (ram_msgs - PAGES)
-        ld      l,a
-        ld      h,high ram_msgs
+        sub     PAGES
+        ld      e,a
+        ld      d,0
+        ld      hl,ram_msgs
+        add     hl,de
         ld      e,(hl)
         inc     hl
         ld      d,(hl)
@@ -3459,7 +4286,6 @@ ram_msgs:       dw msg_ram                  ; 3 bytes apart, as the pages go up 
                 dw msg_ram_two
                 db 0
                 dw msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
-        assert  high ram_msgs == high (ram_msgs + 10), "the RAM messages' table crosses a page"
 
 ; ---- page_list: W0, W1, IO, sites x 3, set x 3.
 
@@ -3512,7 +4338,14 @@ done:   ld      (handoff),a
 ; absorbed once, and each target of its length tried from a copy of that state, so that
 ; it is never read again for another entry. A wrong game: on to the next file there is.
 unlock:
-        call    absorb_game
+        ld      a,(pre_done)                ; made during the menu (pre_keep): the key state as it left it
+        or      a
+        jr      z,.full
+        dec     a
+        ld      (tgt_buf),a
+        call    state_keep
+        jp      check_out1
+.full:  call    absorb_game
         call    walk_begin
 .next:  call    walk_next
         jr      z,.wrong
@@ -3673,6 +4506,7 @@ check_file:
         jp      nz,bad_patch
         inc     hl
         djnz    .cmp
+check_out1:
         ld      de,magic_out1
         ld      c,0
         call    stream_open
@@ -7614,6 +8448,7 @@ mp_s_needs:     db "Needs a 2MB Next",0
 
         define  MENU_RULES
         define  MENU_NEEDS
+        define  MENU_IDLE pre_idle
         define  MENU_LANG
         include "menu.asm"
 
@@ -7647,6 +8482,24 @@ menu_busy:
 .say:   ld      b,23
         jp      puts_max
 s_patching:     db "Patching...            ",0
+; build_screen: Patching and a dot for each bank so far, on the last line of the game's screen.
+scr_say:
+        ld      a,23
+        ld      c,0
+        call    at
+        ld      a,$47
+        ld      (MV_ATTR),a
+        ld      hl,s_patching
+        ld      b,8
+        call    puts_max
+        ld      a,(scr_dots)
+        or      a
+        ret     z
+        ld      b,a
+.dot:   ld      a,'.'
+        call    putc
+        djnz    .dot
+        ret
 s_loading:      db "Loading...             ",0
 
 mp_bigv:        ds      BIG_VARS + 15               ; the walk's SET3 state, then B_CUR and B_MAP
