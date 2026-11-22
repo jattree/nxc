@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Herbert's Dummy Run
   Publisher   Mikro-Gen, 1985
-  Version     1.4
+  Version     1.5
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -39,6 +39,10 @@
               1.4: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.5: The default build and Enhanced each had a colour equal to
+              the Next's Layer 2 transparent colour (E3), so on a real Next
+              those pixels showed the picture underneath; it is now E7, the
+              next shade, and nothing else in the build changed
 
   Note        Controls: Q and W move, Caps Shift jumps. Herbert's drawing code
               is the same family as Everyone's a Wally and Three Weeks in
@@ -69,8 +73,8 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-05
+  Tested      1.5: Tang FPGA board: loads and plays; Played by Jon Attree in
+              JNext through the real loader, 2026-11-05
 
   Replay      v1.3 both sets: 30133 frames IDENTICAL each; 19 sites, 114651
               external calls each; 18/18 negatives; 512 clock/R, 1072 pattern

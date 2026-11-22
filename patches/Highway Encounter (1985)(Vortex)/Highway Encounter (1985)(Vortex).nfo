@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Highway Encounter
   Publisher   Vortex, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -39,6 +39,10 @@
   Changes     1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Enhanced had a colour equal to the Next's Layer 2
+              transparent colour (E3), so on a real Next those pixels showed
+              the picture underneath; it is now E7, the next shade, and
+              nothing else in the build changed
 
   Note        Original monochrome presentation by default, with original-pace
               drawing windows. Optional approved Enhanced colours preserve the
@@ -70,10 +74,12 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Exact archive entry and original/NEXLOAD boot, full hidden ROM;
-              independent source-pixel and hook registers/R/RAM checks, all 57
-              figures and four shifts, deliberately broken builds and native
-              player-update/sound comparisons. Emulator evidence only.
+  Tested      1.2: Enhanced run by the owner in OverSpec, 2026-11-21:
+              approved; Tang FPGA board: loads and plays; Exact archive entry
+              and original/NEXLOAD boot, full hidden ROM; independent source-
+              pixel and hook registers/R/RAM checks, all 57 figures and four
+              shifts, deliberately broken builds and native player-
+              update/sound comparisons. Emulator evidence only.
 
   Replay      Original continuous routes and all-zone demo; independent colour
               model and hook registers/R/RAM. Full verification recorded

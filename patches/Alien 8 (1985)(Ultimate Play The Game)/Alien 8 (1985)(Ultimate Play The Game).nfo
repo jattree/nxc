@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Alien 8
   Publisher   Ultimate, 1985
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -50,6 +50,10 @@
               1.3: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.4: Enhanced had a colour equal to the Next's Layer 2
+              transparent colour (E3), so on a real Next those pixels showed
+              the picture underneath; it is now E7, the next shade, and
+              nothing else in the build changed
 
   Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
               Interface II joystick, 5 directional control, then 0 to start.
@@ -90,9 +94,10 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
-              by script through the real loader on NextZXOS 26.11 card copies;
-              1.2 approved by the owner 2026-11-07 (no visible change)
+  Tested      1.4: Tang FPGA board: loads and plays; Played by the owner in
+              JNext 1.1.104, 2026-11-07: approved. Run by script through the
+              real loader on NextZXOS 26.11 card copies; 1.2 approved by the
+              owner 2026-11-07 (no visible change)
 
   Replay      IDENTICAL on an 18,000-frame recording per mode (4 starts, 17
               deaths, 3 game overs): at every hook original and patched code

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Into the Eagle's Nest
   Publisher   Pandora, 1987
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -46,6 +46,10 @@
               1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Enhanced had a colour equal to the Next's Layer 2
+              transparent colour (E3), so on a real Next those pixels showed
+              the picture underneath; it is now E7, the next shade, and
+              nothing else in the build changed
 
   Note        Keys: on the menu 1 to 4 pick controls (2 Kempston is set), 6
               sound, 7 messages, 8 level, any other key plays, then pick a
@@ -77,9 +81,10 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy, default, Enhanced and cheats; 1.0 not yet played by the
-              owner; published at his request
+  Tested      1.2: Tang FPGA board: loads and plays; Run by script through the
+              real loader on a NextZXOS 26.11 card copy, default, Enhanced and
+              cheats; 1.0 not yet played by the owner; published at his
+              request
 
   Replay      Default: no hooks, every snapshot bank byte for byte in the
               .nex, unchanged from the earlier review. Enhanced: 6 scripted

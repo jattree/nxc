@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Bubbler
   Publisher   Ultimate, 1987
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -45,6 +45,10 @@
               1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Enhanced: the play area's right border is whole again (it
+              showed a dotted column): the Layer 2 view copied 16 more pixels
+              per row than the original shows, and one colour equalled the
+              Next's Layer 2 transparent colour (E3, now E7)
 
   Note        Keys: on the game's menu A for one player or B for two, choose
               keyboard, Kempston, cursor or Interface II for each player, then
@@ -83,7 +87,8 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
+  Tested      1.2: Tang FPGA board: loads and plays, the right border clean;
+              Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
               by script through the real loader on NextZXOS 26.11 card copies.
 
   Replay      IDENTICAL on a 10,000-frame recording and a 21,901-frame

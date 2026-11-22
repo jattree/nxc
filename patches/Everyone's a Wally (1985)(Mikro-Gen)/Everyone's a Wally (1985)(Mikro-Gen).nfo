@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Everyone's a Wally
   Publisher   Mikro-Gen, 1985
-  Version     1.3
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -44,6 +44,10 @@
               1.3: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.4: Enhanced had a colour equal to the Next's Layer 2
+              transparent colour (E3), so on a real Next those pixels showed
+              the picture underneath; it is now E7, the next shade, and
+              nothing else in the build changed
 
   Note        Known issues: pace against the original in JNext, 2026-11-08, 8
               runs with the same input and game state equal at every update,
@@ -76,11 +80,11 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by Jon Attree in JNext through the real loader,
-              2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
-              played by the owner in JNext 1.1.104, 2026-11-08: approved;
-              through the real loader on a NextZXOS 26.11 card copy, default
-              and Enhanced
+  Tested      1.4: Tang FPGA board: loads and plays; Played by Jon Attree in
+              JNext through the real loader, 2026-11-03; 1.1 approved by the
+              owner in JNext, 2026-11-07; 1.2 played by the owner in JNext
+              1.1.104, 2026-11-08: approved; through the real loader on a
+              NextZXOS 26.11 card copy, default and Enhanced
 
   Replay      1.2 (2026-11-08, pace limiter on the pixel copy): 2 bot
               recordings from the start state, 16002 frames, 12770 plots
