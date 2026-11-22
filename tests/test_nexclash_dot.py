@@ -862,9 +862,11 @@ class Cobra(Base):
         m0, _, _ = self.run_cobra()
         for n in range(1, m0.reads + 1, max(1, m0.reads // 24)):
             m, failed, message = self.run_cobra(fail_read=n)
-            self.assertTrue(failed, f"read {n}")
             self.assertEqual(m.clean(), [])
-            self.assertNotIn(NEX, m.written)
+            if failed:
+                self.assertNotIn(NEX, m.written)
+            else:                       # a read the menu's pre-check made: it falls back to the full route, same .nex
+                self.assertEqual(hashlib.md5(bytes(m.written[NEX])).hexdigest(), self.base_digest, f"read {n}")
         for n in range(1, m0.writes + 1):
             m, failed, message = self.run_cobra(fail_write=n)
             self.assertTrue(failed, f"write {n}")
@@ -949,9 +951,11 @@ class Cobra(Base):
         inc     hl
         inc     de
         djnz    .chk""")],
-        "no room check in ZX0": [(""".room:  push    af
-        ld      a,b""", """.room:  ret
-        ld      a,b""")],
+        "no room check in ZX0": [("""; BC bytes more at DE must be possible, and BC not zero. Keeps all but flags.
+.room:  push    af
+        ld      a,b""", """; BC bytes more at DE must be possible, and BC not zero. Keeps all but flags.
+.room:  ret
+        ld      a,b""")],                   # zx0_decode's own: pre_zx0 (the loading screen) has a .room of its own first
         "no offset check in ZX0": [("""        jr      nc,.bad
         ld      hl,(zx_last)""", """        nop
         nop
@@ -976,12 +980,16 @@ class Cobra(Base):
         inc     de
         djnz    .crc""")],
         "POKEs forgotten": [("""        call    crc_update
+        call    scr_bank
         call    apply_pokes""", """        call    crc_update
+        call    scr_bank
         nop
         nop
         nop""")],
         "POKEs in the CRC": [("""        call    crc_update
+        call    scr_bank
         call    apply_pokes""", """        call    apply_pokes
+        call    scr_bank
         call    crc_update""")],
         "pages not freed": [("""        ld      hl,BANK_FREE
         exx
