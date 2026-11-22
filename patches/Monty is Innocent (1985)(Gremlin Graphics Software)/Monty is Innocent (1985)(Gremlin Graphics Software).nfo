@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Monty is Innocent
   Publisher   Gremlin Graphics, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -26,6 +26,8 @@
   Changes     1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: a guard the gun catches now disappears at once; before, its
+              sprite stayed on the screen until the next room
 
   Note        Keys: on the game's menu 1 to 3 choose the controls. Sam Stoat,
               Monty and the guards are hardware sprites over the pixels the
@@ -53,12 +55,15 @@
               the game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      NexClash differential verification against a 6,241-frame
-              recording; Tang FPGA board: loads with DivMMC automap on and
-              sprites left by another program and runs its menu (the board's
-              key input did not get past the menu, as with Monty on the Run);
-              that board run was on the build before a speed-up of the sprite
-              code, which the verification covers
+  Tested      1.2: Tang FPGA board: 1.1 plays from the menu into the prison
+              with automap off at start; 1.2 changes only the gun's guard
+              erase, verified against the recording and unit cases; NexClash
+              differential verification against a 6,241-frame recording; Tang
+              FPGA board: loads with DivMMC automap on and sprites left by
+              another program and runs its menu (the board's key input did not
+              get past the menu, as with Monty on the Run); that board run was
+              on the build before a speed-up of the sprite code, which the
+              verification covers
 
   Replay      IDENTICAL on a 6,241-frame recording through 38 screen clears:
               at every hook and every painter call original and patched code
