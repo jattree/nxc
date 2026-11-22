@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Arkanoid
   Publisher   Imagine, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -32,6 +32,10 @@
               molecules, aqua cubes, green pyramids, a fiery explosion and
               orange and red pieces from Doh. A painted set, colourist not
               named.
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: any key past the title, the scores and the story; Z left,
               M right (bottom rows), A to G or ENTER to launch and fire; a
