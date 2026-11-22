@@ -1,0 +1,77 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Auf Wiedersehen Monty
+  Publisher   Gremlin Graphics, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Auf Wiedersehen Monty (1987)(Gremlin Graphics
+              Software)[128K].z80
+  MD5         fe2564a9bf18456d0857806c6219125f
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: on the game's menu 1 to 4 choose the controls, 0 starts.
+              Monty and the creatures in each room are hardware sprites over
+              the pixels the game still draws: the creatures in their own
+              colours, Monty in white, so nobody takes on the colour of the
+              scenery they pass and the coloured squares the game painted
+              behind every figure are gone. Known difference: the game kept a
+              figure's pixels off where they touch scenery ink, for
+              legibility; the sprites show each figure whole. The added work
+              runs at 28 MHz; at most about 2% more per update at the original
+              speed.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Aliens do not kill
+   3  No crushers
+   4  Water does not kill
+   5  No tickets needed to fly
+
+  From an archive .pok, each checked against this release's code: the lives
+  store made a NOP, the alien collision test's first byte made RET, the
+  crusher routine's first byte made RET, the water death's LD A,7 made LD A,0,
+  and the ticket test's RET Z made a NOP (the .pok marks that one for the 48K
+  version; the same code sits at the same address in this 128K release).
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Gremlin Graphics, 1987, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a 321,815-frame
+              recording (a whole playthrough); Tang FPGA board: loads with
+              DivMMC automap on and sprites left by another program, and plays
+              from the menu into the first room
+
+  Replay      IDENTICAL on a 321,815-frame recording through 571 room draws:
+              at every hook original and patched code compared from the same
+              state (every register but R, all RAM), every sprite against its
+              figure record after each of 155,935 figure loops, and every
+              pixel the game's own drawer put into a figure's cells inside
+              that figure's sprite (61.1 million pixels); 63 unit cases; 7
+              deliberately broken builds rejected
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
