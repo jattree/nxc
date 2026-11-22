@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Quazatron
   Publisher   Hewson, 1986
-  Version     1.4
+  Version     1.5
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -46,6 +46,8 @@
               1.4: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.5: Colour hides all 128 sprites at the start; sprites another
+              program left switched on could show as squares over the picture
 
   Note        Controls: choose 2 on CONTROL SELECTION for the cursor keys
               (fire 0), or 4 for a Kempston joystick. Space also fires (off by
@@ -81,10 +83,13 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      1.0 played by the owner in JNext 2026-11-06: approved; 1.1
-              (Centred view) approved; 1.2 played by the owner in JNext
-              2026-11-06: approved; 1.3 approved by the owner 2026-11-07, run
-              by script against v1.2 and the original
+  Tested      1.5: Tang FPGA board, straight after sprites left visible on
+              purpose (as another program may leave them): loads and runs with
+              no stray sprites; the sprite records proved hidden in the boot
+              simulator; 1.0 played by the owner in JNext 2026-11-06:
+              approved; 1.1 (Centred view) approved; 1.2 played by the owner
+              in JNext 2026-11-06: approved; 1.3 approved by the owner
+              2026-11-07, run by script against v1.2 and the original
 
   Replay      Game state IDENTICAL in 43 runs, as 1.2's: v1.0's 6 recordings
               in 4 states, 4 bot recordings against the Centred reference game

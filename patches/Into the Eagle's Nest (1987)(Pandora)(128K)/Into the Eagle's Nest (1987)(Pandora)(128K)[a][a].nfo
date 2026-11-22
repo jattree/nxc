@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Into the Eagle's Nest
   Publisher   Pandora, 1987
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -50,6 +50,9 @@
               transparent colour (E3), so on a real Next those pixels showed
               the picture underneath; it is now E7, the next shade, and
               nothing else in the build changed
+              1.3: Enhanced hides all 128 sprites at the start; sprites
+              another program left switched on could show as squares over the
+              picture
 
   Note        Keys: on the menu 1 to 4 pick controls (2 Kempston is set), 6
               sound, 7 messages, 8 level, any other key plays, then pick a
@@ -81,10 +84,13 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      1.2: Tang FPGA board: loads and plays; Run by script through the
-              real loader on a NextZXOS 26.11 card copy, default, Enhanced and
-              cheats; 1.0 not yet played by the owner; published at his
-              request
+  Tested      1.3: Tang FPGA board, straight after sprites left visible on
+              purpose (as another program may leave them): loads and runs with
+              no stray sprites; the sprite records proved hidden in the boot
+              simulator; 1.2: Tang FPGA board: loads and plays; Run by script
+              through the real loader on a NextZXOS 26.11 card copy, default,
+              Enhanced and cheats; 1.0 not yet played by the owner; published
+              at his request
 
   Replay      Default: no hooks, every snapshot bank byte for byte in the
               .nex, unchanged from the earlier review. Enhanced: 6 scripted

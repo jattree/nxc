@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Chase H.Q.
   Publisher   Ocean, 1989
-  Version     1.4
+  Version     1.5
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -67,6 +67,9 @@
               1.4: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.5: Enhanced colours, at both paces, hide all 128 sprites at
+              the start; sprites another program left switched on could show
+              as squares over the picture
 
   Note        Keys: ENTER options, 5 redefine (tested: SPACE gear, Q
               accelerate, A brake, O left, P right, X quit, H pause, T turbo),
@@ -104,11 +107,15 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06 (Speed, Enhanced at both
-              paces): approved. Automated JNext checks and the real loader on
-              disposable card copies; 1.2 Orig. pace through the real loader
-              in JNext; 1.2 published at his request; 1.3 through the real
-              loader in JNext, 1.3 not yet played by the owner
+  Tested      1.5: Tang FPGA board, straight after sprites left visible on
+              purpose (as another program may leave them): loads and runs with
+              no stray sprites; the sprite records proved hidden in the boot
+              simulator; Played by the owner in JNext 2026-11-06 (Speed,
+              Enhanced at both paces): approved. Automated JNext checks and
+              the real loader on disposable card copies; 1.2 Orig. pace
+              through the real loader in JNext; 1.2 published at his request;
+              1.3 through the real loader in JNext, 1.3 not yet played by the
+              owner
 
   Replay      1.3 (2026-11-08): two LD A,I reads made double reads (24 bytes
               of the hidden-ROM page, all three modes); stage 1, 4 runs of 800

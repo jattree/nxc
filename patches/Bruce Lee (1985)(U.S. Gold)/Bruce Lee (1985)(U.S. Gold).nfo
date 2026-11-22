@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Bruce Lee
   Publisher   U.S. Gold, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -34,6 +34,8 @@
   Changes     1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Hides all 128 sprites at the start; sprites another program
+              left switched on could show as squares over the picture
 
   Note        Original figures with colour clash removed by default; optional
               approved Enhanced figures and all 20 room tiles. Original
@@ -62,10 +64,13 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Frozen selftest verification and exact rebuild; normal/NEXLOAD
-              boot and full hidden ROM; continuous original/sprite
-              composition, all figure frames, all 20 room layouts,
-              registers/R/RAM and five broken builds; native pace and
+  Tested      1.2: Tang FPGA board, straight after sprites left visible on
+              purpose (as another program may leave them): loads and runs with
+              no stray sprites; the sprite records proved hidden in the boot
+              simulator; Frozen selftest verification and exact rebuild;
+              normal/NEXLOAD boot and full hidden ROM; continuous
+              original/sprite composition, all figure frames, all 20 room
+              layouts, registers/R/RAM and five broken builds; native pace and
               interrupt injection. Emulator evidence only.
 
   Replay      Original continuous and death/game-over recordings; frozen
