@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Auf Wiedersehen Monty
   Publisher   Gremlin Graphics, 1987
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -29,6 +29,8 @@
               game or spoil its drawing
               1.2: Keeps the CPU speed you chose (F8): the sprite updates used
               to drop the Next back to 3.5 MHz
+              1.3: Starts with the Next's DivMMC automap switched off again:
+              1.2 was built without it
 
   Note        Keys: on the game's menu 1 to 4 choose the controls, 0 starts.
               Monty and the creatures in each room are hardware sprites over
