@@ -1,0 +1,71 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Monty is Innocent
+  Publisher   Gremlin Graphics, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Monty is Innocent (1985)(Gremlin Graphics Software).z80
+  MD5         cc90fbe7e7b6568e5f9d00c3226f215b
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: on the game's menu 1 to 3 choose the controls. Sam Stoat,
+              Monty and the guards are hardware sprites over the pixels the
+              game still draws: the guards in their own colours, Sam and Monty
+              in white, so the coloured blocks each guard painted around
+              itself are gone and nobody changes colour near a guard. Panel
+              icons and the items in the rooms stay as the game draws them.
+              The added work runs at 28 MHz; about 3% more per frame at the
+              original speed.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Guards do not catch you
+
+  From an archive .pok, each checked against this release's code: the lives
+  counter's DEC A made OR A (the count is kept), and the guard collision
+  test's death routine starts with RET, so the test returns as if Monty had
+  not been caught.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Gremlin Graphics, 1985, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a 6,241-frame
+              recording; Tang FPGA board: loads with DivMMC automap on and
+              sprites left by another program and runs its menu (the board's
+              key input did not get past the menu, as with Monty on the Run);
+              that board run was on the build before a speed-up of the sprite
+              code, which the verification covers
+
+  Replay      IDENTICAL on a 6,241-frame recording through 38 screen clears:
+              at every hook and every painter call original and patched code
+              compared from the same state (every register but R, all 48K
+              RAM), every figure's XOR pixels against its four sprites after
+              each of 7,531 figure plots (1.0 million pixels); 328 unit cases;
+              6 deliberately broken builds rejected
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
