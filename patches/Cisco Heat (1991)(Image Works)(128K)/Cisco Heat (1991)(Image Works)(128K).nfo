@@ -1,0 +1,103 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Cisco Heat
+  Publisher   Image Works, 1991
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Ciscoheat.tap
+  MD5         7cf4c47830a587bb0d79fbbc72bb0992
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Pace        original
+
+  Changes     1.0: first NXC patch, from nexclash cisco_heat v1.2 with no
+              loading-screen hold
+
+  Note        Keys as the original. Smooth engine: the game's own update at
+              the original pace, with up to 50 in-between pictures a second
+              drawn by the game's own code, and the player's car as red Next
+              sprites, so road lines, posts and other cars beside it no longer
+              turn red. The tape's loading screen shows from ENTER while the
+              patch builds and while the game loads; the game then starts at
+              once. The five stages are kept in memory: no tape loads between
+              stages. Toggles: 25 pictures a second is the v1.1 cadence, more
+              even steps; Original picture rate shows one picture per game
+              update, as the original; Original car colours draws the car in
+              the game's red cells, with the clash. With Original picture rate
+              on, 25 pictures a second does nothing. Known issues: pictures
+              are unevenly spaced at the 50 cadence (1- and 2-frame steps),
+              each at its own in-between position; the car's shadow is black,
+              as in the original.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite time
+
+  Cheats come from the archive's POKEs for this release (Spectrum Computing,
+  ZXDB entry 968). Infinite time holds the whole seconds; the tenths still
+  run.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Image Works, 1991, by its original authors. All rights to the
+              game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Bare v1.2 played by the owner on a Spectrum Next, 2026-11-22;
+              this patch through the real loader not yet played
+
+  Replay      1.0 (2026-11-22, nexclash cisco_heat v1.2 with no loading-screen
+              hold): the real update, run at 28 MHz, against the original
+              0x8AFE from the same state, and the in-between frames (smooth on
+              against off, every byte they write put back): 159 cases from six
+              recordings (stages 1-5 and the end sequence), real update and
+              in-between frames IDENTICAL in 159 of 159, 754 in-between
+              frames, none late; 43 captured states with the car on, every
+              10th update, IDENTICAL. Toggles (each display only): 25 pictures
+              a second, stage 3, 37 of 37 IDENTICAL, 131 in-between frames;
+              Original car colours (the car's cells red as the game makes
+              them, no sprites), stage 1, 33 of 33 IDENTICAL, 149 in-between
+              frames; Original picture rate is the update with the in-between
+              frames off, the build every real-update case above runs. Car
+              sprites: the game's car routine on a clear buffer, the sprites
+              inside their clip window show exactly the pixels the game makes
+              red, 111 frames, mirrored images included.
+
+  Emulator    JNext 1.2.0 headless, the bare build without the hold's loader
+              screen (v1.2): game state in lockstep with the original for 300
+              updates on two input seeds; AY writes and interrupts as the
+              original; flicker, 100 frames: 59 picture changes against the
+              original's 11, none out of step, vanished or transient. Not run
+              through the real NXC loader.
+
+  Coverage    Stages 1-5 and the end sequence from the owner's recordings. Not
+              covered: a full unassisted playthrough; the 25 pictures a second
+              and Original car colours toggles on stages other than those
+              named; the trainers in JNext or on hardware; joystick.
+
+  Hardware    v1.2 as a bare .nex (with the 4 s screen hold) on a Spectrum
+              Next: played by the owner, "it works great". This patch's build
+              (no hold, toggles, trainers) not yet run on hardware.
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
