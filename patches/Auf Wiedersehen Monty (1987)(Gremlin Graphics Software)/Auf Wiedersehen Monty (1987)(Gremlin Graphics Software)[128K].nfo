@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Auf Wiedersehen Monty
   Publisher   Gremlin Graphics, 1987
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -23,6 +23,10 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+              NextZXOS leaves it on, and on current cores that could crash the
+              game or spoil its drawing
 
   Note        Keys: on the game's menu 1 to 4 choose the controls, 0 starts.
               Monty and the creatures in each room are hardware sprites over
