@@ -1,0 +1,77 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Monty on the Run
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Monty on the Run (1985)(Gremlin Graphics Software).z80
+  MD5         0acdc707ef4cf3b4aaf94316bd0f285c
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Note        Keys: on the game's menu 1 chooses the Monty Freedom Kit, 3
+              plays. Monty and the four creatures in each room are hardware
+              sprites over the pixels the game still draws: the creatures in
+              their own colours, Monty in white, so nobody takes on the colour
+              of the cells they pass and no coloured blocks follow the
+              creatures any more. The rooms, the panel and the other moving
+              objects stay as the game draws them. Known issues: about 2%
+              slower than the original while figures move (the sprite updates,
+              measured as hook time over a recording). Where a crumbling
+              platform eats into a figure, or the lift block slides one, the
+              original leaves scrambled pixels and the sprite shows the figure
+              whole; where two figures overlap the sprite is in front.
+              Missing: the four cheats are unplayed by a person; real Next
+              hardware untested.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Monsters do not kill
+   3  Water does not kill
+   4  No crushers
+
+  From an archive .pok, each checked against this release's code: the lives
+  counter's JR NZ made JR, the monster collision test's first byte made RET,
+  the water tile range test's CP 215 made CP 0, the crusher routine's RET Z
+  made RET. The archive's Infinite Shields pokes a data byte that could not be
+  tied to the shields and is left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    the publisher, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a 61,198-frame
+              recording; Tang FPGA board: loads with DivMMC automap on and
+              runs to the game's menu (the board's key input did not reach the
+              menu)
+
+  Replay      IDENTICAL on a 61,198-frame recording through 157 rooms: at
+              every hook and every attribute painter call original and patched
+              code compared from the same state (every register but R, all 48K
+              RAM), every figure's pixels against its sprites after each draw
+              (13.7 million pixels); 424 unit cases; 9 deliberately broken
+              builds rejected
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
