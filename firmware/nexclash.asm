@@ -226,7 +226,7 @@ name:   ld      hl,cur_fi
 vname   equ     var_at
 var_at  =       var_at + vsize
         endm
-vars            equ $3A20
+vars            equ $3A1F
 var_at          =   vars
         VAR     patch_path, PATH_SIZE
 game_b          equ patch_path              ; once open, its extension becomes .z80
@@ -308,7 +308,8 @@ game_kind       equ target_kinds
         VAR     scr_now, 1
         VAR     scr_show, 1                 ; INF1's build_screen: the game file's own screen from ENTER
         VAR     scr_at, 4                   ; where it is in the game file
-        VAR     scr_dots, 1                 ; and a dot for each bank so far
+        VAR     scr_dots, 1                 ; and its dots so far, 24 when the last bank is made
+        VAR     scr_acc, 1                  ; 24 for each bank made, less the header's bank count per dot
         VAR     pre_done, 1                 ; the key was made during the menu: its target's index + 1
         VAR     cur_kind, 1
         VAR     ram_bank, 1                 ; OPT1's highest 16K bank
@@ -3943,11 +3944,17 @@ scr_bank:
         ld      a,(scr_show)
         or      a
         ret     z
+        ld      a,(HDR+9)                   ; the .nex's banks: the 24 dots spread over them
+        ld      c,a
         ld      hl,scr_dots
-        ld      a,(hl)
-        cp      24
-        jr      nc,.say
+        ld      a,(scr_acc)
+        add     a,24
+.dot:   cp      c
+        jr      c,.acc
+        sub     c
         inc     (hl)
+        jr      .dot
+.acc:   ld      (scr_acc),a
 .say:   ld      a,NR_MMU5                   ; the menu's page where the menu ran it, for its text
         ld      bc,NR_SELECT
         out     (c),a
@@ -4262,9 +4269,11 @@ work_begin:
         ldir
         jp      crc_make
 .none:  ld      a,(page_goal)               ; 6, 9, 12 or 15 pages: the message for that many
-        add     a,low (ram_msgs - PAGES)
-        ld      l,a
-        ld      h,high ram_msgs
+        sub     PAGES
+        ld      e,a
+        ld      d,0
+        ld      hl,ram_msgs
+        add     hl,de
         ld      e,(hl)
         inc     hl
         ld      d,(hl)
@@ -4277,7 +4286,6 @@ ram_msgs:       dw msg_ram                  ; 3 bytes apart, as the pages go up 
                 dw msg_ram_two
                 db 0
                 dw msg_ram_tape2            ; a tape and two sets: only with a tape's first part in
-        assert  high ram_msgs == high (ram_msgs + 10), "the RAM messages' table crosses a page"
 
 ; ---- page_list: W0, W1, IO, sites x 3, set x 3.
 

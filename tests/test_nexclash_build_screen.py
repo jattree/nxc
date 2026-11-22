@@ -68,12 +68,10 @@ class BuildScreen(T.Base):
         self.assertTrue(rows(at_unlock)[LAST_LINE].startswith("Patching"))
         self.assertNotEqual(rows(at_unlock)[LAST_LINE][8], ".")
         self.assertLessEqual({i for i in range(SCREEN) if at_unlock[i] != want[i]}, text_cells(8))
-        banks = sum(1 for b in nxc.apply(PATCH, game=GAME)[18:18 + 112] if b)
         final = bytes(m.m.memory[0x4000:0x5B00])
         line = rows(final)[LAST_LINE]
-        self.assertTrue(line.startswith("Patching" + "." * banks), line)
-        self.assertNotEqual(line[8 + banks], ".")
-        self.assertLessEqual({i for i in range(SCREEN) if final[i] != want[i]}, text_cells(8 + banks))
+        self.assertEqual(line, "Patching" + "." * 24)   # the 24 dots spread over the banks, the last at the edge
+        self.assertLessEqual({i for i in range(SCREEN) if final[i] != want[i]}, text_cells(32))
         self.assertEqual((m.m.memory[0x5C8D], m.m.memory[0x5C48]), (7, 7))
         self.assertEqual(m.clean(), SYSVARS)
 
