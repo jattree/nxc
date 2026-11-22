@@ -1,0 +1,3 @@
+# .nfo files are CRLF by design (make_nfo writes them so); never convert their line endings
+*.nfo -text
+*.nxc binary
