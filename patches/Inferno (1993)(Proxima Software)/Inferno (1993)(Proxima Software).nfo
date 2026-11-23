@@ -1,0 +1,93 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Inferno
+  Publisher   Proxima Software, 1993
+  Version     1.1
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Inferno.tzx
+  MD5         335eec35a526f2044455cb87e8c77206
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: Kempston joystick works; pilot SAVE and LOAD go to
+              INFERNO.SAV on the SD card, with an autosave at each mission
+              start; English briefing title pictures and attract-mode credits
+              (MUSIC, GRAPHICS); no Czech flash before an English briefing.
+              1.0: first NXC patch, from nexclash inferno hybrid build with
+              English text; Czech as the language set
+
+  Note        The whole game from the tape (intro, six levels, ending) with
+              the figures as Next hardware sprites over a tilemap scenery; the
+              original code runs, with small hooks for the joystick and the SD
+              card saves. English is the default: the Language line steps
+              English / Czech (the original text); the build is the same
+              either way. English text is a reviewed translation of the Czech
+              original (menus, intro, level briefings and their title
+              pictures, story, debriefs, attract-mode credits, command words
+              HELP KEY REP WEA QUI PAS). Needs a 2MB Next. Kempston joystick:
+              answer Y (A in Czech) at the prompt; the stick moves and fires,
+              weapon and activate stay on Symbol Shift and N. Pilots: the
+              game's SAVE and LOAD use INFERNO.SAV in the game's folder on the
+              SD card (up to 112 pilots, names matched in either case), and
+              the pilot is saved by itself at the start of each mission; with
+              no card the pilots stay in RAM. Do not run automap_fix or any
+              DivMMC automap-off step on this build: the SD saves call esxDOS.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Bleugh
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Proxima Software, 1993, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      JNext 1.2.0 headless, 2026-11-23: the patch with the tape gives
+              the English and Czech builds byte for byte (MD5 eb68c94d and
+              ec57c7e9); through the menu .nex, English (default) and Czech
+              (key 2) reach the level 1 briefing in their own language and
+              level 1 play. Builds: level ends 1 to 5 reach the next level and
+              level 6 the ending; Kempston, pilot SAVE / LOAD through
+              INFERNO.SAV and the autosave; English briefings, debriefs and
+              attract credits. This patch not yet run on a Next
+
+  Emulator    JNext 1.2.0 headless, 2026-11-23: English build: level ends 1 to
+              5 reach the next level and level 6 the ending; English debriefs,
+              briefing titles (no Czech flash) and attract credits seen;
+              Kempston joystick flies the ship in both languages (Y / A at the
+              prompt); pilot SAVE, RAM wiped, LOAD read back from INFERNO.SAV
+              in one run, also after an autosave at mission start; copier-
+              window gate 0 failures
+
+  Coverage    Not covered: a full playthrough in either language; the shop
+              (cannot be reached headless); INFERNO.SAV kept over a power-off
+              (JNext does not write the card back); the colour clash fix OFF
+              line (the original game from the tape); pace and freshness on
+              hardware
+
+  Hardware    none: an earlier full-game build of the same sprite engine
+              reached play on a Next 2026-11-09 (user: working); v1.1 has not
+              run on hardware
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
