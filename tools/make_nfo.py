@@ -15,6 +15,7 @@ import nxc
 W = 78
 NO_CLASH = 'play area has no colour clash'          # PRF1 display_model phrases for a default that removes no clash
 KEEPS_CLASH = 'default keeps the original picture'
+NATIVE = 'view redrawn by a next renderer'           # ... for a 3D view drawn again on Layer 2 (Castle Master): no figures, no clash
 PLAIN_LABELS = (nxc.FIX_LABEL, 'Original colours', '128K build', 'NexClash build', 'Next build')   # fix line names that add nothing more
 
 HEAD = r"""
@@ -119,6 +120,11 @@ def nfo(d, base):
             text = "The default keeps the original look, and the small colour clash the original has stays (see the note). "
         text += 'The patch adds %s.%s %s' % (adds, more, logic or 'Game logic is unchanged.')
         if colours: text += ' Enhanced colours, an option on the menu, are below.'
+        o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
+    elif NATIVE in model:
+        o[2] = o[2].replace('colour clash removed with hardware sprites', 'the 3D view redrawn in colour on Layer 2')
+        text = ("The game's 3D view is drawn again by a Next renderer on Layer 2, each surface in its own colour. "
+                "The play area has no colour clash to remove. " + (logic or 'Game logic is unchanged.'))
         o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
     elif 'layer 2' in model:
         o[2] = o[2].replace('with hardware sprites', 'on Next hardware')
