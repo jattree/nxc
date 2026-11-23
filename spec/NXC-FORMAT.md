@@ -234,6 +234,8 @@ Optional display results, from comparing what the build shows with a reference:
 | `display_model` | What the reference was |
 | `display_when` | When |
 
+**Logic**, optional: `logic`, one sentence saying what the default build changes in the game's logic, such as finer time steps, for a patch whose default is not the original's logic (a kind 4 toggle may then give the original back). Left out, the default changes none, and a reader may say so.
+
 A figure for how long something takes goes in `timing`, with `timing_when`, and states the machine and speed it was measured at. It is a record, not a requirement: no model of timing is part of this format.
 
 **Pace**, optional: how fast the rebuilt game plays against the original, in fields a reader can show the same way for every patch.

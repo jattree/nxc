@@ -60,7 +60,7 @@ NO_CAP = 255; OLD_HOLD = 2; STATES_MAX = 65536   # the description's N with OPR1
 CREDIT = "Built with NexClash by Dean Woodyatt (Bleugh.biz, bleughb/nexclash, GPL-3.0-or-later)"
 PROOF_KEYS = ('replay', 'replay_when', 'emulator', 'emulator_when', 'hardware', 'hardware_when', 'coverage', 'coverage_when',
               'display_samples', 'display_exact', 'display_misses', 'display_approved', 'display_model', 'display_when',
-              'timing', 'timing_when', 'pace', 'pace_measured', 'pace_where', 'pace_when')
+              'timing', 'timing_when', 'pace', 'pace_measured', 'pace_where', 'pace_when', 'logic')
 
 class Wrong(ValueError):
     """The file cannot be applied to this snapshot."""

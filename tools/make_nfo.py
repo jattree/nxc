@@ -107,6 +107,7 @@ def nfo(d, base):
                                               for e in big)), o)
     rule(o, 'WHAT IT DOES')
     model = prf.get('display_model', '').lower()
+    logic = prf.get('logic', '')                    # what the default changes in the game's logic; none said = unchanged
     if NO_CLASH in model or KEEPS_CLASH in model:   # the default removes no clash: none to remove, or the original's own kept
         o[2] = o[2].replace('colour clash removed with hardware sprites', 'the original game on Next hardware')
         label = nxc.fix_label(d)
@@ -116,17 +117,23 @@ def nfo(d, base):
             text = "The game's play area has no colour clash, so none is removed: the default keeps the original look. "
         else:
             text = "The default keeps the original look, and the small colour clash the original has stays (see the note). "
-        text += 'The patch adds %s.%s Game logic is unchanged.' % (adds, more)
+        text += 'The patch adds %s.%s %s' % (adds, more, logic or 'Game logic is unchanged.')
         if colours: text += ' Enhanced colours, an option on the menu, are below.'
         o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
     elif 'layer 2' in model:
         o[2] = o[2].replace('with hardware sprites', 'on Next hardware')
         o.append('  Moving figures are drawn on the Next\'s own graphics layers, so they keep their')
-        o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
-        o.append('  unchanged.')
+        if logic:
+            o.extend('  ' + l for l in textwrap.wrap("own colours and no longer take on the scenery's (colour clash). " + logic, W - 2))
+        else:
+            o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
+            o.append('  unchanged.')
     else:
         o.append('  Moving figures become Next hardware sprites, so they keep their own colours')
-        o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
+        if logic:
+            o.extend('  ' + l for l in textwrap.wrap("and no longer take on the scenery's (colour clash). " + logic, W - 2))
+        else:
+            o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
     if colours:
         names = [e['name'].decode('ascii', 'replace') for e in colours]
         o.append('')
