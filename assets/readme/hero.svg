@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="380" viewBox="0 0 1200 380" role="img" aria-labelledby="title desc">
+  <title id="title">.nxc</title>
+  <desc id="desc">.nxc: colour-clash-free Spectrum games for the ZX Spectrum Next, from your own copy of the game. Your game plus the patch, which holds no game data, becomes the game with its clash fixed, on your Next.</desc>
+  <rect width="1200" height="380" rx="28" fill="#000000"/>
+  <text x="64" y="96" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="18" fill="#00d7d7" letter-spacing="2.4">PATCHES FOR THE ZX SPECTRUM NEXT</text>
+  <text x="58" y="222" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="140" font-weight="700" fill="#f4f4ee" letter-spacing="-3"><tspan fill="#00d7d7">.</tspan>nxc</text>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="29" fill="#f4f4ee">
+    <text x="64" y="282">Colour-clash-free Spectrum games,</text>
+    <text x="64" y="320">from your own copy of the game.</text>
+  </g>
+  <rect x="716" y="44" width="420" height="74" rx="12" fill="#141414"/><rect x="716" y="44" width="8" height="74" rx="4" fill="#e8e000"/><text x="744" y="72" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="18" fill="#a3a3a3" letter-spacing="1.5">YOUR GAME</text><text x="744" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="23" fill="#f4f4ee">your own .z80, .sna or .tap</text>
+  <text x="926" y="148" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="26" fill="#a3a3a3">+</text>
+  <rect x="716" y="156" width="420" height="74" rx="12" fill="#141414"/><rect x="716" y="156" width="8" height="74" rx="4" fill="#00d7d7"/><text x="744" y="184" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="18" fill="#a3a3a3" letter-spacing="1.5">THE PATCH</text><text x="744" y="214" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="23" fill="#f4f4ee">a .nxc, with no game in it</text>
+  <text x="926" y="260" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="26" fill="#a3a3a3">=</text>
+  <rect x="716" y="268" width="420" height="74" rx="12" fill="#1d1d1d"/><rect x="716" y="268" width="8" height="74" rx="4" fill="#2fd34a"/><text x="744" y="296" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="18" fill="#a3a3a3" letter-spacing="1.5">ON YOUR NEXT</text><text x="744" y="326" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" font-size="23" fill="#f4f4ee" font-weight="600">the game, clash fixed</text>
+</svg>
