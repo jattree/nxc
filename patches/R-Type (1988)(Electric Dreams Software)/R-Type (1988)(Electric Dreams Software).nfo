@@ -1,0 +1,79 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       R-Type
+  Publisher   Electric Dreams, 1988
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        r_type.z80
+  MD5         5a2179b4006d7888a1f7f821a4316bf5
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.0: first NXC patch, from the nexclash r_type SpecNext build
+              with the loading screen at ENTER
+
+  Note        Layer 2 scenery with half-pixel hardware scroll, figures as
+              filled hardware sprites that glide, four pictures per game
+              update; the original code runs as the logic. Start-up shows a
+              technical-spec screen (Advanced intro screen toggle). The game
+              file is the 128K snapshot (a tape cannot be the target: level
+              data is converted at load). The loading screen shows from ENTER
+              and needs the current NXC loader (NEXCLASH). Too large for the
+              in-NEX menu: the loader builds it with your choices. Needs a 2MB
+              Next. Not verified: a full playthrough; the replay check was not
+              run (no recordings).
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Immunity
+   3  Absolute invincibility
+   4  Immortality
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Bleugh
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Electric Dreams, 1988, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Run on a Spectrum Next through the NXC loader by the owner,
+              2026-11-22 (works); not played through every level
+
+  Replay      Verify : none: not verified (emulator evidence only;
+              games/r_type.md "Evidence"); Result : BUILT, NOT VERIFIED;
+              Checks : COMPLETE: rom_paths not run (no recordings)
+
+  Emulator    CSpect (owner, 2026-11-17) and JNext headless on the build's
+              predecessors; see development notes
+
+  Coverage    Not covered: a full playthrough; level changes in every level;
+              the replay equivalence check (no recordings); a 1MB Next (needs
+              2MB)
+
+  Hardware    Spectrum Next: the owner ran this patch through the NXC loader
+              (with the current NEXCLASH loader and this .nxc together),
+              2026-11-22: works. Playthrough and 1MB Next not tested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
