@@ -165,6 +165,11 @@ def nfo(d, base):
             o.extend('  ' + l for l in textwrap.wrap(asc(inf['cheats_source']).strip(), W - 2))
         else:
             o.append('  Cheats come from the archive\'s POKEs for this release.')
+    elif inf.get('cheats_source') and any(logic for _, logic in nxc.toggles_of(d)):
+        for name, logic in nxc.toggles_of(d):     # cheats a patch can only build in: logic toggles on the menu
+            if logic: o.append('  Toggle  %s' % name)
+        o.append('')
+        o.extend('  ' + l for l in textwrap.wrap(asc(inf['cheats_source']).strip(), W - 2))
     else:
         o.append('  No cheats.')
     rule(o, 'CREDITS')
