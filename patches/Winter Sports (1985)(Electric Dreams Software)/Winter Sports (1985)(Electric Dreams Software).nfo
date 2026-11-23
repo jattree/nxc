@@ -42,7 +42,14 @@
               screen shows from ENTER.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Your clock stops
+   2  Missed gates count
+   3  Endless stamina
+
+  No POKEs were published for this game, so these were found by tracing it:
+  Your clock stops (Downhill, Slalom, Giant Slalom and Speed Skating), Missed
+  gates count (the three skiing events), Endless stamina (Biathlon). Each was
+  checked in the simulator; they work with the colour clash fix on.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Dean Woodyatt
@@ -55,7 +62,9 @@
   Tested      Plain build played by the owner on a Spectrum Next, 2026-11-22
               (loads, Downhill runs). The other events, Enhanced, Original
               pace and this patch through the real loader: simulator and JNext
-              checks only, not yet played on hardware
+              checks only, not yet played on hardware. Cheats: each checked in
+              the simulator on the original game, and against every build's
+              bytes.
 
   Nothing here claims a result on real hardware unless the line above says so.
 
