@@ -12,7 +12,7 @@
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
 
-  File        ws.tap
+  File        Winter Sports (1985)(Electric Dreams Software).tap
   MD5         a53ffe203db7109427c84fb438aa9ebe
 
   The patch carries none of the game's code. It only works with that exact
@@ -45,6 +45,7 @@
   No cheats.
 
 -- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
               bleughb/nexclash, GPL-3.0-or-later)
   Original    Electric Dreams Software, 1985, by its original authors. All
