@@ -1,6 +1,19 @@
-# .nxc
+<p align="center">
+  <img src="assets/readme/hero.svg" width="100%" alt=".nxc: colour-clash-free Spectrum games for the ZX Spectrum Next, from your own copy of the game. Your game plus the patch, which holds no game, becomes the game with its clash fixed, on your Next.">
+</p>
 
-Colour-clash-free Spectrum games for the ZX Spectrum Next, from your own copy of the game.
+<p align="center">
+  <a href="patches/"><b>The patches</b></a>
+  &nbsp;·&nbsp; <a href="#one-time-card-setup">Set up your card</a>
+  &nbsp;·&nbsp; <a href="#play-a-game">Play a game</a>
+  &nbsp;·&nbsp; <a href="#part-2-make-a-patch">Make a patch</a>
+  &nbsp;·&nbsp; <a href="spec/NXC-FORMAT.md">The format</a>
+</p>
+
+<p align="center">
+  <img src="assets/readme/showcase.png" width="100%" alt="Three Weeks in Paradise three ways. The original: Wally turns the red and yellow of the tree he walks past. With its .nxc: he is a Next sprite and keeps his own colours. With its Enhanced colours: he is in fuller colour.">
+  <br><sub>Three Weeks in Paradise (Mikro-Gen, 1986). Its Enhanced colours come from an older Spec256 conversion.</sub>
+</p>
 
 [NexClash](https://github.com/bleughb/nexclash), by Dean Woodyatt (Bleugh.biz), rebuilds Spectrum games so that
 their moving figures are Next hardware sprites, which keep their own colours. Its builds contain the game, so they
@@ -10,11 +23,9 @@ Next rebuilds the game with the clash fixed, plus any cheats or colour sets the 
 The format and tools are by Jon Attree. Built with NexClash by Dean Woodyatt (Bleugh.biz,
 [bleughb/nexclash](https://github.com/bleughb/nexclash), GPL-3.0-or-later).
 
-## Status
-
-**Early.** Everything has been tested in the JNext emulator. On real hardware so far, the loader has run on Jon's
-NextNano (a Tang Nano 20K FPGA build of the Next) with NextZXOS v2.09, and nothing beyond that. It has not yet run on
-an official Next board. The format may still change.
+> **Status: early.** Everything has been tested in the JNext emulator. On real hardware so far, the loader has run on Jon's
+> NextNano (a Tang Nano 20K FPGA build of the Next) with NextZXOS v2.09, and nothing beyond that. It has not yet run on
+> an official Next board. The format may still change.
 
 # Part 1: Play a patch on your Next
 
@@ -68,7 +79,10 @@ With the clash fix turned off, ENTER plays your own game as it is, with any chea
 
 ## If it refuses
 
-The loader stops with a message:
+The loader stops with a message.
+
+<details>
+<summary><b>What each message means</b></summary>
 
 | Message | What to do |
 |---|---|
@@ -84,6 +98,8 @@ The loader stops with a message:
 | `Needs more RAM: turn fix off` | The rebuilt game needs more memory than this Next has. With the clash fix off, the original game still plays. |
 | `Needs 72K free RAM` and the like | Not enough memory is free for the rebuild. Restart the Next and try again. |
 | `No menu .nex: press ENTER` | SPACE, which saves a `.nex` with the menu in it, can't be used for this game. Press ENTER. |
+
+</details>
 
 If the Browser doesn't start the loader when you choose a `.nxc`, the `browser.cfg` line is missing: run the card
 setup again.
@@ -104,7 +120,7 @@ game, so it is for your own use: share the `.nxc`, never the `.nex`.
 
 ## The patches
 
-[`patches/`](patches/) holds the patches made so far, one folder per game, each played through the real loader in
+[`patches/`](patches/) holds the 114 patches made so far, for 107 games, one folder per game, each played through the real loader in
 JNext. Each has a `.nfo` naming the exact game file it needs, what it changes, its cheats, its credits and how it
 was tested. None of them carries game code.
 
@@ -177,7 +193,8 @@ python tools/nxc.py Game.nxc Game.z80 -o Check.nex --bare --trainer 1 --colours 
 sprite build's graphics are made from the game's, held encrypted, and a screen or art you add may not be in the
 player's file at all. Get the agreement of whoever made the build.
 
-### The details
+<details>
+<summary><b>The details</b></summary>
 
 The game can be `.z80` or `.sna`. It rebuilds the `.nex` from what it wrote before keeping anything, and refuses one it can't package: a `.nex` above `V1.2`, a screen of a later version, anything past the banks, or too much changed from the game for a loader to hold in `SIT1`. A colour or language set has no such limit, and is always a choice on the menu: the plain build stays the default. `--proof-file` takes the proof fields as lines of `KEY=VALUE`, and the [format](spec/NXC-FORMAT.md) lists them. `--colours NAME=NEX` and `--language NAME=NEX` add sets, each from the same build with it applied, and `--colours-by` credits a colour set.
 
@@ -193,6 +210,8 @@ blocks. [docs/TAP1-NOTES.md](docs/TAP1-NOTES.md) has the steps.
 python tools/nxc.py make Game.nex "Game (1989)(Ocean).tap" --start Game_start.z80 -o Game.nxc --title "Game"
 python tools/nxc.py add-target Game.nxc "Game (1989)(Ocean).tap" "Game (1989)(Ocean).tzx" -o Game2.nxc
 ```
+
+</details>
 
 ## Adding to a patch
 

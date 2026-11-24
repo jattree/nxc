@@ -15,6 +15,7 @@ import nxc
 W = 78
 NO_CLASH = 'play area has no colour clash'          # PRF1 display_model phrases for a default that removes no clash
 KEEPS_CLASH = 'default keeps the original picture'
+NATIVE = 'view redrawn by a next renderer'           # ... for a 3D view drawn again on Layer 2 (Castle Master): no figures, no clash
 PLAIN_LABELS = (nxc.FIX_LABEL, 'Original colours', '128K build', 'NexClash build', 'Next build')   # fix line names that add nothing more
 
 HEAD = r"""
@@ -107,6 +108,7 @@ def nfo(d, base):
                                               for e in big)), o)
     rule(o, 'WHAT IT DOES')
     model = prf.get('display_model', '').lower()
+    logic = prf.get('logic', '')                    # what the default changes in the game's logic; none said = unchanged
     if NO_CLASH in model or KEEPS_CLASH in model:   # the default removes no clash: none to remove, or the original's own kept
         o[2] = o[2].replace('colour clash removed with hardware sprites', 'the original game on Next hardware')
         label = nxc.fix_label(d)
@@ -116,17 +118,28 @@ def nfo(d, base):
             text = "The game's play area has no colour clash, so none is removed: the default keeps the original look. "
         else:
             text = "The default keeps the original look, and the small colour clash the original has stays (see the note). "
-        text += 'The patch adds %s.%s Game logic is unchanged.' % (adds, more)
+        text += 'The patch adds %s.%s %s' % (adds, more, logic or 'Game logic is unchanged.')
         if colours: text += ' Enhanced colours, an option on the menu, are below.'
+        o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
+    elif NATIVE in model:
+        o[2] = o[2].replace('colour clash removed with hardware sprites', 'the 3D view redrawn in colour on Layer 2')
+        text = ("The game's 3D view is drawn again by a Next renderer on Layer 2, each surface in its own colour. "
+                "The play area has no colour clash to remove. " + (logic or 'Game logic is unchanged.'))
         o.extend('  ' + l for l in textwrap.wrap(text, W - 2))
     elif 'layer 2' in model:
         o[2] = o[2].replace('with hardware sprites', 'on Next hardware')
         o.append('  Moving figures are drawn on the Next\'s own graphics layers, so they keep their')
-        o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
-        o.append('  unchanged.')
+        if logic:
+            o.extend('  ' + l for l in textwrap.wrap("own colours and no longer take on the scenery's (colour clash). " + logic, W - 2))
+        else:
+            o.append('  own colours and no longer take on the scenery\'s (colour clash). Game logic is')
+            o.append('  unchanged.')
     else:
         o.append('  Moving figures become Next hardware sprites, so they keep their own colours')
-        o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
+        if logic:
+            o.extend('  ' + l for l in textwrap.wrap("and no longer take on the scenery's (colour clash). " + logic, W - 2))
+        else:
+            o.append('  and no longer take on the scenery\'s (colour clash). Game logic is unchanged.')
     if colours:
         names = [e['name'].decode('ascii', 'replace') for e in colours]
         o.append('')
@@ -158,6 +171,11 @@ def nfo(d, base):
             o.extend('  ' + l for l in textwrap.wrap(asc(inf['cheats_source']).strip(), W - 2))
         else:
             o.append('  Cheats come from the archive\'s POKEs for this release.')
+    elif inf.get('cheats_source') and any(logic for _, logic in nxc.toggles_of(d)):
+        for name, logic in nxc.toggles_of(d):     # cheats a patch can only build in: logic toggles on the menu
+            if logic: o.append('  Toggle  %s' % name)
+        o.append('')
+        o.extend('  ' + l for l in textwrap.wrap(asc(inf['cheats_source']).strip(), W - 2))
     else:
         o.append('  No cheats.')
     rule(o, 'CREDITS')

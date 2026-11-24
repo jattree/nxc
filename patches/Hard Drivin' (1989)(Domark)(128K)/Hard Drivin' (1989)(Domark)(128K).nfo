@@ -1,0 +1,105 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Hard Drivin'
+  Publisher   Domark, 1989
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch
+  (one of these files):
+
+  File        hd.tap
+  MD5         02e1f96c6b0b872859283b16f761c3b6
+
+  File        hd.tzx
+  MD5         61f7d04c538e35029ca909e77f82f682
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Finer time steps line adds more; see the note. Game
+  logic is changed: each update is split into 2 to 4 finer time steps (the
+  menu's Original time steps line gives the original back).
+
+  Pace        slowdown removed
+
+  Changes     1.0: first NXC patch, for the tape, from nexclash hard_drivin
+              (steps route + loading screen; toggle: the smooth route)
+
+  Note        Keys as the original. Finer time steps: each game update is
+              split into 2 to 4 sub-steps run at 28 MHz and paced to real time
+              (one race-clock second a second), so the car reads the controls
+              and the 3D view is drawn 2 to 4 times as often. The picture
+              stays the original's: no sprites, the same colours. The loading
+              screen (the tape has none; supplied by the owner) shows from
+              ENTER while the patch builds and the game loads. Toggle:
+              Original time steps plays the original's own update steps at its
+              own pace, with in-between views of the 3D scene drawn at 28 MHz
+              for a smoother picture.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite time
+   2  Hard pilot
+   3  9 replays
+   4  Infinite off-road
+   5  No crashes
+
+  Cheats are the archive's POKEs (The Tipshop: Gerard Sweeney, Hippy Smith),
+  checked against this release. Each was read in the game's code and run in
+  the NexClash simulator; easy steering left out.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Domark, 1989, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Bare steps and smooth .nex builds played by the owner on a
+              Spectrum Next, 2026-11-23; this patch through the real loader
+              not yet played
+
+  Replay      1.0 (2026-11-23, nexclash add-hard-drivin, PR
+              bleughb/nexclash#306; auto PASSED, stamped selftest --verify
+              PASSED): the owner's recording, 22,116 frames, 1,555 updates.
+              Steps build: each update run by the build's model (sub-steps at
+              28 MHz, the Next's paging) and by an independent spec of the
+              sub-step rules from the same state, adaptive N and fixed N = 1 /
+              2 / 4: 6,220 cases, 0 mismatches (N = 1 also equals the
+              recording); unit tests and 20 of 20 negative controls caught;
+              model pace per update 10.00 / 10.19 / 10.76 frames (median / p95
+              / max; 10 = real time). Original time steps: 3,112 checks of the
+              real update and 3,281 in-between views, 0 fail. ROM paths: every
+              byte the game runs is as recorded.
+
+  Emulator    JNext: the steps prototype (the same sub-step code), 154 s: 120
+              race-clock seconds in 120.12 s; the smooth route timed against
+              the plain build, 178 updates. This patch's build not run in
+              JNext.
+
+  Coverage    The owner's recording of play from the title screen (22,116
+              frames). Not covered: stopwatch against the race clock on
+              hardware, race end and the replay menus, 9 replays and No
+              crashes on recorded play (synthetic states only), joystick.
+
+  Hardware    Bare .nex builds on a Spectrum Next, played by the owner: the
+              steps build "plays much better"; the smooth build plays like the
+              original. This patch (loading screen, trainers, through the real
+              loader) not yet run on hardware.
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
