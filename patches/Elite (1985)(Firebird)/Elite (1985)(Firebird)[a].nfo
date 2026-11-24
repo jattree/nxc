@@ -1,0 +1,86 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Elite
+  Publisher   Firebird, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Elite (1985)(Firebird)[a].tap
+  MD5         dc48f02c5f7424da52a9819c4b76c15b
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu and the Next start-up. Game
+  logic is unchanged (the two toggles change it, off by default).
+
+  Changes     1.0: the standard release from its tape, original look and pace;
+              IM 2 fix; 50 fps title ship; Elite.scr loading screen from
+              ENTER; two gameplay toggles
+
+  Note        The "[a]" tape: the Lenslok check is skipped (the build starts
+              at the game's entry after it, at the title with "Load New
+              Commander (Y/N)?"). Original look and 3.5 MHz. Changes: the IM 2
+              interrupt works whatever the Next puts on the bus, and the title
+              screens' rotating ship is redrawn every frame (50 fps) at the
+              original turning speed by the game's own draw. Toggles, off by
+              default, one at a time: "Bigger pirate packs" (3-6 a pack, not
+              3-4) and "Russian hack gameplay" (the Russian 128K hack's code
+              and data: its ships, fonts, stars, fills; disk save / load off).
+              Keys: M / N roll, S / X pitch, SPACE / SYMBOL SHIFT faster /
+              slower, A laser, T / F target / fire missile, 1-4 views (1
+              launches), H hyperspace, I / O charts, K market, L status, P
+              data, ENTER inventory. Known issues: hardware untested; the hack
+              toggle's own logic is not verified.
+
+-- MENU ----------------------------------------------------------------------
+  No cheats.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Firebird, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Lockstep verify against the original and the CSpect emulator;
+              not yet played on a Next
+
+  Replay      No recordings of the standard game exist: lockstep of build and
+              original per instruction (PC, registers, all RAM, port writes,
+              many bus bytes at the interrupt) from 24-25 scripted states per
+              version (title, docked pages, launch, flight, charts,
+              hyperspace, the sun, seven kinds of encounter, a missile, a long
+              fight, eight equipment and end-of-game cases); every title
+              render put back exactly; negative builds caught.
+
+  Emulator    CSpect: title frames (every frame differs from the one before),
+              Y / N, status page, launch and flight; both toggles boot and
+              fly.
+
+  Coverage    Scripted input, no human play: title, docked pages, launch,
+              flight, charts, hyperspace, the sun, encounters, and with
+              equipment set by poke the docking computer, escape pod, energy
+              bomb, galactic hyperdrive, in-system jump, game over, an
+              explosion and a missile hit; not reached: docking by hand, a
+              full trading career.
+
+  Hardware    none
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------

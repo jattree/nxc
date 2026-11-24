@@ -10,10 +10,14 @@
   Version     1.0
 
 -- YOU NEED ------------------------------------------------------------------
-  Your own copy of the original game, saved beside this patch:
+  Your own copy of the original game, saved beside this patch
+  (one of these files):
 
   File        hd.tap
   MD5         02e1f96c6b0b872859283b16f761c3b6
+
+  File        hd.tzx
+  MD5         61f7d04c538e35029ca909e77f82f682
 
   The patch carries none of the game's code. It only works with that exact
   dump, under that name or any other: anything else is refused, with a
