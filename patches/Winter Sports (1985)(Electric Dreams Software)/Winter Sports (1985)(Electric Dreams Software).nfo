@@ -1,0 +1,74 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Winter Sports
+  Publisher   Electric Dreams Software, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Winter Sports (1985)(Electric Dreams Software).tap
+  MD5         a53ffe203db7109427c84fb438aa9ebe
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Downhill: painted extended-colour mountain panorama (the other
+              events keep the original 16 colours). A painted set, colourist
+              not named.
+
+  Pace        original
+
+  Changes     1.0: first NXC patch, from nexclash winter_sports with no
+              loading-screen hold
+
+  Note        Six events in one game: the patch rebuilds all of them.
+              Smoother, similar play in the game's own 16 colours: Downhill
+              scrolls on Layer 2 and every event draws at 28 MHz from the
+              frame interrupt (no tearing). Toggle Original pace restores the
+              original timing. Ski Jumping is unchanged. The tape's loading
+              screen shows from ENTER.
+
+-- MENU ----------------------------------------------------------------------
+   1  Your clock stops
+   2  Missed gates count
+   3  Endless stamina
+
+  No POKEs were published for this game, so these were found by tracing it:
+  Your clock stops (Downhill, Slalom, Giant Slalom and Speed Skating), Missed
+  gates count (the three skiing events), Endless stamina (Biathlon). Each was
+  checked in the simulator; they work with the colour clash fix on.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Dean Woodyatt
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Electric Dreams Software, 1985, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      Plain build played by the owner on a Spectrum Next, 2026-11-22
+              (loads, Downhill runs). The other events, Enhanced, Original
+              pace and this patch through the real loader: simulator and JNext
+              checks only, not yet played on hardware. Cheats: each checked in
+              the simulator on the original game, and against every build's
+              bytes.
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
