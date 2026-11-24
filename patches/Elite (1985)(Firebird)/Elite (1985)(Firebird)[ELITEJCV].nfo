@@ -22,26 +22,29 @@
 -- WHAT IT DOES --------------------------------------------------------------
   The game's play area has no colour clash, so none is removed: the default
   keeps the original look. The patch adds the menu and the Next start-up. Game
-  logic is unchanged (the two toggles change it, off by default).
+  logic is unchanged (save / load writes files instead of tape blocks) (the
+  two toggles change it, off by default).
 
   Changes     1.0: the standard release from its tape, original look and pace;
-              IM 2 fix; 50 fps title ship; Elite.scr loading screen from
-              ENTER; two gameplay toggles
+              IM 2 fix; 50 fps title ship; commander save / load on the SD
+              card; Elite.scr loading screen from ENTER; two gameplay toggles
 
   Note        The ELITEJCV (Joystick Club) tape: a frozen game with commander
               MILICEVIC; it starts at "Press Space, Commander". Original look
               and 3.5 MHz. Changes: the IM 2 interrupt works whatever the Next
               puts on the bus, and the title screens' rotating ship is redrawn
               every frame (50 fps) at the original turning speed by the game's
-              own draw. Toggles, off by default, one at a time: "Bigger pirate
-              packs" (3-6 a pack, not 3-4) and "Russian hack gameplay" (the
-              Russian 128K hack's code and data: its ships, fonts, stars,
-              fills; disk save / load off). Keys: M / N roll, S / X pitch,
-              SPACE / SYMBOL SHIFT faster / slower, A laser, T / F target /
-              fire missile, 1-4 views (1 launches), H hyperspace, I / O
-              charts, K market, L status, P data, ENTER inventory. Known
-              issues: hardware untested; the hack toggle's own logic is not
-              verified.
+              own draw. Save / load (docked, SYMBOL SHIFT) uses the SD card: a
+              file per commander, the first 8 letters + .ELA (.ELB on
+              ELITE128); no name loads the last saved. Toggles, off by
+              default, one at a time: "Bigger pirate packs" (3-6 a pack, not
+              3-4) and "Russian hack gameplay" (the Russian 128K hack's code
+              and data: its ships, fonts, stars, fills; disk save / load off).
+              Keys: M / N roll, S / X pitch, SPACE / SYMBOL SHIFT faster /
+              slower, A laser, T / F target / fire missile, 1-4 views (1
+              launches), H hyperspace, I / O charts, K market, L status, P
+              data, ENTER inventory. Known issues: hardware untested; the hack
+              toggle's own logic is not verified.
 
 -- MENU ----------------------------------------------------------------------
   No cheats.
@@ -63,7 +66,9 @@
               version (title, docked pages, launch, flight, charts,
               hyperspace, the sun, seven kinds of encounter, a missile, a long
               fight, eight equipment and end-of-game cases); every title
-              render put back exactly; negative builds caught.
+              render put back exactly; SD save / load hooks run on a Next
+              memory model with a simulated esxDOS (save, load, empty name,
+              missing name, a refusing card); negative builds caught.
 
   Emulator    CSpect: title frames (every frame differs from the one before),
               Y / N, status page, launch and flight; both toggles boot and

@@ -22,10 +22,11 @@
 -- WHAT IT DOES --------------------------------------------------------------
   The game's play area has no colour clash, so none is removed: the default
   keeps the original look. The patch adds the menu and the Next start-up. Game
-  logic is unchanged.
+  logic is unchanged (save / load writes files instead of tape blocks).
 
   Changes     1.0: the standard release from its tape, original look and pace;
-              50 fps title ship; Elite.scr loading screen from ENTER
+              50 fps title ship; commander save / load on the SD card;
+              Elite.scr loading screen from ENTER
 
   Note        The ELITE128 tape, the original Firebird release (a 48K game,
               the same code at other addresses): it starts at "Load New
@@ -33,10 +34,13 @@
               Next; the smooth title ship is the only change. Original look
               and 3.5 MHz. The title screens' rotating ship is redrawn every
               frame (50 fps) at the original turning speed by the game's own
-              draw. Keys: M / N roll, S / X pitch, SPACE / SYMBOL SHIFT faster
-              / slower, A laser, T / F target / fire missile, 1-4 views (1
-              launches), H hyperspace, I / O charts, K market, L status, P
-              data, ENTER inventory. Known issues: hardware untested.
+              draw. Save / load (docked, SYMBOL SHIFT) uses the SD card: a
+              file per commander, the first 8 letters + .ELA (.ELB on
+              ELITE128); no name loads the last saved. Keys: M / N roll, S / X
+              pitch, SPACE / SYMBOL SHIFT faster / slower, A laser, T / F
+              target / fire missile, 1-4 views (1 launches), H hyperspace, I /
+              O charts, K market, L status, P data, ENTER inventory. Known
+              issues: hardware untested.
 
 -- MENU ----------------------------------------------------------------------
   No cheats.
@@ -58,7 +62,9 @@
               version (title, docked pages, launch, flight, charts,
               hyperspace, the sun, seven kinds of encounter, a missile, a long
               fight, eight equipment and end-of-game cases); every title
-              render put back exactly; negative builds caught.
+              render put back exactly; SD save / load hooks run on a Next
+              memory model with a simulated esxDOS (save, load, empty name,
+              missing name, a refusing card); negative builds caught.
 
   Emulator    CSpect: title frames (every frame differs from the one before),
               Y / N, status page, launch and flight.
