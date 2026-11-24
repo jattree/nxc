@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Hard Drivin'
   Publisher   Domark, 1989
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -27,24 +27,33 @@
   The game's play area has no colour clash, so none is removed: the default
   keeps the original look. The patch adds the menu, its cheats and the Next
   start-up. The menu's Finer time steps line adds more; see the note. Game
-  logic is changed: each update is split into 2 to 4 finer time steps (the
-  menu's Original time steps line gives the original back).
+  logic is changed: each update is split into 2 to 4 finer time steps, with
+  manual gears gated to one shift an update as the original (the menu's
+  Original time steps line gives the original back).
 
   Pace        slowdown removed
 
-  Changes     1.0: first NXC patch, for the tape, from nexclash hard_drivin
+  Changes     1.1: faster (hardware multiply, DMA view copy), manual-gear fix,
+              heading smoothing (menu toggle), core 3.03
+              1.0: first NXC patch, for the tape, from nexclash hard_drivin
               (steps route + loading screen; toggle: the smooth route)
 
   Note        Keys as the original. Finer time steps: each game update is
               split into 2 to 4 sub-steps run at 28 MHz and paced to real time
               (one race-clock second a second), so the car reads the controls
-              and the 3D view is drawn 2 to 4 times as often. The picture
-              stays the original's: no sprites, the same colours. The loading
-              screen (the tape has none; supplied by the owner) shows from
-              ENTER while the patch builds and the game loads. Toggle:
-              Original time steps plays the original's own update steps at its
-              own pace, with in-between views of the 3D scene drawn at 28 MHz
-              for a smoother picture.
+              and the 3D view is drawn 2 to 4 times as often; a held gear key
+              shifts once an update, as the original. Heading smoothing
+              (default): during a turn the 3D view's objects and road move in
+              smaller steps between the game's heading steps (display only;
+              the mountain backdrop still steps). The picture stays the
+              original's: no sprites, the same colours. The loading screen
+              (the tape has none; supplied by the owner) shows from ENTER
+              while the patch builds and the game loads. Toggles: No heading
+              smoothing draws the view at the game's own heading, as the
+              original; Original time steps plays the original's own update
+              steps at its own pace, with in-between views of the 3D scene
+              drawn at 28 MHz for a smoother picture (it has no heading
+              smoothing, so the two are never on together).
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time
@@ -65,37 +74,53 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Bare steps and smooth .nex builds played by the owner on a
-              Spectrum Next, 2026-11-23; this patch through the real loader
-              not yet played
+  Tested      Phase 1 .nex builds (the steps build with and without the
+              loading screen, and without heading smoothing) played by the
+              owner on a Spectrum Next, core 3.03, 2026-11-24: "work great";
+              this patch through the real loader not yet played
 
-  Replay      1.0 (2026-11-23, nexclash add-hard-drivin, PR
-              bleughb/nexclash#306; auto PASSED, stamped selftest --verify
-              PASSED): the owner's recording, 22,116 frames, 1,555 updates.
-              Steps build: each update run by the build's model (sub-steps at
-              28 MHz, the Next's paging) and by an independent spec of the
-              sub-step rules from the same state, adaptive N and fixed N = 1 /
-              2 / 4: 6,220 cases, 0 mismatches (N = 1 also equals the
-              recording); unit tests and 20 of 20 negative controls caught;
-              model pace per update 10.00 / 10.19 / 10.76 frames (median / p95
-              / max; 10 = real time). Original time steps: 3,112 checks of the
-              real update and 3,281 in-between views, 0 fail. ROM paths: every
-              byte the game runs is as recorded.
+  Replay      1.1 (2026-11-24, nexclash hard_drivin route 2a phase 1, branch
+              hd-phase1; auto PASSED, stamped selftest --verify PASSED): the
+              owner's recording, 22,116 frames, 1,555 updates. Steps build:
+              each update run by the build's model (sub-steps at 28 MHz, the
+              Next's paging, Z80N MUL, zxnDMA) and by an independent spec of
+              the sub-step rules from the same state, adaptive N and fixed N =
+              1 / 2 / 4: 6,220 cases, 0 mismatches (N = 1 also equals the
+              recording); the multiplies tested exhaustively, the DMA view
+              copy and the gear gate by unit tests; 27 of 27 negative controls
+              caught; model pace per update 10.00 / 10.02 / 10.70 frames
+              (median / p95 / max; 10 = real time). No heading smoothing
+              (display only): game logic IDENTICAL with it on: the spec with
+              and without the smoothing from the same recorded states, 90 runs
+              of 20 updates at N = 1 / 2 / 4, all 128K outside the render's
+              own view bytes and every register but those the view copy loads
+              from them equal, 3,676 smoothed views, 0 fail; on all 1,552
+              updates every byte it changes is one the render writes and the
+              logic never reads. Its layer: the build equals the spec byte for
+              byte with the view (smoothing on), and with bl_on 0 equals the
+              spec without it; looked at in JNext on a slow turn. Original
+              time steps: 3,112 checks of the real update and 3,281 in-between
+              views, 0 fail. ROM paths: every byte the game runs is as
+              recorded.
 
-  Emulator    JNext: the steps prototype (the same sub-step code), 154 s: 120
-              race-clock seconds in 120.12 s; the smooth route timed against
-              the plain build, 178 updates. This patch's build not run in
-              JNext.
+  Emulator    JNext: the phase 1 steps build, 9,000 frames with and without
+              heading smoothing: update 10.00 frames median, 0 views early;
+              screenshots of a slow turn compared (objects and road edges a
+              pixel or two apart, the backdrop unchanged). 1.0: 120 race-clock
+              seconds in 120.12 s. This patch's build not run in JNext.
 
   Coverage    The owner's recording of play from the title screen (22,116
               frames). Not covered: stopwatch against the race clock on
-              hardware, race end and the replay menus, 9 replays and No
-              crashes on recorded play (synthetic states only), joystick.
+              hardware for phase 1, race end and the replay menus, 9 replays
+              and No crashes on recorded play (synthetic states only), the
+              gear fix on recorded play (synthetic held keys), joystick.
 
-  Hardware    Bare .nex builds on a Spectrum Next, played by the owner: the
-              steps build "plays much better"; the smooth build plays like the
-              original. This patch (loading screen, trainers, through the real
-              loader) not yet run on hardware.
+  Hardware    Spectrum Next, core 3.03, played by the owner 2026-11-24: the
+              phase 1 .nex builds (the steps build with and without the
+              loading screen, and without heading smoothing) "work great";
+              2026-11-23: the steps build "plays much better", the smooth
+              build plays like the original. This patch (through the real
+              loader, its toggles and trainers) not yet run on hardware.
 
   Nothing here claims a result on real hardware unless the line above says so.
 
