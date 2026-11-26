@@ -64,8 +64,8 @@
   Tested      NexClash differential verification against six recordings; run
               from its menu in OverSpec with Arcade colours and the cheat on;
               Tang FPGA board: default and Arcade colours load and play.
-              Colours approved by the owner, 2026-11-21. Not played by a
-              person.
+              Colours approved by the owner, 2026-11-21. Played by the owner
+              on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      IDENTICAL on 6 machine-played recordings, 65,443 frames (rounds
               1-11 without a cheat; rounds 9, 17 and 25 and Doh's round 33 by
@@ -87,10 +87,11 @@
               12-16, 19-24 and 27-32 not reached (same engine, level data);
               beating Doh, the ending and high score entry not reached
 
-  Hardware    Tang Nano 20K FPGA build of the Next, with DivMMC automap on and
-              124 sprites left visible by a previous program: default and
-              Arcade colours load, play (the floating bus wait the game
-              depends on works), no crash
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: Tang Nano 20K FPGA build of the Next,
+              with DivMMC automap on and 124 sprites left visible by a
+              previous program: default and Arcade colours load, play (the
+              floating bus wait the game depends on works), no crash)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

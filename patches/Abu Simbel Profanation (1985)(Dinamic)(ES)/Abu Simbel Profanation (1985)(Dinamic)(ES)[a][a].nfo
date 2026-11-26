@@ -87,7 +87,9 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      The look approved by the owner in JNext 2026-11-03 ('game is
-              good'); v1.0 played by the owner in JNext 2026-11-07: approved
+              good'); v1.0 played by the owner in JNext 2026-11-07: approved.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-26:
+              fine.
 
   Replay      10 scripted recordings (attract, game over, play, 6 start
               rooms), 69,928 frames: 75,427 plots and 87 screen clears run
@@ -107,7 +109,8 @@
               return to the menu; not reached: the ending, the loader's code
               prompt, a natural full playthrough
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, fine
 
   Nothing here claims a result on real hardware unless the line above says so.
 
