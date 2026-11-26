@@ -90,6 +90,8 @@
   Tested      1.2: Tang FPGA board: loads and plays, the right border clean;
               Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
               by script through the real loader on NextZXOS 26.11 card copies.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-26:
+              good.
 
   Replay      IDENTICAL on a 10,000-frame recording and a 21,901-frame
               recording through all five stages (next-level cheat): at every
@@ -102,11 +104,12 @@
               no errors; the real loader (.NEXCLASH) on private NextZXOS 26.11
               card copies
 
-  Coverage    Recordings and soaks by script, no human play: menus, play,
-              deaths, game over, all five stages via the next-level cheat; not
-              reached: natural completion, joysticks
+  Coverage    Recordings and soaks by script: menus, play, deaths, game over,
+              all five stages via the next-level cheat; not reached: natural
+              completion, joysticks
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
