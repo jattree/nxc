@@ -73,7 +73,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy; 1.0 not yet played by the owner; published at his request
+              copy. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-26: good.
 
   Replay      3 scripted recordings (title, menu, play in all four zones,
               wipes, deaths, game over, restart), 51078 frames: 82842 hooks
@@ -93,12 +94,13 @@
               15-minute soak against the original; flicker check; the overlay
               published outside the play rows
 
-  Coverage    Scripted input, no human play: title, menu, the first rooms of
-              all four commandos' zones, wipes between zones, deaths, game
-              over and a new game; not reached: later rooms and zones, natural
+  Coverage    Scripted input: title, menu, the first rooms of all four
+              commandos' zones, wipes between zones, deaths, game over and a
+              new game; not reached: later rooms and zones, natural
               completion, the end message
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
