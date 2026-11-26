@@ -56,9 +56,9 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Version 1.1 played by the owner on a Spectrum Next from its
-              patch through the real loader, 2026-11-22; version 1.2 (the same
-              with automap off at the start) not yet played on hardware; the
-              cheats not played
+              patch through the real loader, 2026-11-22; version 1.; the
+              cheats not played. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-26: good.
 
   Replay      every view of 524 sampled screen updates of one recording equal
               per pixel to a model of the original's renderer; the game's own
@@ -70,9 +70,11 @@
 
   Coverage    one recording (5,233 updates); neither cheat played
 
-  Hardware    ZX Spectrum Next (owner's): version 1.1 loaded from its patch
-              through the loader's build screen and played, Original colours
-              too; version 1.2 (automap off at the start) not yet played
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: ZX Spectrum Next (owner's): version
+              1.1 loaded from its patch through the loader's build screen and
+              played, Original colours too; version 1.2 (automap off at the
+              start) not yet played)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
