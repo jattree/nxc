@@ -71,7 +71,8 @@
               normal/NEXLOAD boot and full hidden ROM; continuous
               original/sprite composition, all figure frames, all 20 room
               layouts, registers/R/RAM and five broken builds; native pace and
-              interrupt injection. Emulator evidence only.
+              interrupt injection. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-26: good.
 
   Replay      Original continuous and death/game-over recordings; frozen
               selftest passed, exact hook registers/R/RAM plus original-
@@ -85,7 +86,8 @@
               figure images. Natural completion and two-player play not
               covered.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
