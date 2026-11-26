@@ -87,8 +87,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy in default, Enhanced and with all cheats; 1.0 not yet
-              played by the owner; published at his request
+              copy in default, Enhanced and with all cheats. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      5 scripted recordings (title, menus, define keys, play, 21 holds
               by a test call, game over, a new game, the hidden game), 32815
@@ -104,12 +104,13 @@
               emulated minutes of soak and a flicker pass on each build;
               pictures viewed. Hardware: none.
 
-  Coverage    Scripted input, no human play: the first hold played, the other
-              20 reached by a test call, menus, define keys, game over, a new
-              game, the hidden game; not reached: pause, completing a hold by
-              play, finishing the game.
+  Coverage    Scripted input: the first hold played, the other 20 reached by a
+              test call, menus, define keys, game over, a new game, the hidden
+              game; not reached: pause, completing a hold by play, finishing
+              the game.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

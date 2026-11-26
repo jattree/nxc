@@ -59,15 +59,17 @@
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against sixteen recordings;
               simulated boot on Sinclair's ROM and on a foreign ROM; run from
-              its menu in OverSpec; Tang FPGA board: loads and plays.
+              its menu in OverSpec; Tang FPGA board: loads and plays. Played
+              by the owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      IDENTICAL on sixteen recordings (52,185 frames): every plot,
               erase, bomb, tile and score hook against the original, with 18
               broken builds detected. Enhanced differs from the default in the
               sprite patterns only (bank 11).
 
-  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
-              on and plays
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: Tang Nano 20K FPGA build of the Next:
+              loads with DivMMC automap on and plays)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
