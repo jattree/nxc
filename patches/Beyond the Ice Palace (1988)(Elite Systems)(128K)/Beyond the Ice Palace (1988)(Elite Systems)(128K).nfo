@@ -66,7 +66,8 @@
               game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      Played by the owner in JNext 2026-11-06: approved. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      3 RZX recordings, 24700 frames, 105855 paired hook calls. CPU
               registers including R, working RAM and original sound I/O match.
@@ -84,7 +85,8 @@
               50 large IDs and 14 small IDs. Full natural completion of all
               levels is not claimed.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
