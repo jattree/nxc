@@ -67,7 +67,8 @@
   Tested      NexClash differential verification against a 321,815-frame
               recording (a whole playthrough); Tang FPGA board: loads with
               DivMMC automap on and sprites left by another program, and plays
-              from the menu into the first room
+              from the menu into the first room. Played by the owner on a ZX
+              Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      IDENTICAL on a 321,815-frame recording through 571 room draws:
               at every hook original and patched code compared from the same
@@ -76,6 +77,9 @@
               pixel the game's own drawer put into a figure's cells inside
               that figure's sprite (61.1 million pixels); 63 unit cases; 7
               deliberately broken builds rejected
+
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
