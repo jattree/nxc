@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The Arc of Yesod
   Publisher   Thor Computer Software, 1985
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,11 +25,14 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
-  Enhanced    The painted colours of the 36 graphics Arc shares with Nodes of
-              Yesod. Arc's own figures are not painted yet. Off by default. A
-              painted set, colourist not named.
+  Enhanced    Every figure painted by Jon Attree: Charlie, Arc's own creatures
+              and items, and the moles and figures it shares with Nodes of
+              Yesod. The scenery keeps the game's own colours. Off by default.
+              Source: Enhanced colours: Jon Attree.
 
-  Changes     1.1: Starts with the Next's DivMMC automap switched off:
+  Changes     1.2: Enhanced paints every figure, front-facing Charlie included
+              (1.1 had only the 36 graphics shared with Nodes of Yesod)
+              1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
 
@@ -47,7 +50,8 @@
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
   Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
-              bleughb/nexclash, GPL-3.0-or-later)
+              bleughb/nexclash, GPL-3.0-or-later); Enhanced colours: Jon
+              Attree
   Original    Thor Computer Software, 1985, by its original authors. All
               rights to the game remain theirs.
 
@@ -60,9 +64,9 @@
               the owner's play in Fuse (arc_h1, 7,880 frames, 37 rooms,
               autosaves stripped) and 10 scripted (8 from the archive snapshot
               through the hatch; a teleporter and the out-of-time screen from
-              poked states); unit PASS (1,254 positions, 114 graphics); 30 of
-              30 broken builds detected (NexClash record arc_of_yesod,
-              verified 2026-11-17; this build is byte-identical to it)
+              poked states); unit PASS (1,254 positions, 114 graphics); 31 of
+              31 broken builds detected (one: front-facing Charlie's live
+              tiles without the painted colours)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
