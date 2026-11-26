@@ -67,7 +67,8 @@
   Tested      1.0 played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 played by the owner in JNext on NextZXOS v2.10
               (System/Next 26.11), 2026-11-06: approved; 1.2 played by the
-              owner in JNext 2026-11-07: approved
+              owner in JNext 2026-11-07: approved. Played by the owner on a ZX
+              Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      1.2: NexClash main 102091f, selftest --game cyclone --verify on
               the engine's own snapshot: 5 recordings IDENTICAL (9,851 frames,
@@ -131,7 +132,8 @@
               helicopter lost with; 3 lost in each without (frames
               shots/cy_nocrash.png: still flying at 5000)
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

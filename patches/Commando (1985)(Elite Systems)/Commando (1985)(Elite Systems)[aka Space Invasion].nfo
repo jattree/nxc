@@ -70,7 +70,8 @@
   Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
               played by the owner in JNext 1.1.104, 2026-11-08: approved;
-              through the real loader on a NextZXOS 26.11 card copy
+              through the real loader on a NextZXOS 26.11 card copy. Played by
+              the owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      1.2 (2026-11-08, NexClash branch nexttang/commando-pace, the
               logic at 28 MHz down to the frame sync, R kept at every hook):
@@ -128,7 +129,8 @@
               (touch only comes once the player survives): enemy touch set the
               hit flag 199 and 150 times without it, never with it
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

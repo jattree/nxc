@@ -74,7 +74,8 @@
   Tested      Played by the owner in JNext 2026-11-06: approved. Differential
               replays, figure and edge tests, deliberately broken builds,
               JNext pace and AY checks, and the real loader (default,
-              Enhanced, all eight cheats) on disposable card copies.
+              Enhanced, all eight cheats) on disposable card copies. Played by
+              the owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      All registers including R, working RAM and sprite pixels
               compared against the original drawing routines: 23,816 replay
@@ -85,7 +86,8 @@
               exact ordered AY stream after accounting for startup phase;
               direct/NEXLOAD boot checked.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

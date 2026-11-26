@@ -67,7 +67,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      1.0 played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 played by the owner in JNext on NextZXOS v2.10
-              (System/Next 26.11), 2026-11-06: approved
+              (System/Next 26.11), 2026-11-06: approved. Played by the owner
+              on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      1.1: NexClash's ROM path check (nextboot.rom_paths) on the v2.10
               ROM3, 1 recording, 8591 frames: the ROM bytes the game runs or
@@ -107,7 +108,8 @@
               screen and no death with; a hen kills the player at frame 4869
               without (frames shots/nohens_compare_f2000.png)
 
-  Hardware    untested
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

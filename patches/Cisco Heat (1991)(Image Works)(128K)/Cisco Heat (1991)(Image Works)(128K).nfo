@@ -61,8 +61,9 @@
               game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Bare v1.2 played by the owner on a Spectrum Next, 2026-11-22;
-              this patch through the real loader not yet played
+  Tested      Bare v1.2 played by the owner on a Spectrum Next, 2026-11-22.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-26:
+              plays; the player's car shows see-through (to be fixed).
 
   Replay      1.1 (2026-11-23, nexclash main e55537e: v1.2 plus the caller's
               CPU speed kept at the start; same results as 1.0 on the same
@@ -96,9 +97,10 @@
               and Original car colours toggles on stages other than those
               named; the trainers in JNext or on hardware; joystick.
 
-  Hardware    v1.2 as a bare .nex (with the 4 s screen hold) on a Spectrum
-              Next: played by the owner, "it works great". This patch's build
-              (no hold, toggles, trainers) not yet run on hardware.
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, plays; the player's car shows see-through (to be
+              fixed) (earlier: v1.2 as a bare .nex (with the 4 s screen hold)
+              on a Spectrum Next: played by the owner, "it works great".)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

@@ -114,8 +114,9 @@
               Enhanced at both paces): approved. Automated JNext checks and
               the real loader on disposable card copies; 1.2 Orig. pace
               through the real loader in JNext; 1.2 published at his request;
-              1.3 through the real loader in JNext, 1.3 not yet played by the
-              owner
+              1.3 through the real loader in JNext. Played by the owner on a
+              ZX Spectrum Next (KS3), 2026-11-26: good (the patch takes a long
+              time to apply on the Next).
 
   Replay      1.3 (2026-11-08): two LD A,I reads made double reads (24 bytes
               of the hidden-ROM page, all three modes); stage 1, 4 runs of 800
@@ -148,7 +149,9 @@
               time-out game over and return to menu. Not covered: a full
               unassisted playthrough, the final ending, joystick options.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (the patch takes a long time to apply on the
+              Next)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
