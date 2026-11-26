@@ -83,8 +83,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-06: approved; 1.5 approved
               by the owner in JNext, 2026-11-07; 1.6 through the real loader
-              in JNext, default and Enhanced; 1.6 not yet played by the owner;
-              published at his request
+              in JNext, default and Enhanced. Played by the owner on a ZX
+              Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      1.6 (2026-11-08, room window, catch-up, faster image build;
               nexclash branch nexttang/atic_atac-pace): IDENTICAL on walk1,
@@ -148,7 +148,8 @@
               hook code adds the pace limiter (figure setups, text, scenery,
               room line and character setup hooks) and hook RAM 0x5BA9-0x5BAF.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

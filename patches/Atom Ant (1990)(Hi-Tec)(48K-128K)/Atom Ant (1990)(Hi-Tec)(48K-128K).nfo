@@ -79,8 +79,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy, default and Enhanced; 1.0 not yet played by the owner;
-              published at his request
+              copy, default and Enhanced. Played by the owner on a ZX Spectrum
+              Next (KS3), 2026-11-26: good.
 
   Replay      Enhanced: 6 recordings, 20149 frames, level 1 and levels 3, 5, 7
               and every level end by test copies: 27036 hooks run original and
@@ -99,12 +99,12 @@
               against the original with the sheet viewed; flicker check clean;
               the flip outside the play rows
 
-  Coverage    Scripted input, no human play: level 1 at length, deaths, game
-              over; levels 3, 5, 7 and all level ends by test copies; not
-              reached by play: natural level completion, natural end of the
-              game, Interface 2
+  Coverage    Scripted input: level 1 at length, deaths, game over; levels 3,
+              5, 7 and all level ends by test copies; not reached by play:
+              natural level completion, natural end of the game, Interface 2
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

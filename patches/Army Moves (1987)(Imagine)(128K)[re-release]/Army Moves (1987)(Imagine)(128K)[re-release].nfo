@@ -117,10 +117,10 @@
               Backdrop; flicker check; the picture published outside the play
               area's rows
 
-  Coverage    Scripted input, no human play: part 1 phases 1 to 4 and part 2's
-              jungle (two recordings with test pokes to reach them), attract,
-              deaths, game over; not reached: the rest of part 2, natural
-              completion, a redefined-keys run on real keys
+  Coverage    Scripted input: part 1 phases 1 to 4 and part 2's jungle (two
+              recordings with test pokes to reach them), attract, deaths, game
+              over; not reached: the rest of part 2, natural completion, a
+              redefined-keys run on real keys
 
   Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
               the owner, good
