@@ -42,8 +42,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against the seven recordings
-              listed under Replay; unit cases; simulated boot. Not on real
-              hardware.
+              listed under Replay; unit cases; simulated boot. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      Verify : heart_h1.rzx 12178 frames, 2485 steps, 2478 copies, 6
               screen clears, 5452 plots, 4210 paints, 118 random bytes, most
@@ -83,6 +83,9 @@
               2, random byte from a cell written since 2, seven paints noted
               1, twelve figures noted at A7D4 1, twelve figures noted at A837
               1 -> PASS; Result : PASSED; Checks : COMPLETE: rom_paths pass
+
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
