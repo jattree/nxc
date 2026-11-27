@@ -66,7 +66,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy; 1.0 not yet played by the owner; published at his request
+              copy. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: good.
 
   Replay      3 scripted recordings (title, name entry, play, bombs, deaths,
               game over, restart; one with an infinite lives test poke): 36045
@@ -84,11 +85,12 @@
               flicker check clean; the overlay published outside the play
               area's rows
 
-  Coverage    Scripted input, no human play: the first levels, bombs, deaths,
-              game over, restart, name entry. Not reached: the sea levels and
-              bosses of later stages, 2-player, natural completion
+  Coverage    Scripted input: the first levels, bombs, deaths, game over,
+              restart, name entry. Not reached: the sea levels and bosses of
+              later stages, 2-player, natural completion
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
