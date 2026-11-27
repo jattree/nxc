@@ -74,7 +74,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      1.5: Tang FPGA board: loads and plays; Played by Jon Attree in
-              JNext through the real loader, 2026-11-05
+              JNext through the real loader, 2026-11-05. Played by the owner
+              on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      v1.3 both sets: 30133 frames IDENTICAL each; 19 sites, 114651
               external calls each; 18/18 negatives; 512 clock/R, 1072 pattern
@@ -88,7 +89,8 @@
               injected room starts in replay. 231 figure/facing previews. Not
               a complete walkthrough.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
