@@ -73,7 +73,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05: approved; 1.1 approved
-              by the owner in JNext, 2026-11-07
+              by the owner in JNext, 2026-11-07. Played by the owner on a ZX
+              Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      1.1 (NexClash main 102091f, selftest --game gryzor --verify): 5
               recordings IDENTICAL (33,038 frames, 13,466 ticks, every screen
@@ -98,13 +99,13 @@
               scrolled scenery (the 2026-11-03 build: 42 in the same window),
               no figure vanished, no attribute flashes
 
-  Coverage    Random-key bot recordings only, no human play: the whole first
-              section to the door, the walk out and START TAPE (lives cheat in
-              3 of 5), game overs, menu and restarts; not reached: Kempston
-              and other input modes in play, define keys; the 48K form holds
-              section 1 only
+  Coverage    Random-key bot recordings only: the whole first section to the
+              door, the walk out and START TAPE (lives cheat in 3 of 5), game
+              overs, menu and restarts; not reached: Kempston and other input
+              modes in play, define keys; the 48K form holds section 1 only
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
