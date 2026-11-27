@@ -72,7 +72,8 @@
               game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      Played by the owner in JNext 2026-11-06: approved. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      5 recordings of the 128K release on rework v128 (bot walks: two
               of 6,013 / 6,330 frames in Double Trouble, the mirrored Dizzy's
@@ -110,7 +111,8 @@
               layout: it overwrites the 128K release's AY paging routine and
               the game stops)
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
