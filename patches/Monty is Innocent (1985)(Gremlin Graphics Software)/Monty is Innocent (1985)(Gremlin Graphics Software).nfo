@@ -65,7 +65,8 @@
               another program and runs its menu (the board's key input did not
               get past the menu, as with Monty on the Run); that board run was
               on the build before a speed-up of the sprite code, which the
-              verification covers
+              verification covers. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-27: good.
 
   Replay      IDENTICAL on a 6,241-frame recording through 38 screen clears:
               at every hook and every painter call original and patched code
@@ -73,6 +74,9 @@
               RAM), every figure's XOR pixels against its four sprites after
               each of 7,531 figure plots (1.0 million pixels); 328 unit cases;
               6 deliberately broken builds rejected
+
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
