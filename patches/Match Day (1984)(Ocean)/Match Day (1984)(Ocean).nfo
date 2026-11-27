@@ -50,8 +50,7 @@
               it. Known issues: none found in testing. Missing: no loading
               screen (the build already uses the last bank of a 1MB Next); no
               cheats (the archive's POKEs only ask for values); not yet
-              checked: the second half, 2-player games and Match Day Special;
-              hardware untested.
+              checked: the second half, 2-player games and Match Day Special.
 
 -- MENU ----------------------------------------------------------------------
   No cheats.
@@ -64,7 +63,8 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      Played by the owner in JNext 2026-11-06: approved. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      engine matchday_v21 (rework v2.1 on refactor-final f6b8ac0, run
               clone 8de4d6a; plain 02fd1835, sprites 0b10aeb4): match_day.rzx
@@ -103,7 +103,8 @@
               the highest bank, and this build holds Sinclair's ROM in bank
               47)
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
