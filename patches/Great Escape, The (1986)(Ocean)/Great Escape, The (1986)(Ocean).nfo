@@ -1,0 +1,86 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       the original game on Next hardware
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       The Great Escape
+  Publisher   Ocean, 1986
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Great Escape, The (1986)(Ocean).z80
+  MD5         ff5eae3b61188cb5095a6177c3c34a06
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  The game's play area has no colour clash, so none is removed: the default
+  keeps the original look. The patch adds the menu, its cheats and the Next
+  start-up. The menu's Presentation line adds more; see the note. Game logic
+  is unchanged. Enhanced colours, an option on the menu, are below.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The camp and every figure painted in period colours on Layer 2:
+              prisoners in varied RAF blue, brown, cream and olive, guards in
+              muted uniforms, timber, slate and dusty ground. The game's own
+              black linework, masks and drawing order stay, so depth and the
+              searchlight work as before. A painted set, colourist not named.
+
+  Note        Menu: Enhanced turns the colours on; McQueen player (needs
+              Enhanced, turns it on with it) dresses the player in McQueen's
+              outfit, while a guard disguise still looks like a guard. Known
+              issues: Enhanced runs within 2% of the original's pace in JNext;
+              the searchlight and movement step as coarsely as in the
+              original. Missing: a natural playthrough to the end and a real
+              Next run.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite morale
+   2  No other people
+   3  Pass through doors
+
+  Cheats come from the archive's POKEs for this release.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Ocean, 1986, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against four recordings (two
+              play, an abort/restart and a result-screen run); simulated boot
+              of every build; run from its menu in OverSpec in default,
+              Enhanced and McQueen. Played by the owner in OverSpec,
+              2026-11-27: Enhanced and McQueen play. Not on real hardware.
+
+  Replay      Four recordings identical on this build (two play, an
+              abort/restart and a result-screen run): 53158 frames, 457675
+              hooks.
+
+  Emulator    OverSpec: the owner played Enhanced and McQueen from this menu
+              (2026-11-27). JNext 1.1.104 ran every menu choice of the pilot
+              build through the real .NEXCLASH loader on NextZXOS 26.11
+              (2026-11-09).
+
+  Coverage    Two play recordings, an abort/restart run and a controlled
+              result-screen run (not a natural finish). Default keeps the
+              original monochrome picture; Enhanced adds period colours. Fits
+              a 1MB Next.
+
+  Hardware    Not tested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
