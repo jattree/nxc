@@ -69,7 +69,8 @@
               independent figure pixels, speed/IFF/clock phases, original
               trainer behaviour and deliberately broken builds. Native actual-
               player-update trials and timestamped AY/beeper comparison.
-              Emulator evidence only.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-27:
+              good.
 
   Replay      Continuous original 128K recordings; exact hook registers
               including R and game RAM, independent source-pixel oracle; full
@@ -82,7 +83,8 @@
               stored frames and edge positions separately checked. Completion
               and exhaustive later-zone play remain untested.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
