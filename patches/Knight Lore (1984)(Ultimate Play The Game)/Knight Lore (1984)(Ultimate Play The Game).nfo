@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Knight Lore
   Publisher   Ultimate, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -54,6 +54,11 @@
               1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: Enhanced: figures are no longer cut by scenery behind them
+              (the chest by the steps), and the moon no longer shows past its
+              window's frame. The game draws whole objects off screen and
+              copies only the parts it redrew; Enhanced now shows only those
+              parts too, as the original does
 
   Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
               Interface II joystick, 5 directional control, then 0 to start.
@@ -96,16 +101,17 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
               by script through the real loader on NextZXOS v2.09 and 26.11
-              card copies.
+              card copies. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: good.
 
-  Replay      IDENTICAL on 2 recordings, 48,000 frames, Enhanced: 16,212
-              publications checked at every hook from the same state as the
-              original code, every register with R, all 48K RAM but the patch
-              bytes and the dead stack, objects, the monochrome bitmap, an
-              independent ordered colour model and the composed sprite and
-              Layer 2 picture; menus, transformations, deaths, game over and
-              restart; 9 of 9 negatives detected; 248 hook cases at 3.5, 7, 14
-              and 28 MHz with interrupts on and off
+  Replay      1.2: IDENTICAL on 2 recordings, 48,000 frames, Enhanced: after
+              each of 16,212 drawing passes the colours, the sprites and Layer
+              2 equal a model of the screen built from the original's own
+              copies to it; 1.1's hooks and the clip turned off both caught.
+              1.1: every register with R, all 48K RAM but the patch bytes and
+              the dead stack, objects, the monochrome bitmap at every hook;
+              menus, transformations, deaths, game over and restart; 9 of 9
+              negatives; 248 hook cases at 3.5, 7, 14 and 28 MHz
 
   Emulator    JNext 1.1.104 headless: six 12,000-frame soaks, 20,385 player
               updates, deaths and game overs, no errors, no sprite overflow,
@@ -119,7 +125,8 @@
               reached: natural completion, the cauldron filled by play,
               joysticks
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

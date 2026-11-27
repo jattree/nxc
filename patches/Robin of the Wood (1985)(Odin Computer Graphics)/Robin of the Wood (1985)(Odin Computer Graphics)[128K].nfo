@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Robin of the Wood
   Publisher   Odin, 1985
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,10 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.1: Starts on a Next: the game's stack sits in the printer
+              buffer, which the loader overwrites; it is now put back before
+              the game runs
 
   Note        Robin, the outlaws, the guards and the creatures are hardware
               sprites, so they no longer take the colours of the forest they
@@ -48,14 +52,16 @@
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against three recordings;
               simulated boot; run from its menu in OverSpec; Tang FPGA board:
-              loads and plays.
+              loads and plays. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-27: good.
 
   Replay      IDENTICAL on three recordings (a journey, a life cycle with
               deaths and restarts, and the Bishop's cave): every hook event
               against the original, with negative controls
 
-  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
-              on and plays
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: Tang Nano 20K FPGA build of the Next:
+              loads with DivMMC automap on and plays)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

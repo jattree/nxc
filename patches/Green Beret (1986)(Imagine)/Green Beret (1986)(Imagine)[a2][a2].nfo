@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Green Beret
   Publisher   Imagine, 1986
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -36,6 +36,9 @@
               1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.2: The start of play no longer shows a few stray pixels in the
+              scenery for a moment: the start-up code now puts back the game
+              bytes it borrows before the game runs
 
   Note        Keys: 1 on the game's menu for the keyboard, then your six keys
               (up, down, left, right, stab, shoot), Y, then stab to start. The
@@ -72,7 +75,8 @@
               remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-06: approved
+  Tested      Played by the owner in JNext 2026-11-06: approved. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      IDENTICAL on 4 recordings, 84,814 frames: 22,521 draw passes,
               91,412 figure plots, 2,716 object plots, 9,871 mines, 4,119
@@ -87,7 +91,10 @@
               hooks: the game reads R only for its bit 7 (the sign after LD
               A,R), and the four recordings replayed with R's low 7 bits
               randomised at every hook site and game update (283,838 times)
-              give the same RAM at every update
+              give the same RAM at every update. Start-up (2026-11-23): on the
+              same 4 recordings every ROM byte the game runs is as recorded,
+              and the bytes the start-up code borrows (0x8342-0x8377) are back
+              before the game's first instruction
 
   Emulator    JNext 1.1.104 headless. On copies of the v2.09 and the 26.11
               (NextZXOS v2.10) emulator cards, through the Browser: the .nxc
@@ -107,7 +114,8 @@
               not reached: the end of stage 3 by play (by cheat only), stage
               4's boss paths, the end of the game
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

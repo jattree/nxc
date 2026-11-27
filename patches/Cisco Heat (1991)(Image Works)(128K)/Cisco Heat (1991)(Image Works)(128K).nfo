@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Cisco Heat
   Publisher   Image Works, 1991
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,10 +25,14 @@
 
   Pace        original
 
-  Changes     1.1: keeps the CPU speed you choose (the start set 3.5 MHz) and
-              starts with the Next's DivMMC automap switched off (nexclash
-              main, 2026-11-23). 1.0: first NXC patch, from nexclash
-              cisco_heat v1.2 with no loading-screen hold
+  Changes     1.2: the player's car is solid: road lines, posts and other cars
+              behind it no longer show through it (the original draws it with
+              no mask; inside its outline the road's own colour shows, as in
+              the original where nothing is behind it). 1.1: keeps the CPU
+              speed you choose (the start set 3.5 MHz) and starts with the
+              Next's DivMMC automap switched off (nexclash main, 2026-11-23).
+              1.0: first NXC patch, from nexclash cisco_heat v1.2 with no
+              loading-screen hold
 
   Note        Keys as the original. Smooth engine: the game's own update at
               the original pace, with up to 50 in-between pictures a second
@@ -63,10 +67,20 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Bare v1.2 played by the owner on a Spectrum Next, 2026-11-22.
               Played by the owner on a ZX Spectrum Next (KS3), 2026-11-26:
-              plays; the player's car shows see-through (to be fixed).
+              plays; the player's car showed see-through, fixed in 1.2. Played
+              by the owner on a ZX Spectrum Next (KS3), 2026-11-27: the
+              player's car is solid now; the other cars can seem to pass
+              through it (being looked at).
 
-  Replay      1.1 (2026-11-23, nexclash main e55537e: v1.2 plus the caller's
-              CPU speed kept at the start; same results as 1.0 on the same
+  Replay      1.2 (2026-11-27, cisco_heat v1.3: the car's outline cleared on
+              the shown screen after each copy): the same checks as 1.0 on the
+              same six recordings, real update and in-between frames IDENTICAL
+              in 159 of 159, 755 in-between frames, none late; the outline:
+              the game's car routine on a random background, the screen after
+              the copy against a model from the game's own drawing, IDENTICAL
+              in 92 car frames (70 mirrored), the build without it caught. 1.1
+              (2026-11-23, nexclash main e55537e: v1.2 plus the caller's CPU
+              speed kept at the start; same results as 1.0 on the same
               recordings, selftest --verify PASSED) and 1.0 (2026-11-22,
               nexclash cisco_heat v1.2 with no loading-screen hold): the real
               update, run at 28 MHz, against the original 0x8AFE from the same
@@ -98,9 +112,10 @@
               named; the trainers in JNext or on hardware; joystick.
 
   Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, plays; the player's car shows see-through (to be
-              fixed) (earlier: v1.2 as a bare .nex (with the 4 s screen hold)
-              on a Spectrum Next: played by the owner, "it works great".)
+              the owner, the player's car is solid now; the other cars can
+              seem to pass through it (being looked at) (earlier: v1.2 as a
+              bare .nex (with the 4 s screen hold) on a Spectrum Next: played
+              by the owner, "it works great".)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Altered Beast
   Publisher   Activision, 1988
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,16 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Figures in the arcade's colours: the centurion with skin, blond
+              hair, a red loincloth and brown sandals, zombies in purple robes
+              with grey heads, fiery transformation clouds, pale wolves.
+              Player two and a wolf's hit flash keep the game's colours. Only
+              sprite colours change. A painted set, colourist not named.
+
+  Changes     1.1: Enhanced colours, after the arcade, as a menu choice.
 
   Note        Keys: SPACE starts; 6 left, 7 right, 8 duck, 9 jump, 0 punch;
               ENTER on the menu adds a second player. Every figure, graves and
@@ -54,15 +64,26 @@
   Tested      NexClash differential verification against four recordings;
               simulated boot; the interrupt fix checked to leave the handlers'
               state unchanged; run from its menu in OverSpec; Tang FPGA board:
-              loads and plays.
+              loads and plays. 1.0 played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-26: plays. Played by the owner on a ZX Spectrum
+              Next (KS3), 2026-11-27: the player and the Enhanced colours look
+              good; the scroll steps 8 pixels at a time, as the original; at
+              game over the game stops on its GAME OVER screen, waiting for
+              its tape.
 
   Replay      IDENTICAL on four recordings (32,291 frames: all of level 1,
               power-ups, the beast, the boss and its death, game over, two
-              players)
+              players), the default and the Enhanced set each, with every
+              broken build detected; Enhanced differs from the default in the
+              sprite patterns and palette only.
 
-  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
-              on and plays; without the interrupt fix it crashed within 8
-              seconds
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, the player and the Enhanced colours look good; the
+              scroll steps 8 pixels at a time, as the original; at game over
+              the game stops on its GAME OVER screen, waiting for its tape
+              (earlier: Tang Nano 20K FPGA build of the Next: loads with
+              DivMMC automap on and plays; without the interrupt fix it
+              crashed within 8 seconds)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

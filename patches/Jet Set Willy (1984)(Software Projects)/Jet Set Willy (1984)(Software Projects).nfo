@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Jet Set Willy
   Publisher   Software Projects, 1984
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,6 +25,9 @@
 
   Changes     1.1: The Attic bug fixed (Software Projects' own POKE 59901,82),
               so the game can be completed.
+              1.2: Starts on a Next: the game's stack sits in the printer
+              buffer, which the loader overwrites; it is now put back before
+              the game runs
 
   Note        Keys: Q and W (and the top row) left and right, SPACE jumps,
               ENTER starts. Starts at the title with no colour code to type.
@@ -54,7 +57,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against recorded play;
               simulated boot; run from its menu in OverSpec; Tang FPGA board:
-              loads and plays.
+              loads and plays. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-27: good.
 
   Replay      IDENTICAL on machine-played recordings through many rooms up to
               The Attic, where the fixed arrow differs by design (the fix is
@@ -62,8 +66,9 @@
               the patch sites and hook state checked intact, negative controls
               detected
 
-  Hardware    Tang Nano 20K FPGA build of the Next: loads with DivMMC automap
-              on and plays
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: Tang Nano 20K FPGA build of the Next:
+              loads with DivMMC automap on and plays)
 
   Nothing here claims a result on real hardware unless the line above says so.
 

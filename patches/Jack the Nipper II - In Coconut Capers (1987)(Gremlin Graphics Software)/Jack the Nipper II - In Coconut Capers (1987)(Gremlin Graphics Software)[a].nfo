@@ -1,0 +1,80 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Jack the Nipper II - In Coconut Capers
+  Publisher   Gremlin Graphics, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Jack the Nipper II - In Coconut Capers (1987)(Gremlin Graphics
+              Software)[a].z80
+  MD5         6f5d708c439f3356a930ea4f176a0c8f
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Every figure painted in colours of its own: Jack, the jungle's
+              creatures and people, and the pickups. Only sprite colours
+              change. A painted set, colourist not named.
+
+  Changes     1.0: figures as Next sprites; Enhanced colours (every figure
+              painted) as a menu choice.
+
+  Note        Jack, the natives, the monkeys, the lion, the hippo, scorpions,
+              snakes, birds and the pickups are hardware sprites, so a figure
+              no longer takes the colours of the scenery it crosses; the
+              scenery, the swinging rope, the panel and the text stay as the
+              game draws them. It runs about 4.5% slower than the original.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+   2  Infinite ammo
+   3  Immunity
+
+  Infinite lives and Infinite ammo are the archive's POKEs; Immunity returns
+  from the death routine after it clears its counters, so a death never starts
+  and a long fall lands. All checked against the code.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Gremlin Graphics, 1987, by its original authors. All rights to
+              the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against a 158,593-frame
+              recording; simulated boot; menus boot and reach play in JNext.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-27:
+              good.
+
+  Replay      IDENTICAL on one recording of 158,593 frames: 142,528 figure
+              blits and 55,675 screen copies checked at every hook, every
+              sprite pixel against the original's drawing; 10 deliberately
+              broken builds detected.
+
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
