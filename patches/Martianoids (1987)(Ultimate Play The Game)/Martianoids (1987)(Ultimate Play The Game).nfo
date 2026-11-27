@@ -60,7 +60,7 @@
               frame timing variation remain; in JNext it runs 1.2 to 1.4
               percent faster than the original in every scene measured.
               Missing: not reached in testing: natural play to the end,
-              joysticks; hardware untested.
+              joysticks.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -83,7 +83,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 1.1.104, 2026-11-07: approved. Run
               by script through the real loader on NextZXOS v2.09 and 26.11
-              card copies.
+              card copies. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: good.
 
   Replay      IDENTICAL on the archive-start recording (18,000 frames) and a
               last-life recording (4,000 frames): at every hook original and
@@ -95,11 +96,12 @@
               accelerated renderer and at the original clock. Whole hidden
               ROM, original loading screen and sparse BASIC-safe veneers.
 
-  Coverage    Recordings and soaks by script, no human play: menus, play,
-              deaths, game over, initials entry and a new game; not reached:
-              natural completion, joysticks
+  Coverage    Recordings and soaks by script: menus, play, deaths, game over,
+              initials entry and a new game; not reached: natural completion,
+              joysticks
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
