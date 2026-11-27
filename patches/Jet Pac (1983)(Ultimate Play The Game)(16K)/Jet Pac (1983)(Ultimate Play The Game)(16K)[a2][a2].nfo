@@ -80,8 +80,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.2 approved by the owner in JNext, 2026-11-07; 1.3
-              through the real loader in JNext; 1.3 not yet played by the
-              owner; published at his request
+              through the real loader in JNext. Played by the owner on a ZX
+              Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      1.3 (NexClash branch nexttang/jetpac-pace 9fbcc61, selftest
               --game jetpac --verify --stamp, rework v11): free run 6,000
@@ -128,7 +128,8 @@
               the image's low half; loading screen stub in bank 13, emulator-
               tested only
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
