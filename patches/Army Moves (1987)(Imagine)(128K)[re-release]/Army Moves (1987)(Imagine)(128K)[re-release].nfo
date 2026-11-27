@@ -73,7 +73,7 @@
               slowest stretch reads +11 to +20 percent and its busy scenes up
               to +2.5 percent. An occasional interrupt can be lost while the
               game's own sound code has interrupts off. Missing: natural play
-              to the end; hardware untested.
+              to the end.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

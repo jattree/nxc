@@ -42,8 +42,7 @@
               build was at most about 6% behind the original. Missing: no
               Enhanced colour set; the pace runs could not be checked for
               lockstep (no state addresses); earlier builds ran on a real Next
-              for Dean, and the faults he found were fixed, but this build has
-              not; hardware untested.
+              for Dean, and the faults he found were fixed.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

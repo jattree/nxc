@@ -71,7 +71,7 @@
               faster); steady play is within 2 percent of the original. With
               Infinite lives and Start 10 lives both on, the lives counter
               shows 00 although you have 10. Missing: not reached in testing:
-              natural play to the end, joysticks; hardware untested.
+              natural play to the end, joysticks.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

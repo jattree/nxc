@@ -63,7 +63,7 @@
               keys (the game's chance comes from R, which the hooks change);
               the game reads a few ROM bytes as data and gets the Next ROM's
               values (effect on play not established). Missing: few rooms
-              walked by script; hardware untested.
+              walked by script.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -132,8 +132,7 @@
               step, 0 vanished, one-frame attribute changes 0 / 1 (a room
               change) / 0 frames (original 77 / 26 / 70). Soak 15 emulated
               minutes: no freeze, loop or crash; play in many rooms, game
-              overs and restarts. No hardware test. No on-device NXC-loader
-              test.
+              overs and restarts. No on-device NXC-loader test.
 
   Coverage    v1.6: one more game-bank site, 0x9159 (the CALL that queues the
               room's sound); the sound routines' first bytes 0xA3AA and 0xA46E

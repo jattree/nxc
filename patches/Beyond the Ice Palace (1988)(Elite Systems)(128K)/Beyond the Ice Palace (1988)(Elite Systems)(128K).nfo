@@ -45,7 +45,7 @@
               hook sites (a screen-copy caller) was only checked by a direct
               test, not in play. Missing: no Enhanced colour set; not every
               level was played to completion; tested through the loader on
-              NextZXOS v2.09, not yet checked on v2.10; hardware untested.
+              NextZXOS v2.09, not yet checked on v2.10.
 
 -- MENU ----------------------------------------------------------------------
    1  Start with 99 lives

@@ -63,8 +63,7 @@
               pauses and low update rate remain; in JNext it runs 0.1 to 1.6
               percent faster than the original in every scene measured.
               Missing: not reached in testing: natural play to the end (all
-              five stages reached with the next-level cheat), joysticks;
-              hardware untested.
+              five stages reached with the next-level cheat), joysticks.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite time

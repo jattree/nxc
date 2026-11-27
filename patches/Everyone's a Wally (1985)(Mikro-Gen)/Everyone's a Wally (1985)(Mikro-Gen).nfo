@@ -60,8 +60,7 @@
               differ from the original's with the same keys, as in 1.0 and
               1.1. Missing: the Enhanced set was carried over from Dean's
               build and not replayed on its own (its bytes are 1.0's, on the
-              new hooks); puzzles not reached in testing (few rooms walked);
-              hardware untested.
+              new hooks); puzzles not reached in testing (few rooms walked).
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

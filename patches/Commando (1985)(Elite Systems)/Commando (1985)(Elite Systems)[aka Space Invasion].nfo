@@ -49,7 +49,7 @@
               snipers are left as the game draws them, not as sprites (Dean's
               design), so their colour clash is not removed. Missing: no
               Enhanced colour set; the value-asking cheats (lives, grenades)
-              are not on the menu; hardware untested.
+              are not on the menu.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives

@@ -77,9 +77,8 @@
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification against two machine-played
               recordings and unit cases over every graphic, both builds;
-              simulated boot; run from its menu in OverSpec. Not on real
-              hardware. Played by the owner on a ZX Spectrum Next (KS3),
-              2026-11-26: good.
+              simulated boot; run from its menu in OverSpec. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-26: good.
 
   Replay      two machine-played recordings (40426 frames, 12 games), both
               builds: every register with R and all memory at every hook,
