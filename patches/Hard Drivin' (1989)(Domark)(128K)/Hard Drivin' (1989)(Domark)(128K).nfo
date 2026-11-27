@@ -76,8 +76,9 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Phase 1 .nex builds (the steps build with and without the
               loading screen, and without heading smoothing) played by the
-              owner on a Spectrum Next, core 3.03, 2026-11-24: "work great";
-              this patch through the real loader not yet played
+              owner on a Spectrum Next, core 3.03, 2026-11-24: "work great".
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-27:
+              good.
 
   Replay      1.1 (2026-11-24, nexclash hard_drivin route 2a phase 1, branch
               hd-phase1; auto PASSED, stamped selftest --verify PASSED): the
@@ -115,12 +116,12 @@
               and No crashes on recorded play (synthetic states only), the
               gear fix on recorded play (synthetic held keys), joystick.
 
-  Hardware    Spectrum Next, core 3.03, played by the owner 2026-11-24: the
-              phase 1 .nex builds (the steps build with and without the
-              loading screen, and without heading smoothing) "work great";
-              2026-11-23: the steps build "plays much better", the smooth
-              build plays like the original. This patch (through the real
-              loader, its toggles and trainers) not yet run on hardware.
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: Spectrum Next, core 3.03, played by
+              the owner 2026-11-24: the phase 1 .nex builds (the steps build
+              with and without the loading screen, and without heading
+              smoothing) "work great"; 2026-11-23: the steps build "plays much
+              better", the smooth build plays like the original.)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
