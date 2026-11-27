@@ -85,7 +85,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy; 1.0 not yet played by the owner; published at his request
+              copy. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: good.
 
   Replay      9 recordings, 21270 frames, 43206 hook runs, each against the
               original to the same point: every register with R, all 48K RAM
@@ -99,11 +100,12 @@
               in each, output byte for byte as nxc.py makes it, reaching play;
               soak 15 emulated minutes; flicker
 
-  Coverage    Scripted input, no human play: title, options, deaths, game
-              over; all 19 levels by a test poke of the level number; not
-              reached: natural play past level 1, natural game completion
+  Coverage    Scripted input: title, options, deaths, game over; all 19 levels
+              by a test poke of the level number; not reached: natural play
+              past level 1, natural game completion
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
