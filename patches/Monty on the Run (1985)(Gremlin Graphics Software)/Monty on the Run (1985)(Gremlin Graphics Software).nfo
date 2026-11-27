@@ -63,7 +63,9 @@
   Tested      NexClash differential verification against a 61,198-frame
               recording; Tang FPGA board: loads with DivMMC automap on and
               runs to the game's menu (the board's key input did not reach the
-              menu)
+              menu). Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: broken: once a game starts, the line of text under
+              the play area is corrupted (being looked at).
 
   Replay      IDENTICAL on a 61,198-frame recording through 157 rooms: at
               every hook and every attribute painter call original and patched
@@ -71,6 +73,10 @@
               RAM), every figure's pixels against its sprites after each draw
               (13.7 million pixels); 424 unit cases; 9 deliberately broken
               builds rejected
+
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, broken: once a game starts, the line of text under
+              the play area is corrupted (being looked at)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
