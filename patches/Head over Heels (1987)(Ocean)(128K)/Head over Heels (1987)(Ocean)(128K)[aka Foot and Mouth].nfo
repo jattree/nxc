@@ -89,8 +89,9 @@
   Tested      Run by script through the real loader on NextZXOS 26.11 card
               copies (default, Enhanced, Enhanced with all cheats),
               2026-11-08; recorded-input checks of registers with R, game
-              memory and pixels, deliberate faults and interrupt injection;
-              not yet played by the owner
+              memory and pixels, deliberate faults and interrupt injection.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-27:
+              good.
 
   Replay      head_over_heels_walk.rzx; head_over_heels_death.rzx;
               head_over_heels_game_over.rzx. Death/game-over use declared
@@ -101,7 +102,8 @@
               workspace overwrite. Disposable-card real-loader evidence
               supplied separately.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
