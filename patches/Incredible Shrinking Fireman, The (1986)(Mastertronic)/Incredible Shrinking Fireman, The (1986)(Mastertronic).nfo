@@ -63,7 +63,8 @@
   Tested      1.0 played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 played by the owner in JNext on NextZXOS v2.10
               (System/Next 26.11), 2026-11-06: approved; 1.2 approved by the
-              owner in JNext, 2026-11-07
+              owner in JNext, 2026-11-07. Played by the owner on a ZX Spectrum
+              Next (KS3), 2026-11-27: good.
 
   Replay      1.2 (NexClash main 102091f, selftest --game
               incredible_shrinking_fireman-add-OPUS --verify): the recording
@@ -113,9 +114,11 @@
               original file, same walks: no hit in 2 x 15000 frames (original
               hit 40 and 80 times), lives stayed 4
 
-  Hardware    400d0d11 on a real Next (Dean 2026-10-25): corruption in room 5
-              (ISR plot inside a main-code plot; fixed in 53f2665e); dc65565c:
-              flicker (fixed), mask asked (added)
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: 400d0d11 on a real Next (Dean
+              2026-10-25): corruption in room 5 (ISR plot inside a main-code
+              plot; fixed in 53f2665e); dc65565c: flicker (fixed), mask asked
+              (added))
 
   Nothing here claims a result on real hardware unless the line above says so.
 
