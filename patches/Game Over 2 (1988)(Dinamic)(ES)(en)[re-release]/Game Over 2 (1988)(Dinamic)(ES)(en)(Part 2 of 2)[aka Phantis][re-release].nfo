@@ -69,7 +69,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy; 1.0 not yet played by the owner; published at his request
+              copy. Played by the owner on a ZX Spectrum Next (KS3),
+              2026-11-27: good.
 
   Replay      4 scripted recordings, 46063 frames: 44436 hooks run original
               and build from one state each: every register including R, all
@@ -87,11 +88,12 @@
               flicker check clean; the overlay published outside the play
               area's rows
 
-  Coverage    Scripted input, no human play: code screen, menu, play, deaths,
-              game over; not reached: the later scenes beyond those the test
-              copy met, natural completion
+  Coverage    Scripted input: code screen, menu, play, deaths, game over; not
+              reached: the later scenes beyond those the test copy met,
+              natural completion
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 

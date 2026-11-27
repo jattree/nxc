@@ -82,8 +82,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Run by script through the real loader on a NextZXOS 26.11 card
-              copy, default and Enhanced, with and without the cheat; 1.0 not
-              yet played by the owner; published at his request
+              copy, default and Enhanced, with and without the cheat. Played
+              by the owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      Default: unchanged from 1.0, byte for byte (48034 frames, 60657
               hooks IDENTICAL). Enhanced: 3 scripted recordings, 48034 frames:
@@ -101,12 +101,12 @@
               15-minute soak of Enhanced against the original; flicker check
               clean; the overlay published outside the play area's rows
 
-  Coverage    Scripted input, no human play: menu, play, deaths, game over;
-              the later scenes (rocks, red caves, the sea) by a test copy with
-              infinite lives; not reached: the access code screen, natural
-              completion
+  Coverage    Scripted input: menu, play, deaths, game over; the later scenes
+              (rocks, red caves, the sea) by a test copy with infinite lives;
+              not reached: the access code screen, natural completion
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
