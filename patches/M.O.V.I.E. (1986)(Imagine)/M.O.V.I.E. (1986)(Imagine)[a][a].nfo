@@ -53,7 +53,7 @@
               character's Enhanced sprite still needs work. In JNext, Enhanced
               is up to 1.75 percent slower than the original in sampled
               windows, within the 2 percent target. Missing: natural play to
-              the end; hardware untested.
+              the end.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -78,7 +78,9 @@
   Tested      Recorded-input checks of registers with R, game memory and
               pixels against an independent painted model, deliberate faults,
               interrupt and speed injection, and native pace trials. Real-
-              loader runs on disposable NextZXOS 26.11 card copies.
+              loader runs on disposable NextZXOS 26.11 card copies. Played by
+              the owner on a ZX Spectrum Next (KS3), 2026-11-27: good (DMA
+              left on).
 
   Replay      movie_reference.rzx; movie_source_start.rzx;
               movie_end_reset.rzx: 61472 frames, 143626 complete native plots;
@@ -94,7 +96,8 @@
   Coverage    Menus, play, speech, initialisation and reset; all eight drawing
               paths. Reference recording ends at 16%, not completion.
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (DMA left on)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
