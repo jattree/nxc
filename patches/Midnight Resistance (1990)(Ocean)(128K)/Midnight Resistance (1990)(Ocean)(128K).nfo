@@ -41,7 +41,7 @@
               a stretch of 20 game frames can read up to 7% slow or 5% fast.
               Missing: no Enhanced colour set; an earlier build ran on a real
               Next for Dean (2026-10-14), but this one, with the loading
-              screen, has not; hardware untested.
+              screen, has not.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -63,7 +63,8 @@
   Tested      Played by Jon Attree in JNext through the real loader,
               2026-11-03; 1.1 approved by the owner in JNext, 2026-11-07; 1.2
               played by the owner in JNext, 2026-11-08: approved; through the
-              real loader in JNext
+              real loader in JNext. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-27: good.
 
   Replay      1.2 (2026-11-08, pace limiter): 2 RZX identical, unit,
               interrupt, level / shop exit, map and limiter checks pass; game
@@ -103,7 +104,9 @@
               lives at frames 12, 444, 753; with it only the first, and the
               after-death timer (40360) holds at 48
 
-  Hardware    670f9403 tests OK on a real Next (Dean, 2026-10-14)
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good (earlier: 670f9403 tests OK on a real Next
+              (Dean, 2026-10-14))
 
   Nothing here claims a result on real hardware unless the line above says so.
 
