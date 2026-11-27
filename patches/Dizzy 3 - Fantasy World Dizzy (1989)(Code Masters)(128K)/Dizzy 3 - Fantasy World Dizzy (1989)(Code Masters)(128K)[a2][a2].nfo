@@ -70,7 +70,8 @@
               game remain theirs.
 
 -- TESTING -------------------------------------------------------------------
-  Tested      Played by the owner in JNext 2026-11-05: approved
+  Tested      Played by the owner in JNext 2026-11-05: approved. Played by the
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
 
   Replay      3 recordings of the 128K release IDENTICAL on rework v128 (bot
               walks of 12,010 / 12,007 / 12,004 frames: the dungeon, the
@@ -105,7 +106,8 @@
               and the POKE takes the no-collision exit; dropped: Lives (asks
               the player for a value, which a patch cannot hold)
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
