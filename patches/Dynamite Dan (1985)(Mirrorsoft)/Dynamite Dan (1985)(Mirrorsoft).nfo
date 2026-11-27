@@ -71,7 +71,8 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05, with QUIT and PAUSE
-              redefined: approved
+              redefined: approved. Played by the owner on a ZX Spectrum Next
+              (KS3), 2026-11-27: good.
 
   Replay      v1.0's hooks: IDENTICAL on 52 recordings, 122,380 frames: 22,117
               Dan plots, 269 screen clears (the ending's hide in unit cases
@@ -102,13 +103,14 @@
               1 one-frame attribute change also in the approved build);
               15-minute soak: no freeze, loop or crash
 
-  Coverage    Random-play recordings only, no human play: one from the TOSEC
-              file's BASIC start (rooms 0, 43, 44), 48 room-census starts,
-              deaths, water, the airship room; none pauses or quits (those by
-              unit cases and JNext); not reached: the ending (all 8 dynamite
-              sticks and the airship), the lifts measured
+  Coverage    Random-play recordings only: one from the TOSEC file's BASIC
+              start (rooms 0, 43, 44), 48 room-census starts, deaths, water,
+              the airship room; none pauses or quits (those by unit cases and
+              JNext); not reached: the ending (all 8 dynamite sticks and the
+              airship), the lifts measured
 
-  Hardware    none
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
+              the owner, good
 
   Nothing here claims a result on real hardware unless the line above says so.
 
