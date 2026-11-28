@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Dynamite Dan
   Publisher   Mirrorsoft, 1985
-  Version     1.2
+  Version     1.4
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -19,9 +19,20 @@
   dump, under that name or any other: anything else is refused, with a
   message naming the file it wants.
 
+  Memory      Any Next: a 1MB Next has the memory for the game. Enhanced needs
+              a 1MB Next, and is not offered on a smaller one.
+
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Dan and the four kinds of enemy painted as sprites: Dan in a red
+              jacket, blue trousers, an ochre cap and boots, with a skin-toned
+              face and hands; the enemies in their own colours. The lifts and
+              the rest of the scenery stay the game's own. Off by default. A
+              painted set, colourist not named.
 
   Pace        original (+0.09% measured in JNext 1.1.104 headless, the default
               build (its keys code adds 3 T a tick); probe 0xC80A (the main
@@ -37,6 +48,8 @@
               1.2: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.4: Enhanced colours (a menu choice, off by default): Dan and
+              the enemies painted as sprites
 
   Note        Keys: a key on the loading screen, then ENTER on the menu. In
               play A left, S right, SPACE jump, P pause, Q quit. On by
@@ -72,25 +85,30 @@
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-05, with QUIT and PAUSE
               redefined: approved. Played by the owner on a ZX Spectrum Next
-              (KS3), 2026-11-27: good.
+              (KS3), 2026-11-27: good. 1.4 (Enhanced: Dan and the enemies
+              painted, the owner's own painting) played by the owner in
+              OverSpec, 2026-11-27: good.
 
-  Replay      v1.0's hooks: IDENTICAL on 52 recordings, 122,380 frames: 22,117
-              Dan plots, 269 screen clears (the ending's hide in unit cases
-              only): at every hook original and patched code compared from the
-              same state, every register with R, memory, Dan's sprite pixels
-              against the original plotter's ink, the airship's hull and
-              cables against the live screen in room 43; 27 negative controls
-              detected; ROM path check clean, the BASIC start included. v1.1's
-              keys (246 bytes, disjoint from the hooks): the original against
-              the original with them, in lockstep on the same 52 recordings,
-              every IN served in order (192,925 reads), all 22,425 main-loop
-              passes compared (every register but A and F, dead there; R
-              included; all RAM outside the patch): IDENTICAL with Q and P,
-              and with QUIT X and PAUSE H set by the build's own define
-              routine; 3 broken builds detected (play reading the old P, the
-              old Q; R 4 off); 6,290 unit cases 0 failures (pause, quit, the
-              old P and Q held, every key as PAUSE or QUIT, the Q cheat on and
-              off)
+  Replay      1.4: IDENTICAL on t1 and n1 for the default and the Enhanced
+              build: every enemy plot (54,231) and every visible enemy pixel
+              (5,231,662) matched, erase and animation negatives caught; all
+              64 colour, key and cheat combinations. v1.0's hooks: IDENTICAL
+              on 52 recordings, 122,380 frames: 22,117 Dan plots, 269 screen
+              clears (the ending's hide in unit cases only): at every hook
+              original and patched code compared from the same state, every
+              register with R, memory, Dan's sprite pixels against the
+              original plotter's ink, the airship's hull and cables against
+              the live screen in room 43; 27 negative controls detected; ROM
+              path check clean, the BASIC start included. v1.1's keys (246
+              bytes, disjoint from the hooks): the original against the
+              original with them, in lockstep on the same 52 recordings, every
+              IN served in order (192,925 reads), all 22,425 main-loop passes
+              compared (every register but A and F, dead there; R included;
+              all RAM outside the patch): IDENTICAL with Q and P, and with
+              QUIT X and PAUSE H set by the build's own define routine; 3
+              broken builds detected (play reading the old P, the old Q; R 4
+              off); 6,290 unit cases 0 failures (pause, quit, the old P and Q
+              held, every key as PAUSE or QUIT, the Q cheat on and off)
 
   Emulator    JNext 1.1.104 headless, the default build from its own BASIC:
               the define page without the Q / P warning, five prompts, X and H
@@ -109,8 +127,8 @@
               JNext); not reached: the ending (all 8 dynamite sticks and the
               airship), the lifts measured
 
-  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, good
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: 1.2 played
+              by the owner, good; the 1.4 Enhanced set not yet run on hardware
 
   Nothing here claims a result on real hardware unless the line above says so.
 
