@@ -1,0 +1,88 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Yie Ar Kung-Fu (128K)
+  Publisher   Imagine, 1985
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Yie Ar Kung-Fu (1985)(Imagine Software)[128K].z80
+  MD5         954472db58451ab0183075154cd70169
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    Oolong and all eleven opponents in the colours of Konami's 1985
+              arcade game: clothes, skin, hair and weapons, in flat colours
+              with the game's black lines kept and no white edge. Off by
+              default. A painted set, colourist not named.
+
+  Changes     1.0: the fighters as Next sprites (the colour clash fix),
+              Enhanced colours, two checked cheats and the loading screen
+              while patching
+
+  Note        Keys: Space at the title or the scores, then 1 for one player.
+              In a fight A and D move, hold S with a direction to attack, and
+              Space switches between punches and kicks. Oolong and his
+              opponents, the thrown stars and the chain are Next sprites over
+              the figures the game still draws: black lines, bodies in the
+              ground's colour as in the original (cyan on the lawn, yellow in
+              the courtyard), and the same look wherever they move instead of
+              the colours of the cells they cross; the hit spark no longer
+              colours its cell. At Feedle the waiting fighters stay hidden in
+              the black caves. Known issues: the pace has not been compared
+              with the original on a Next. Missing: a real Next run.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite energy
+   2  Infinite lives
+
+  Cheats are the archive's POKEs for this release, each checked against the
+  code; dropped: seven entries that hit reloadable opponent data, change a
+  CALL or JP target, or remove a real extra-life award.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Imagine, 1985, by its original authors. All rights to the game
+              remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against three machine-played
+              recordings; simulated boot of every build; run from its menu in
+              OverSpec with every colour and cheat combination. Played by the
+              owner in OverSpec, 2026-11-28: good. Not on real hardware.
+
+  Replay      33,008 frames identical across t1, t2 and t3. All 12 hook sites
+              reached. Four CPU speeds. 64 hide cases. Eight negative controls
+              detected.
+
+  Emulator    OverSpec desktop: all eight colour and cheat combinations
+              reached the Buchu fight from the patch menu; the owner played it
+              from the menu, 2026-11-28: good.
+
+  Coverage    Enhanced t3 checked 1,144,576 uploaded fighter bytes in 15,004
+              frames. All 105 sheet poses checked separately.
+
+  Hardware    Not tested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
