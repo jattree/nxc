@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Green Beret
   Publisher   Imagine, 1986
-  Version     1.2
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -22,6 +22,13 @@
 -- WHAT IT DOES --------------------------------------------------------------
   Moving figures become Next hardware sprites, so they keep their own colours
   and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
+              by default.
+  Enhanced    The player, soldiers and dogs painted in arcade-style colours
+              with black lines (the owner's own painting), and every stage
+              intro (the captives, the brick wall, the text) in the arcade
+              colours. Off by default. A painted set, colourist not named.
 
   Pace        original (+0.00% measured in JNext 1.1.104 headless, the v2.09
               card; probe 0xA38C (the main loop's scenery blit, once a game
@@ -39,22 +46,27 @@
               1.2: The start of play no longer shows a few stray pixels in the
               scenery for a moment: the start-up code now puts back the game
               bytes it borrows before the game runs
+              1.3: Enhanced colours option: the figures in arcade-style
+              colours with black lines, and every stage intro in the arcade
+              colours; a dark grey ring round the figures instead of the white
+              one, so their black outline stands out from dark scenery; the
+              game's menu shows over the tape's loading screen again, as the
+              original does, and that screen shows while the Next patches
 
   Note        Keys: 1 on the game's menu for the keyboard, then your six keys
               (up, down, left, right, stab, shoot), Y, then stab to start. The
               player, soldiers, dogs and explosions are Next sprites in white
               and black over their own pixels; scenery, panel and text keep
-              the original's colours. Each figure keeps a 1 pixel white edge
-              so it stays clear of dark scenery. Pace is the original's (the
-              game waits for each frame). Tested in JNext on NextZXOS v2.09
-              and v2.10. Known issues: the beeper makes 5 to 7 percent fewer
-              writes than the original, so some sound effects may sound
-              slightly different; in the sky the figures' white bodies are
-              solid, because the original draws them there without a mask; the
-              weapon shot is drawn behind the figures. Missing: no Enhanced
-              colour set yet (figures are white and black only); no loading or
-              title screen on the menu; the cheats are the archive's POKEs and
-              were not re-checked in this build.
+              the original's colours. Each figure has a 1 pixel dark grey ring
+              so its black outline stays clear of dark scenery. Pace is the
+              original's (the game waits for each frame). Tested in JNext on
+              NextZXOS v2.09 and v2.10. Known issues: the beeper makes 5 to 7
+              percent fewer writes than the original, so some sound effects
+              may sound slightly different; in the sky the figures' white
+              bodies are solid, because the original draws them there without
+              a mask; the weapon shot is drawn behind the figures. Missing:
+              the cheats are the archive's POKEs and were not re-checked in
+              this build.
 
 -- MENU ----------------------------------------------------------------------
    1  Infinite lives
@@ -76,25 +88,15 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      Played by the owner in JNext 2026-11-06: approved. Played by the
-              owner on a ZX Spectrum Next (KS3), 2026-11-27: good.
+              owner on a ZX Spectrum Next (KS3), 2026-11-27: good. 1.3 (dark
+              grey ring; Enhanced: the owner's own painting with black lines,
+              and the stage intros in colour) played by the owner in OverSpec,
+              2026-11-27: good.
 
   Replay      IDENTICAL on 4 recordings, 84,814 frames: 22,521 draw passes,
-              91,412 figure plots, 2,716 object plots, 9,871 mines, 4,119
-              bullets, 40 screen wipes: at every hook original and patched
-              code compared from the same state (every register but R, all
-              memory), then the picture: the patched screen plus the sprites
-              against the original's pixels, 35.2M pixels; the trimmed edge
-              pixels (310,485 in 54,983 plots) allowed only where a plot of a
-              trimmed figure put them; 106 figure images against the edge
-              rule, 18 negative controls detected (the edge rule left out and
-              the exit forced to 3.5 MHz among them). R is not kept by the
-              hooks: the game reads R only for its bit 7 (the sign after LD
-              A,R), and the four recordings replayed with R's low 7 bits
-              randomised at every hook site and game update (283,838 times)
-              give the same RAM at every update. Start-up (2026-11-23): on the
-              same 4 recordings every ROM byte the game runs is as recorded,
-              and the bytes the start-up code borrows (0x8342-0x8377) are back
-              before the game's first instruction
+              91,412 figure plots, every picture pixel compared for both
+              colour choices; all 134 figures checked (12,490 dark grey ring
+              pixels by rule; Enhanced line pixels black, no rim)
 
   Emulator    JNext 1.1.104 headless. On copies of the v2.09 and the 26.11
               (NextZXOS v2.10) emulator cards, through the Browser: the .nxc
@@ -114,8 +116,8 @@
               not reached: the end of stage 3 by play (by cheat only), stage
               4's boss paths, the end of the game
 
-  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, good
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: 1.2 played
+              by the owner, good; 1.3 not yet run on hardware
 
   Nothing here claims a result on real hardware unless the line above says so.
 
