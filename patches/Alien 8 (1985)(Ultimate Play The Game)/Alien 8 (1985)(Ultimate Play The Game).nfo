@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Alien 8
   Publisher   Ultimate, 1985
-  Version     1.5
+  Version     1.6
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -57,6 +57,10 @@
               1.5: objects are no longer drawn over the ones in front of them
               as the robot moves among them (both modes): as in the original,
               only the parts the game copies to the screen show
+              1.6: Enhanced: no unpainted room when you go through a door, and
+              no unpainted robot by doors: the painted picture now covers the
+              whole play area, and the old room stays on screen until the new
+              one is ready
 
   Note        Keys: on the game's menu 1 keyboard, 2 Kempston, 3 cursor or 4
               Interface II joystick, 5 directional control, then 0 to start.
@@ -104,25 +108,33 @@
               ZX Spectrum Next (KS3), 2026-11-27: good: objects are drawn in
               the right order now; on going into or leaving a room the room
               shows without the Enhanced colours, and near doors an unpainted
-              ghost of the robot sometimes shows (to be fixed).
+              ghost of the robot sometimes shows (1.5; fixed in 1.6). 1.6
+              played by the owner in OverSpec, 2026-11-27: good.
 
-  Replay      1.5: IDENTICAL on an 18,000-frame recording per mode: after each
-              of 2,877 drawing passes the picture, the sprites and Layer 2
-              equal a model of the screen built from the original's own copies
-              to it; 1.4's hooks and the clip turned off both caught. 1.1: 4
-              starts, 17 deaths, 3 game overs, at every hook original and
-              patched code compared from the same state, every register with R
-              and all 48K RAM; 5 deliberately broken builds rejected
+  Replay      1.6: IDENTICAL on play-08, 18,000 frames each mode (57,730 hook
+              comparisons, 2,877 publications); Enhanced: at every frame of 4
+              recorded door crossings (536 frames) the play area shows the
+              whole old or new picture, never the original screen; 3 of 3
+              negatives caught (sprites off at the clear, the bank held a
+              frame, room ink left see-through). 1.5: IDENTICAL on an
+              18,000-frame recording per mode: after each of 2,877 drawing
+              passes the picture, the sprites and Layer 2 equal a model of the
+              screen built from the original's own copies to it; 1.4's hooks
+              and the clip turned off both caught. 1.1: 4 starts, 17 deaths, 3
+              game overs, at every hook original and patched code compared
+              from the same state, every register with R and all 48K RAM; 5
+              deliberately broken builds rejected
 
   Emulator    JNext 1.1.104 headless: 20,000-frame soaks per mode, no pattern
               overflow or errors; beeper writes all at 3.5 MHz; the real
               loader (.NEXCLASH) on private NextZXOS 26.11 card copies
 
-  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, good: objects are drawn in the right order now; on
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: 1.5 played
+              by the owner, good: objects are drawn in the right order now; on
               going into or leaving a room the room shows without the Enhanced
               colours, and near doors an unpainted ghost of the robot
-              sometimes shows (to be fixed)
+              sometimes shows (fixed in 1.6, which has not been run on
+              hardware yet)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
