@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Gauntlet
   Publisher   U.S. Gold, 1986
-  Version     1.1
+  Version     1.3
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch
@@ -32,21 +32,39 @@
   Changes     1.1: Starts with the Next's DivMMC automap switched off:
               NextZXOS leaves it on, and on current cores that could crash the
               game or spoil its drawing
+              1.3: eight cheats from the archive's POKEs, off by default; the
+              heroes' and the monsters' shots are Next sprites in their
+              shooter's colour (Thor red-orange, Thyra ice blue, Merlin gold,
+              Questor leaf green, demons' fireballs amber, lobbers' rocks
+              sandstone), so they no longer show the scenery's colours or a
+              block of wall colour when they cross a wall
 
-  Note        The whole game from both sides of the tape with no loading: it
-              starts at the title, and the main game and all 31 level blocks
-              come from memory. Every 8 x 8 cell of the play window is shown
-              as a painted tile on the Next's tile layer and the status panel
-              is painted on Layer 2; the game underneath is unchanged. All
-              four heroes are painted. Steady speed runs the game at 28 MHz
-              with an update every 3 frames, off by default. Known issues: the
-              heroes' shots and a few cells where things overlap are drawn at
-              pixel positions and keep their Spectrum colours; the high score
-              and name entry text keeps its Spectrum colours; no real hardware
-              yet.
+  Note        The whole game from both tape sides with no loading: the main
+              game and all 31 level blocks come from memory. The play window
+              is painted tiles on the tile layer and the panel is painted on
+              Layer 2; the game underneath is unchanged. All four heroes are
+              painted, and the heroes' and monsters' shots are sprites in
+              their shooter's colour. Steady speed (off by default): 28 MHz
+              with an update every 3 frames. Keys: Space through the title,
+              credits and instructions; then the cursor keys move the pointer
+              and Space picks players, hero and controls (Sinclair, Kempston,
+              Protek or keyboard). Keyboard: player 1 up 1, down Q, left S,
+              right D, fire Z, magic Caps Shift; player 2 up 8, down I, left
+              K, right L, fire M, magic Space; P pauses. Known issues: a few
+              cells where things overlap, and the high score and name entry
+              text, keep their Spectrum colours.
 
 -- MENU ----------------------------------------------------------------------
-  No cheats.
+   1  Infinite health
+   2  Infinite keys
+   3  Infinite magic bottles
+   4  Infinite treasure time
+   5  Shoot through walls
+   6  Infinite amulet's effect
+   7  No enemy generation
+   8  No non-generated enemies
+
+  Cheats come from the archive's POKEs for this release.
 
 -- CREDITS -------------------------------------------------------------------
   Patch by    Jon Attree
@@ -57,11 +75,13 @@
 
 -- TESTING -------------------------------------------------------------------
   Tested      NexClash differential verification of the main game's hooks on
-              three recordings; the hand-over from the front end and the level
-              blocks from memory by unit cases and a recording's real tape
-              load; simulated boot of both builds; run in OverSpec from the
-              title into level 1, one and two players. Played by the owner on
-              a ZX Spectrum Next (KS3), 2026-11-27: good.
+              three recordings, and of the shots on two; the hand-over from
+              the front end and the level blocks from memory by unit cases and
+              a recording's real tape load; simulated boot of both builds; run
+              in OverSpec from the title into level 1, one and two players.
+              Played by the owner on a ZX Spectrum Next (KS3), 2026-11-27: 1.1
+              good. 1.3 (shots as sprites, the cheats, Steady speed) played by
+              the owner in OverSpec, 2026-11-28: good.
 
   Replay      NexClash differential verification of the main game's hooks on
               the rzxarchive's recordings of level blocks 1, 2 and 10 (61,548
@@ -69,13 +89,22 @@
               after each hook, the tile layer against the painted map after
               every update -> IDENTICAL. Level block 1 from memory equal to a
               recording's real tape load. The hand-over from the front end to
-              the main game: unit case, and one broken build detected.
+              the main game: unit case, and one broken build detected. 1.3
+              shots: the main recording's 837 shots and 222 erased slots,
+              3,202 updates over 15,698 frames identical; a block 2 run, 94
+              shots in 1,900 frames, identical; every cheat subset at both
+              speeds rebuilds byte for byte (512 builds).
 
   Emulator    OverSpec: from the title through the heroes' and controls
-              screens into level 1, one and two players, scripted keys
+              screens into level 1, one and two players; blocks 2 and 10 with
+              three and four shots on screen (349 shot pixels and 718 painted
+              pixels around them matched); two players' shots through a
+              painted wall with Shoot through walls; a tape playthrough to
+              level 1 with Steady speed and two cheats; the owner played 1.3
+              from the menu, 2026-11-28: good.
 
-  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, good
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: 1.1 played
+              by the owner, good; 1.3 not yet run on hardware
 
   Nothing here claims a result on real hardware unless the line above says so.
 
