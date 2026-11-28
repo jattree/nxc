@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       Altered Beast
   Publisher   Activision, 1988
-  Version     1.1
+  Version     1.2
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -25,13 +25,16 @@
 
   Colours     Default (the game's own) plus: Enhanced, chosen on the menu, off
               by default.
-  Enhanced    Figures in the arcade's colours: the centurion with skin, blond
-              hair, a red loincloth and brown sandals, zombies in purple robes
-              with grey heads, fiery transformation clouds, pale wolves.
-              Player two and a wolf's hit flash keep the game's colours. Only
-              sprite colours change. A painted set, colourist not named.
+  Enhanced    Every figure painted after Sega's 1988 arcade original: the hero
+              in skin tones with a red loincloth and blond hair, player two in
+              cobalt blue with chestnut hair, zombies in purple robes over
+              olive-grey skin, wolves pale with a cream hit flash, the boss
+              and heads in reds and ochre. Off by default. A painted set,
+              colourist not named.
 
   Changes     1.1: Enhanced colours, after the arcade, as a menu choice.
+              1.2: Enhanced: player two and the enemies painted too, each
+              group in its own colours
 
   Note        Keys: SPACE starts; 6 left, 7 right, 8 duck, 9 jump, 0 punch;
               ENTER on the menu adds a second player. Every figure, graves and
@@ -69,21 +72,24 @@
               Next (KS3), 2026-11-27: the player and the Enhanced colours look
               good; the scroll steps 8 pixels at a time, as the original; at
               game over the game stops on its GAME OVER screen, waiting for
-              its tape.
+              its tape. 1.2 (player two and the enemies painted) played by the
+              owner in OverSpec, 2026-11-27: good.
 
-  Replay      IDENTICAL on four recordings (32,291 frames: all of level 1,
-              power-ups, the beast, the boss and its death, game over, two
+  Replay      1.2: IDENTICAL on four recordings (32,291 frames: all of level
+              1, power-ups, the beast, the boss and its death, game over, two
               players), the default and the Enhanced set each, with every
               broken build detected; Enhanced differs from the default in the
-              sprite patterns and palette only.
+              sprite patterns and palette only; each figure group in its own
+              palette bank: 33 bank selections, a wrong bank detected 27 of 27
+              times.
 
-  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: played by
-              the owner, the player and the Enhanced colours look good; the
+  Hardware    ZX Spectrum Next (Kickstarter 3), System/Next 26.11a: 1.1 played
+              by the owner, the player and the Enhanced colours look good; the
               scroll steps 8 pixels at a time, as the original; at game over
-              the game stops on its GAME OVER screen, waiting for its tape
-              (earlier: Tang Nano 20K FPGA build of the Next: loads with
-              DivMMC automap on and plays; without the interrupt fix it
-              crashed within 8 seconds)
+              the game stops on its GAME OVER screen, waiting for its tape;
+              1.2 not yet run on hardware (earlier: Tang Nano 20K FPGA build
+              of the Next: loads with DivMMC automap on and plays; without the
+              interrupt fix it crashed within 8 seconds)
 
   Nothing here claims a result on real hardware unless the line above says so.
 
