@@ -7,7 +7,7 @@
 -- GAME ----------------------------------------------------------------------
   Title       The Great Escape
   Publisher   Ocean, 1986
-  Version     1.0
+  Version     1.1
 
 -- YOU NEED ------------------------------------------------------------------
   Your own copy of the original game, saved beside this patch:
@@ -33,9 +33,17 @@
               black linework, masks and drawing order stay, so depth and the
               searchlight work as before. A painted set, colourist not named.
 
+  Changes     1.0: the camp and every figure in period colours (Enhanced) and
+              the McQueen outfit, both on the menu.
+              1.1: McQueen in the film's look (grey cut-off sweatshirt, khaki
+              chinos, a baseball glove), and in the cooler he turns to the
+              wall, throws the ball at it and catches it; the prisoners at the
+              mess-hall tables and in bed are painted as people.
+
   Note        Menu: Enhanced turns the colours on; McQueen player (needs
-              Enhanced, turns it on with it) dresses the player in McQueen's
-              outfit, while a guard disguise still looks like a guard. Known
+              Enhanced, turns it on with it) dresses the player as McQueen in
+              the film, and in the cooler he faces the wall and throws a
+              baseball at it; a guard disguise still looks like a guard. Known
               issues: Enhanced runs within 2% of the original's pace in JNext;
               the searchlight and movement step as coarsely as in the
               original. Missing: a natural playthrough to the end and a real
@@ -60,16 +68,20 @@
               play, an abort/restart and a result-screen run); simulated boot
               of every build; run from its menu in OverSpec in default,
               Enhanced and McQueen. Played by the owner in OverSpec,
-              2026-11-27: Enhanced and McQueen play. Not on real hardware.
+              2026-11-27: 1.0 Enhanced and McQueen play; 1.1 (the film look,
+              the cooler ball with McQueen facing the wall) good. Not on real
+              hardware.
 
   Replay      Four recordings identical on this build (two play, an
               abort/restart and a result-screen run): 53158 frames, 457675
-              hooks.
+              hooks, 411 turned cooler draws; units pass, including the cooler
+              ball and the turned figure in every case and their negatives.
 
-  Emulator    OverSpec: the owner played Enhanced and McQueen from this menu
-              (2026-11-27). JNext 1.1.104 ran every menu choice of the pilot
-              build through the real .NEXCLASH loader on NextZXOS 26.11
-              (2026-11-09).
+  Emulator    OverSpec: the owner played 1.0 Enhanced and McQueen from the
+              menu (2026-11-27), and 1.1 with McQueen into the cooler (the
+              ball, facing the wall) and Enhanced. JNext 1.1.104 ran every
+              menu choice of the pilot build through the real .NEXCLASH loader
+              on NextZXOS 26.11 (2026-11-09).
 
   Coverage    Two play recordings, an abort/restart run and a controlled
               result-screen run (not a natural finish). Default keeps the
