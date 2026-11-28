@@ -120,7 +120,7 @@ game, so it is for your own use: share the `.nxc`, never the `.nex`.
 
 ## The patches
 
-[`patches/`](patches/) holds the 118 patches made so far, for 111 games, one folder per game, each played through the real loader in
+[`patches/`](patches/) holds the 119 patches made so far, for 112 games, one folder per game, each played through the real loader in
 JNext. Each has a `.nfo` naming the exact game file it needs, what it changes, its cheats, its credits and how it
 was tested. None of them carries game code.
 

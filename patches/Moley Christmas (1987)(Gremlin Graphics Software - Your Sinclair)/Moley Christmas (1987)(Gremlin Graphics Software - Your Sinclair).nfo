@@ -1,0 +1,71 @@
+     _   _ __  __  ____
+    | \ | |\ \/ / / ___|   .nxc patch for the ZX Spectrum Next
+    |  \| | \  / | |       colour clash removed with hardware sprites
+    | |\  | /  \ | |___    (built with NexClash)
+    |_| \_|/_/\_\ \____|
+
+-- GAME ----------------------------------------------------------------------
+  Title       Moley Christmas
+  Publisher   Gremlin / Your Sinclair, 1987
+  Version     1.0
+
+-- YOU NEED ------------------------------------------------------------------
+  Your own copy of the original game, saved beside this patch:
+
+  File        Moley Christmas (1987)(Gremlin Graphics Software - Your
+              Sinclair).z80
+  MD5         3a40c5f27fb88a7f36553d75e059d732
+
+  The patch carries none of the game's code. It only works with that exact
+  dump, under that name or any other: anything else is refused, with a
+  message naming the file it wants.
+
+-- WHAT IT DOES --------------------------------------------------------------
+  Moving figures become Next hardware sprites, so they keep their own colours
+  and no longer take on the scenery's (colour clash). Game logic is unchanged.
+
+  Changes     1.0: Monty, the enemies and the pickups as Next sprites;
+              Infinite lives covers both ways of losing a life
+
+  Note        Keys: Z left, X right, O up, K down, Space jump; Sinclair and
+              Kempston joysticks work without choosing them. Monty, the
+              enemies and the pickups are Next sprites in their own colours,
+              so they no longer take on the scenery's colours; the screen
+              underneath stays exactly as the game draws it, because the game
+              checks it for collisions. Known issues: the picture changes more
+              often per game update than the original's (2.24 against 1.04),
+              so overlapping figures may flicker. Missing: a real Next run.
+
+-- MENU ----------------------------------------------------------------------
+   1  Infinite lives
+
+  Cheats are the archive's POKEs for this release, both writes, checked on the
+  ordinary and the trap death. A widely shared tape copy already has one of
+  them applied; this patch needs the clean TOSEC file.
+
+-- CREDITS -------------------------------------------------------------------
+  Patch by    Jon Attree
+  Credit      Built with NexClash by Dean Woodyatt (Bleugh.biz,
+              bleughb/nexclash, GPL-3.0-or-later)
+  Original    Gremlin / Your Sinclair, 1987, by its original authors. All
+              rights to the game remain theirs.
+
+-- TESTING -------------------------------------------------------------------
+  Tested      NexClash differential verification against five recordings (the
+              archive playthrough, and the ordinary and trap deaths with the
+              cheat off and on); simulated boot of every build; run from its
+              menu in OverSpec. Played by the owner in OverSpec, 2026-11-28:
+              good. Not on real hardware.
+
+  Replay      5 recordings, 9,419 frames. 1,564 units and 10 negatives passed.
+              All 4 menu builds matched. (NexClash record moley_christmas,
+              verified 2026-11-28; this build is byte-identical to it)
+
+  Hardware    Not tested
+
+  Nothing here claims a result on real hardware unless the line above says so.
+
+-- HOW TO USE ----------------------------------------------------------------
+  Put this .nxc and the game file in the same folder on the Next's card and
+  choose the .nxc in the Browser. See README.txt.
+------------------------------------------------------------------------------
